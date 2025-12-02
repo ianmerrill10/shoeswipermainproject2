@@ -3,12 +3,14 @@ import { FaHeart, FaShare, FaBookmark, FaAmazon } from 'react-icons/fa';
 import { useSneakers } from '../hooks/useSneakers';
 import { getAffiliateUrl, shouldShowPrice, formatPrice } from '../lib/supabaseClient';
 import { Shoe } from '../lib/types';
+import ShoePanel from '../components/ShoePanel';
 
 const FeedPage: React.FC = () => {
   const { getInfiniteFeed, trackView, trackClick, loading } = useSneakers();
   const [shoes, setShoes] = useState<Shoe[]>([]);
   const [currentIndex, setCurrentIndex] = useState(0);
   const [page, setPage] = useState(0);
+  const [showShoePanel, setShowShoePanel] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -50,6 +52,14 @@ const FeedPage: React.FC = () => {
         const nextIndex = Math.min(shoes.length - 1, currentIndex + 1);
         const card = container.querySelector(`[data-index="${nextIndex}"]`);
         card?.scrollIntoView({ behavior: 'smooth' });
+      } else if (e.key === 'ArrowLeft') {
+        e.preventDefault();
+        setShowShoePanel(true);
+      } else if (e.key === 'ArrowRight') {
+        e.preventDefault();
+        // TODO: Open MusicPanel
+      } else if (e.key === 'Escape') {
+        setShowShoePanel(false);
       }
     };
 
@@ -209,6 +219,15 @@ const FeedPage: React.FC = () => {
           </div>
         </div>
       ))}
+
+      {/* Shoe Panel - Opens on Left Arrow */}
+      {shoes[currentIndex] && (
+        <ShoePanel
+          shoe={shoes[currentIndex]}
+          isOpen={showShoePanel}
+          onClose={() => setShowShoePanel(false)}
+        />
+      )}
     </div>
   );
 };
