@@ -1,6 +1,6 @@
 import React from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
-import { FaHome, FaSearch, FaMagic, FaUser } from 'react-icons/fa';
+import { FaHome, FaSearch, FaMagic, FaUser, FaHeart } from 'react-icons/fa';
 
 const BottomNavigation: React.FC = () => {
   const navigate = useNavigate();
@@ -10,6 +10,7 @@ const BottomNavigation: React.FC = () => {
     { path: '/', icon: FaHome, label: 'Feed' },
     { path: '/search', icon: FaSearch, label: 'Search' },
     { path: '/check-fit', icon: FaMagic, label: 'Check Fit', special: true },
+    { path: '/closet', icon: FaHeart, label: 'Closet' },
     { path: '/profile', icon: FaUser, label: 'Profile' },
   ];
 

@@ -4,6 +4,7 @@ import { useAuthGuard } from './hooks/useAuthGuard';
 // Pages
 import FeedPage from './pages/FeedPage';
 import SearchPage from './pages/SearchPage';
+import ClosetPage from './pages/ClosetPage';
 import CheckMyFit from './pages/CheckMyFit';
 import ProfilePage from './pages/ProfilePage';
 import AuthPage from './pages/AuthPage';
@@ -63,6 +64,7 @@ function App() {
         {/* Main App Routes */}
         <Route path="/" element={<FeedPage />} />
         <Route path="/search" element={<SearchPage />} />
+        <Route path="/closet" element={<ClosetPage />} />
         <Route path="/check-fit" element={<CheckMyFit />} />
         <Route path="/profile" element={<ProfilePage />} />
         <Route path="/nft" element={<NFTMarketplace />} />
