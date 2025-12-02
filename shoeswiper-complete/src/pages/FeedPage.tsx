@@ -1,9 +1,10 @@
 import React, { useEffect, useState, useRef } from 'react';
-import { FaHeart, FaShare, FaBookmark, FaAmazon, FaMusic } from 'react-icons/fa';
+import { FaHeart, FaShare, FaBookmark, FaAmazon, FaMusic, FaCheck } from 'react-icons/fa';
 import { useSneakers } from '../hooks/useSneakers';
 import { useAnalytics } from '../hooks/useAnalytics';
 import { useFavorites } from '../hooks/useFavorites';
 import { getAffiliateUrl, shouldShowPrice, formatPrice } from '../lib/supabaseClient';
+import { createAffiliateShareData } from '../lib/deepLinks';
 import { Shoe } from '../lib/types';
 import ShoePanel from '../components/ShoePanel';
 import MusicPanel from '../components/MusicPanel';
@@ -17,6 +18,7 @@ const FeedPage: React.FC = () => {
   const [page, setPage] = useState(0);
   const [showShoePanel, setShowShoePanel] = useState(false);
   const [showMusicPanel, setShowMusicPanel] = useState(false);
+  const [showShareToast, setShowShareToast] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -157,22 +159,27 @@ const FeedPage: React.FC = () => {
   };
 
   const handleShare = async (shoe: Shoe) => {
-    const url = getAffiliateUrl(shoe.amazon_url);
+    // Generate smart share data with deep links and affiliate tracking
+    const shareData = createAffiliateShareData(shoe, 'share_native');
+
     if (navigator.share) {
       try {
         await navigator.share({
-          title: shoe.name,
-          text: `Check out these ${shoe.brand} ${shoe.name}!`,
-          url,
+          title: shareData.title,
+          text: shareData.text,
+          url: shareData.url,
         });
         trackShare(shoe.id, 'native');
       } catch (err) {
         console.log('Share cancelled');
       }
     } else {
-      navigator.clipboard.writeText(url);
+      // Copy rich share text to clipboard
+      navigator.clipboard.writeText(shareData.text);
       trackShare(shoe.id, 'clipboard');
-      alert('Link copied to clipboard!');
+      // Show toast instead of alert
+      setShowShareToast(true);
+      setTimeout(() => setShowShareToast(false), 2500);
     }
   };
 
@@ -374,6 +381,18 @@ const FeedPage: React.FC = () => {
           onClose={() => setShowMusicPanel(false)}
         />
       )}
+
+      {/* Share Success Toast */}
+      <div
+        className={`fixed bottom-24 left-1/2 -translate-x-1/2 bg-zinc-800 text-white px-4 py-3 rounded-xl flex items-center gap-2 shadow-lg z-50 transition-all duration-300 ${
+          showShareToast ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4 pointer-events-none'
+        }`}
+      >
+        <div className="w-6 h-6 bg-green-500 rounded-full flex items-center justify-center">
+          <FaCheck className="text-xs text-white" />
+        </div>
+        <span className="font-medium">Link copied with affiliate tracking!</span>
+      </div>
     </div>
   );
 };

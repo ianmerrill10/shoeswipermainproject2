@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { FaTimes, FaAmazon, FaBookmark, FaShare, FaChevronLeft, FaChevronRight, FaCheck } from 'react-icons/fa';
 import { Shoe } from '../lib/types';
 import { getAffiliateUrl, shouldShowPrice, formatPrice } from '../lib/supabaseClient';
+import { createAffiliateShareData } from '../lib/deepLinks';
 import { useFavorites } from '../hooks/useFavorites';
 import { useAnalytics } from '../hooks/useAnalytics';
 
@@ -14,6 +15,7 @@ interface ShoePanelProps {
 const ShoePanel: React.FC<ShoePanelProps> = ({ shoe, isOpen, onClose }) => {
   const [selectedSize, setSelectedSize] = useState<string | null>(null);
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
+  const [showShareToast, setShowShareToast] = useState(false);
   const { toggleFavorite, isFavorite } = useFavorites();
   const { trackFavorite, trackShare } = useAnalytics();
 
@@ -34,22 +36,27 @@ const ShoePanel: React.FC<ShoePanelProps> = ({ shoe, isOpen, onClose }) => {
   };
 
   const handleShare = async () => {
-    const url = getAffiliateUrl(shoe.amazon_url);
+    // Generate smart share data with deep links and affiliate tracking
+    const shareData = createAffiliateShareData(shoe, 'share_native');
+
     if (navigator.share) {
       try {
         await navigator.share({
-          title: shoe.name,
-          text: `Check out these ${shoe.brand} ${shoe.name}!`,
-          url,
+          title: shareData.title,
+          text: shareData.text,
+          url: shareData.url,
         });
         trackShare(shoe.id, 'native');
       } catch (err) {
         console.log('Share cancelled');
       }
     } else {
-      navigator.clipboard.writeText(url);
+      // Copy rich share text to clipboard
+      navigator.clipboard.writeText(shareData.text);
       trackShare(shoe.id, 'clipboard');
-      alert('Link copied to clipboard!');
+      // Show toast instead of alert
+      setShowShareToast(true);
+      setTimeout(() => setShowShareToast(false), 2500);
     }
   };
 
@@ -256,6 +263,18 @@ const ShoePanel: React.FC<ShoePanelProps> = ({ shoe, isOpen, onClose }) => {
               Share
             </button>
           </div>
+        </div>
+
+        {/* Share Success Toast */}
+        <div
+          className={`fixed bottom-8 left-1/2 -translate-x-1/2 bg-zinc-700 text-white px-4 py-3 rounded-xl flex items-center gap-2 shadow-lg z-[60] transition-all duration-300 ${
+            showShareToast ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4 pointer-events-none'
+          }`}
+        >
+          <div className="w-6 h-6 bg-green-500 rounded-full flex items-center justify-center">
+            <FaCheck className="text-xs text-white" />
+          </div>
+          <span className="font-medium text-sm">Copied with affiliate link!</span>
         </div>
       </div>
     </>
