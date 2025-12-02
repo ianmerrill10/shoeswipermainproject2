@@ -1,7 +1,9 @@
 import React, { useState } from 'react';
-import { FaTimes, FaAmazon, FaBookmark, FaShare, FaChevronLeft, FaChevronRight } from 'react-icons/fa';
+import { FaTimes, FaAmazon, FaBookmark, FaShare, FaChevronLeft, FaChevronRight, FaCheck } from 'react-icons/fa';
 import { Shoe } from '../lib/types';
 import { getAffiliateUrl, shouldShowPrice, formatPrice } from '../lib/supabaseClient';
+import { useFavorites } from '../hooks/useFavorites';
+import { useAnalytics } from '../hooks/useAnalytics';
 
 interface ShoePanelProps {
   shoe: Shoe;
@@ -12,6 +14,8 @@ interface ShoePanelProps {
 const ShoePanel: React.FC<ShoePanelProps> = ({ shoe, isOpen, onClose }) => {
   const [selectedSize, setSelectedSize] = useState<string | null>(null);
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
+  const { toggleFavorite, isFavorite } = useFavorites();
+  const { trackFavorite, trackShare } = useAnalytics();
 
   // Generate view angles (in production these would be real image URLs)
   const viewAngles = [
@@ -30,21 +34,34 @@ const ShoePanel: React.FC<ShoePanelProps> = ({ shoe, isOpen, onClose }) => {
   };
 
   const handleShare = async () => {
+    const url = getAffiliateUrl(shoe.amazon_url);
     if (navigator.share) {
       try {
         await navigator.share({
           title: shoe.name,
           text: `Check out these ${shoe.brand} ${shoe.name}!`,
-          url: getAffiliateUrl(shoe.amazon_url),
+          url,
         });
+        trackShare(shoe.id, 'native');
       } catch (err) {
         console.log('Share cancelled');
       }
     } else {
-      navigator.clipboard.writeText(getAffiliateUrl(shoe.amazon_url));
+      navigator.clipboard.writeText(url);
+      trackShare(shoe.id, 'clipboard');
       alert('Link copied to clipboard!');
     }
   };
+
+  const handleAddToCloset = async () => {
+    const wasAlreadyFavorite = isFavorite(shoe.id);
+    const success = await toggleFavorite(shoe.id);
+    if (success) {
+      trackFavorite(shoe.id, wasAlreadyFavorite ? 'remove' : 'add');
+    }
+  };
+
+  const isInCloset = isFavorite(shoe.id);
 
   const prevImage = () => {
     setCurrentImageIndex((prev) => (prev === 0 ? viewAngles.length - 1 : prev - 1));
@@ -220,9 +237,16 @@ const ShoePanel: React.FC<ShoePanelProps> = ({ shoe, isOpen, onClose }) => {
           </button>
 
           <div className="flex gap-3">
-            <button className="flex-1 bg-zinc-800 text-white font-bold py-3 rounded-xl flex items-center justify-center gap-2 hover:bg-zinc-700 transition-colors">
-              <FaBookmark />
-              Add to Closet
+            <button
+              onClick={handleAddToCloset}
+              className={`flex-1 font-bold py-3 rounded-xl flex items-center justify-center gap-2 transition-colors ${
+                isInCloset
+                  ? 'bg-orange-500 text-white'
+                  : 'bg-zinc-800 text-white hover:bg-zinc-700'
+              }`}
+            >
+              {isInCloset ? <FaCheck /> : <FaBookmark />}
+              {isInCloset ? 'In Closet' : 'Add to Closet'}
             </button>
             <button
               onClick={handleShare}

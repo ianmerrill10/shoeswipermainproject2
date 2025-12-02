@@ -2,6 +2,7 @@ import React, { useEffect, useState, useRef } from 'react';
 import { FaHeart, FaShare, FaBookmark, FaAmazon, FaMusic } from 'react-icons/fa';
 import { useSneakers } from '../hooks/useSneakers';
 import { useAnalytics } from '../hooks/useAnalytics';
+import { useFavorites } from '../hooks/useFavorites';
 import { getAffiliateUrl, shouldShowPrice, formatPrice } from '../lib/supabaseClient';
 import { Shoe } from '../lib/types';
 import ShoePanel from '../components/ShoePanel';
@@ -10,6 +11,7 @@ import MusicPanel from '../components/MusicPanel';
 const FeedPage: React.FC = () => {
   const { getInfiniteFeed, trackView, trackClick, loading } = useSneakers();
   const { trackPanelOpen, trackShare, trackFavorite, trackShoeClick } = useAnalytics();
+  const { toggleFavorite, isFavorite } = useFavorites();
   const [shoes, setShoes] = useState<Shoe[]>([]);
   const [currentIndex, setCurrentIndex] = useState(0);
   const [page, setPage] = useState(0);
@@ -174,9 +176,12 @@ const FeedPage: React.FC = () => {
     }
   };
 
-  const handleFavorite = (shoe: Shoe) => {
-    trackFavorite(shoe.id, 'add');
-    // TODO: Implement actual favorite storage
+  const handleFavorite = async (shoe: Shoe) => {
+    const wasAlreadyFavorite = isFavorite(shoe.id);
+    const success = await toggleFavorite(shoe.id);
+    if (success) {
+      trackFavorite(shoe.id, wasAlreadyFavorite ? 'remove' : 'add');
+    }
   };
 
   if (loading && shoes.length === 0) {
@@ -285,20 +290,28 @@ const FeedPage: React.FC = () => {
               onClick={() => handleFavorite(shoe)}
               className="flex flex-col items-center gap-1"
             >
-              <div className="w-11 h-11 bg-black/30 backdrop-blur-sm rounded-full flex items-center justify-center active:scale-90 transition-transform">
-                <FaHeart className="text-xl text-white" />
+              <div className={`w-11 h-11 backdrop-blur-sm rounded-full flex items-center justify-center active:scale-90 transition-all ${
+                isFavorite(shoe.id) ? 'bg-red-500' : 'bg-black/30'
+              }`}>
+                <FaHeart className={`text-xl ${isFavorite(shoe.id) ? 'text-white' : 'text-white'}`} />
               </div>
-              <span className="text-xs font-bold text-white drop-shadow">{shoe.favorite_count}</span>
+              <span className="text-xs font-bold text-white drop-shadow">
+                {isFavorite(shoe.id) ? 'Liked' : shoe.favorite_count}
+              </span>
             </button>
 
             <button
               onClick={() => handleFavorite(shoe)}
               className="flex flex-col items-center gap-1"
             >
-              <div className="w-11 h-11 bg-black/30 backdrop-blur-sm rounded-full flex items-center justify-center active:scale-90 transition-transform">
+              <div className={`w-11 h-11 backdrop-blur-sm rounded-full flex items-center justify-center active:scale-90 transition-all ${
+                isFavorite(shoe.id) ? 'bg-orange-500' : 'bg-black/30'
+              }`}>
                 <FaBookmark className="text-xl text-white" />
               </div>
-              <span className="text-xs font-bold text-white drop-shadow">Save</span>
+              <span className="text-xs font-bold text-white drop-shadow">
+                {isFavorite(shoe.id) ? 'Saved' : 'Save'}
+              </span>
             </button>
 
             <button
