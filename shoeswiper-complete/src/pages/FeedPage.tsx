@@ -1,9 +1,10 @@
 import React, { useEffect, useState, useRef } from 'react';
-import { FaHeart, FaShare, FaBookmark, FaAmazon } from 'react-icons/fa';
+import { FaHeart, FaShare, FaBookmark, FaAmazon, FaMusic } from 'react-icons/fa';
 import { useSneakers } from '../hooks/useSneakers';
 import { getAffiliateUrl, shouldShowPrice, formatPrice } from '../lib/supabaseClient';
 import { Shoe } from '../lib/types';
 import ShoePanel from '../components/ShoePanel';
+import MusicPanel from '../components/MusicPanel';
 
 const FeedPage: React.FC = () => {
   const { getInfiniteFeed, trackView, trackClick, loading } = useSneakers();
@@ -11,6 +12,7 @@ const FeedPage: React.FC = () => {
   const [currentIndex, setCurrentIndex] = useState(0);
   const [page, setPage] = useState(0);
   const [showShoePanel, setShowShoePanel] = useState(false);
+  const [showMusicPanel, setShowMusicPanel] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -57,15 +59,56 @@ const FeedPage: React.FC = () => {
         setShowShoePanel(true);
       } else if (e.key === 'ArrowRight') {
         e.preventDefault();
-        // TODO: Open MusicPanel
+        setShowMusicPanel(true);
       } else if (e.key === 'Escape') {
         setShowShoePanel(false);
+        setShowMusicPanel(false);
       }
     };
 
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [currentIndex, shoes.length]);
+
+  // Touch swipe gestures for mobile
+  useEffect(() => {
+    const container = containerRef.current;
+    if (!container) return;
+
+    let touchStartX = 0;
+    let touchStartY = 0;
+
+    const handleTouchStart = (e: TouchEvent) => {
+      touchStartX = e.touches[0].clientX;
+      touchStartY = e.touches[0].clientY;
+    };
+
+    const handleTouchEnd = (e: TouchEvent) => {
+      const touchEndX = e.changedTouches[0].clientX;
+      const touchEndY = e.changedTouches[0].clientY;
+      const diffX = touchEndX - touchStartX;
+      const diffY = touchEndY - touchStartY;
+
+      // Only trigger if horizontal swipe is greater than vertical (to not interfere with scroll)
+      if (Math.abs(diffX) > Math.abs(diffY) && Math.abs(diffX) > 50) {
+        if (diffX > 0) {
+          // Swiped right - open ShoePanel
+          setShowShoePanel(true);
+        } else {
+          // Swiped left - open MusicPanel
+          setShowMusicPanel(true);
+        }
+      }
+    };
+
+    container.addEventListener('touchstart', handleTouchStart, { passive: true });
+    container.addEventListener('touchend', handleTouchEnd, { passive: true });
+
+    return () => {
+      container.removeEventListener('touchstart', handleTouchStart);
+      container.removeEventListener('touchend', handleTouchEnd);
+    };
+  }, []);
 
   // Intersection Observer for tracking visible card
   useEffect(() => {
@@ -217,6 +260,36 @@ const FeedPage: React.FC = () => {
               <span className="text-xs font-bold text-white drop-shadow">Share</span>
             </button>
           </div>
+
+          {/* Music Bar - Bottom of card */}
+          {shoe.music && (
+            <button
+              onClick={() => setShowMusicPanel(true)}
+              className="absolute bottom-20 left-4 right-4 flex items-center gap-3 bg-black/40 backdrop-blur-sm rounded-full px-3 py-2 z-10"
+            >
+              {/* Spinning Disc */}
+              <div className="w-10 h-10 rounded-full bg-gradient-to-br from-zinc-700 to-zinc-900 flex items-center justify-center animate-spin-slow flex-shrink-0 border border-zinc-600">
+                <div className="w-4 h-4 rounded-full bg-orange-500 flex items-center justify-center">
+                  <div className="w-1.5 h-1.5 rounded-full bg-black" />
+                </div>
+              </div>
+
+              {/* Song Info with Marquee */}
+              <div className="flex-1 overflow-hidden">
+                <div className="flex items-center gap-2">
+                  <FaMusic className="text-orange-500 text-xs flex-shrink-0" />
+                  <div className="overflow-hidden whitespace-nowrap">
+                    <span className="inline-block animate-marquee text-white text-sm font-medium">
+                      {shoe.music.song} • {shoe.music.artist}
+                    </span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Tap hint */}
+              <span className="text-zinc-400 text-xs flex-shrink-0">Tap for links</span>
+            </button>
+          )}
         </div>
       ))}
 
@@ -226,6 +299,15 @@ const FeedPage: React.FC = () => {
           shoe={shoes[currentIndex]}
           isOpen={showShoePanel}
           onClose={() => setShowShoePanel(false)}
+        />
+      )}
+
+      {/* Music Panel - Opens on Right Arrow */}
+      {shoes[currentIndex] && (
+        <MusicPanel
+          shoe={shoes[currentIndex]}
+          isOpen={showMusicPanel}
+          onClose={() => setShowMusicPanel(false)}
         />
       )}
     </div>
