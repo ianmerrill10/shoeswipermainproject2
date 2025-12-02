@@ -1,23 +1,27 @@
 import React, { useEffect, useState, useRef } from 'react';
-import { FaHeart, FaShare, FaBookmark, FaAmazon, FaMusic, FaCheck } from 'react-icons/fa';
+import { FaHeart, FaShare, FaBookmark, FaAmazon, FaMusic, FaCheck, FaBell } from 'react-icons/fa';
 import { useSneakers } from '../hooks/useSneakers';
 import { useAnalytics } from '../hooks/useAnalytics';
 import { useFavorites } from '../hooks/useFavorites';
+import { usePriceAlerts } from '../hooks/usePriceAlerts';
 import { getAffiliateUrl, shouldShowPrice, formatPrice } from '../lib/supabaseClient';
 import { createAffiliateShareData } from '../lib/deepLinks';
 import { Shoe } from '../lib/types';
 import ShoePanel from '../components/ShoePanel';
 import MusicPanel from '../components/MusicPanel';
+import NotificationsPanel from '../components/NotificationsPanel';
 
 const FeedPage: React.FC = () => {
   const { getInfiniteFeed, trackView, trackClick, loading } = useSneakers();
   const { trackPanelOpen, trackShare, trackFavorite, trackShoeClick } = useAnalytics();
   const { toggleFavorite, isFavorite } = useFavorites();
+  const { unreadCount } = usePriceAlerts();
   const [shoes, setShoes] = useState<Shoe[]>([]);
   const [currentIndex, setCurrentIndex] = useState(0);
   const [page, setPage] = useState(0);
   const [showShoePanel, setShowShoePanel] = useState(false);
   const [showMusicPanel, setShowMusicPanel] = useState(false);
+  const [showNotifications, setShowNotifications] = useState(false);
   const [showShareToast, setShowShareToast] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
 
@@ -69,6 +73,7 @@ const FeedPage: React.FC = () => {
       } else if (e.key === 'Escape') {
         setShowShoePanel(false);
         setShowMusicPanel(false);
+        setShowNotifications(false);
       }
     };
 
@@ -216,7 +221,7 @@ const FeedPage: React.FC = () => {
   return (
     <div
       ref={containerRef}
-      className="h-screen overflow-y-scroll snap-y snap-mandatory scrollbar-hide"
+      className="h-screen overflow-y-scroll snap-y snap-mandatory scrollbar-hide relative"
       style={{
         scrollSnapType: 'y mandatory',
         WebkitOverflowScrolling: 'touch',
@@ -224,6 +229,19 @@ const FeedPage: React.FC = () => {
         msOverflowStyle: 'none'
       }}
     >
+      {/* Notification Bell - Fixed Position */}
+      <button
+        onClick={() => setShowNotifications(true)}
+        className="fixed top-4 right-4 z-30 w-11 h-11 bg-black/40 backdrop-blur-sm rounded-full flex items-center justify-center active:scale-90 transition-transform"
+      >
+        <FaBell className="text-white text-lg" />
+        {unreadCount > 0 && (
+          <span className="absolute -top-1 -right-1 min-w-[18px] h-[18px] bg-red-500 text-white text-[10px] font-bold rounded-full flex items-center justify-center px-1">
+            {unreadCount > 9 ? '9+' : unreadCount}
+          </span>
+        )}
+      </button>
+
       {shoes.map((shoe, index) => (
         <div
           key={shoe.id}
@@ -381,6 +399,12 @@ const FeedPage: React.FC = () => {
           onClose={() => setShowMusicPanel(false)}
         />
       )}
+
+      {/* Notifications Panel */}
+      <NotificationsPanel
+        isOpen={showNotifications}
+        onClose={() => setShowNotifications(false)}
+      />
 
       {/* Share Success Toast */}
       <div
