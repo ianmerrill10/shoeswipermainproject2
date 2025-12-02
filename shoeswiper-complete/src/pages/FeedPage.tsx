@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { FaHeart, FaShare, FaBookmark, FaAmazon } from 'react-icons/fa';
 import { useSneakers } from '../hooks/useSneakers';
-import { getAffiliateUrl } from '../lib/supabaseClient';
+import { getAffiliateUrl, shouldShowPrice, formatPrice } from '../lib/supabaseClient';
 import { Shoe } from '../lib/types';
 
 const FeedPage: React.FC = () => {
@@ -113,13 +113,15 @@ const FeedPage: React.FC = () => {
                   ))}
                 </div>
 
-                {/* Price */}
-                <div className="flex items-center gap-3 mb-4">
-                  <span className="text-3xl font-bold text-orange-400">${currentShoe.price}</span>
-                  {currentShoe.sale_price && currentShoe.sale_price < currentShoe.price && (
-                    <span className="text-lg text-zinc-500 line-through">${currentShoe.retail_price}</span>
-                  )}
-                </div>
+                {/* Price - Only shown when Amazon API is connected */}
+                {shouldShowPrice(currentShoe.price) && (
+                  <div className="flex items-center gap-3 mb-4">
+                    <span className="text-3xl font-bold text-orange-400">{formatPrice(currentShoe.price)}</span>
+                    {currentShoe.sale_price && currentShoe.sale_price < (currentShoe.price || 0) && (
+                      <span className="text-lg text-zinc-500 line-through">{formatPrice(currentShoe.retail_price)}</span>
+                    )}
+                  </div>
+                )}
 
                 {/* Buy Button */}
                 <button
@@ -127,7 +129,7 @@ const FeedPage: React.FC = () => {
                   className="w-full bg-white text-black font-black py-4 rounded-xl flex items-center justify-center gap-3 text-lg hover:bg-zinc-100 active:scale-95 transition-all shadow-lg"
                 >
                   <FaAmazon className="text-2xl" />
-                  BUY NOW ON AMAZON
+                  SHOP ON AMAZON
                 </button>
               </div>
             </div>

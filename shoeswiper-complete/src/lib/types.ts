@@ -7,18 +7,24 @@ export interface Shoe {
   name: string;
   brand: string;
   category_slug?: string;
-  
-  // Pricing
-  price: number;
-  retail_price?: number;
-  sale_price?: number;
+
+  // Pricing - Optional until Amazon API is connected
+  // When price is null/undefined, UI hides price display
+  price?: number | null;
+  retail_price?: number | null;
+  sale_price?: number | null;
   currency?: string;
-  
+  price_last_updated?: string; // ISO timestamp from Amazon API
+
   // Media & Affiliate
   image_url: string;
-  amazon_url: string; // Must include ?tag=shoeswiper-20
-  amazon_asin?: string;
-  
+  amazon_url: string; // Base Amazon URL (affiliate tag added automatically)
+  amazon_asin: string; // Required - Amazon Standard Identification Number
+
+  // Product Details (for detail panel)
+  colorway?: string;
+  style_code?: string;
+
   // Attributes
   style_tags: string[];
   color_tags: string[];
@@ -26,21 +32,41 @@ export interface Shoe {
   sizes_available?: string[];
   release_date?: string;
   description?: string;
-  
+
   // Metrics
   favorite_count: number;
   view_count: number;
   click_count: number;
   vibe_score?: number;
-  
+
   // Status
   is_active: boolean;
   is_featured: boolean;
   stock_status?: 'in_stock' | 'low_stock' | 'out_of_stock';
-  
+
   // Timestamps
   created_at: string;
   updated_at: string;
+}
+
+// ============================================
+// AMAZON API TYPES (for future integration)
+// ============================================
+
+export interface AmazonPriceData {
+  asin: string;
+  price: number;
+  currency: string;
+  availability: 'in_stock' | 'low_stock' | 'out_of_stock';
+  lastUpdated: string;
+}
+
+export interface AmazonAPIConfig {
+  enabled: boolean;
+  accessKey?: string;
+  secretKey?: string;
+  partnerTag: string;
+  marketplace: string; // e.g., 'www.amazon.com'
 }
 
 export interface Brand {

@@ -3,6 +3,7 @@ import { motion } from 'framer-motion';
 import { FaHeart, FaRegHeart, FaAmazon, FaTag } from 'react-icons/fa';
 import { Shoe } from '../lib/types';
 import { useSneakers } from '../hooks/useSneakers';
+import { shouldShowPrice, formatPrice, AFFILIATE_TAG } from '../lib/supabaseClient';
 
 interface Props {
   shoe: Shoe;
@@ -14,10 +15,12 @@ export const SneakerCard: React.FC<Props> = ({ shoe, variant = 'grid' }) => {
   const [isLiked, setIsLiked] = useState(false);
 
   const getAffiliateLink = (url: string) => {
-    if (url.includes('tag=shoeswiper-20')) return url;
+    if (url.includes(`tag=${AFFILIATE_TAG}`)) return url;
     const separator = url.includes('?') ? '&' : '?';
-    return `${url}${separator}tag=shoeswiper-20`;
+    return `${url}${separator}tag=${AFFILIATE_TAG}`;
   };
+
+  const showPrice = shouldShowPrice(shoe.price);
 
   const handleBuyClick = () => {
     trackClick(shoe.id);
@@ -29,9 +32,9 @@ export const SneakerCard: React.FC<Props> = ({ shoe, variant = 'grid' }) => {
     setIsLiked(!isLiked);
   };
 
-  const isOnSale = shoe.sale_price && shoe.sale_price < shoe.price;
-  const discount = isOnSale 
-    ? Math.round(((shoe.price - shoe.sale_price!) / shoe.price) * 100) 
+  const isOnSale = showPrice && shoe.sale_price && shoe.sale_price < (shoe.price || 0);
+  const discount = isOnSale && shoe.price
+    ? Math.round(((shoe.price - shoe.sale_price!) / shoe.price) * 100)
     : 0;
 
   // Render Grid Version (Search Results/Profile)
@@ -61,20 +64,24 @@ export const SneakerCard: React.FC<Props> = ({ shoe, variant = 'grid' }) => {
         <div className="p-3">
           <p className="text-xs text-zinc-500 font-bold uppercase">{shoe.brand}</p>
           <h3 className="text-sm font-medium text-white line-clamp-1">{shoe.name}</h3>
-          
+
           <div className="mt-3 flex items-center justify-between">
-            <div className="flex flex-col">
-              {isOnSale && <span className="text-[10px] text-zinc-500 line-through">${shoe.price}</span>}
-              <span className={`font-bold ${isOnSale ? 'text-red-400' : 'text-orange-500'}`}>
-                ${isOnSale ? shoe.sale_price : shoe.price}
-              </span>
-            </div>
-            
-            <button 
+            {showPrice ? (
+              <div className="flex flex-col">
+                {isOnSale && <span className="text-[10px] text-zinc-500 line-through">{formatPrice(shoe.price)}</span>}
+                <span className={`font-bold ${isOnSale ? 'text-red-400' : 'text-orange-500'}`}>
+                  {formatPrice(isOnSale ? shoe.sale_price : shoe.price)}
+                </span>
+              </div>
+            ) : (
+              <span className="text-xs text-zinc-400">See price on Amazon</span>
+            )}
+
+            <button
               onClick={handleBuyClick}
               className="bg-white text-black px-3 py-1.5 rounded-lg text-xs font-bold flex items-center gap-1 hover:bg-zinc-200"
             >
-              <FaAmazon /> Buy
+              <FaAmazon /> Shop
             </button>
           </div>
         </div>
@@ -109,18 +116,22 @@ export const SneakerCard: React.FC<Props> = ({ shoe, variant = 'grid' }) => {
               ))}
             </div>
             <h2 className="text-3xl font-black text-white leading-tight mb-2 shadow-sm">{shoe.name}</h2>
-            <div className="flex items-center gap-3">
-              <span className="text-2xl font-bold text-orange-400">${shoe.price}</span>
-              <span className="text-zinc-400 text-sm">Free Shipping via Amazon</span>
-            </div>
+            {showPrice ? (
+              <div className="flex items-center gap-3">
+                <span className="text-2xl font-bold text-orange-400">{formatPrice(shoe.price)}</span>
+                <span className="text-zinc-400 text-sm">Free Shipping via Amazon</span>
+              </div>
+            ) : (
+              <span className="text-zinc-400 text-sm">Shop on Amazon for current price</span>
+            )}
           </div>
         </div>
 
-        <button 
+        <button
           onClick={handleBuyClick}
           className="mt-6 w-full bg-white text-black font-black py-4 rounded-xl flex items-center justify-center gap-2 text-lg hover:scale-[1.02] active:scale-95 transition-all shadow-lg shadow-white/10"
         >
-          <FaAmazon className="text-xl" /> BUY NOW ON AMAZON
+          <FaAmazon className="text-xl" /> SHOP ON AMAZON
         </button>
       </div>
 
