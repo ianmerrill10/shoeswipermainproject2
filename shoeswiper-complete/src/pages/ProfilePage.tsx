@@ -1,0 +1,218 @@
+import React, { useEffect, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { supabase, ADMIN_EMAIL } from '../lib/supabaseClient';
+import { FaCog, FaSignOutAlt, FaHeart, FaShoppingBag, FaShieldAlt, FaGem } from 'react-icons/fa';
+import { Profile, Shoe } from '../lib/types';
+import { SneakerCard } from '../components/SneakerCard';
+
+type Tab = 'favorites' | 'closet';
+
+const ProfilePage: React.FC = () => {
+  const navigate = useNavigate();
+  const [profile, setProfile] = useState<Profile | null>(null);
+  const [favorites, setFavorites] = useState<Shoe[]>([]);
+  const [closet, setCloset] = useState<Shoe[]>([]);
+  const [activeTab, setActiveTab] = useState<Tab>('favorites');
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    loadProfile();
+  }, []);
+
+  const loadProfile = async () => {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) {
+      navigate('/auth');
+      return;
+    }
+
+    // Get profile
+    const { data: profileData } = await supabase
+      .from('profiles')
+      .select('*')
+      .eq('id', user.id)
+      .single();
+
+    if (profileData) {
+      setProfile(profileData);
+    } else {
+      setProfile({
+        id: user.id,
+        email: user.email,
+        username: user.user_metadata?.username || 'User',
+        avatar_url: user.user_metadata?.avatar_url,
+        created_at: user.created_at,
+      });
+    }
+
+    // Get favorites
+    const { data: favData } = await supabase
+      .from('favorites')
+      .select('shoe:shoes(*)')
+      .eq('user_id', user.id);
+
+    if (favData) {
+      setFavorites(favData.map((f: any) => f.shoe).filter(Boolean));
+    }
+
+    // Get closet
+    const { data: closetData } = await supabase
+      .from('user_sneakers')
+      .select('shoe:shoes(*)')
+      .eq('user_id', user.id);
+
+    if (closetData) {
+      setCloset(closetData.map((c: any) => c.shoe).filter(Boolean));
+    }
+
+    setLoading(false);
+  };
+
+  const handleSignOut = async () => {
+    await supabase.auth.signOut();
+    navigate('/');
+  };
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-zinc-950 flex items-center justify-center">
+        <div className="w-8 h-8 border-2 border-orange-500 border-t-transparent rounded-full animate-spin" />
+      </div>
+    );
+  }
+
+  const isAdmin = profile?.email === ADMIN_EMAIL;
+
+  return (
+    <div className="min-h-screen bg-zinc-950 pb-24">
+      {/* Header */}
+      <div className="bg-gradient-to-b from-orange-500/20 to-transparent p-6 pt-12">
+        <div className="flex justify-between items-start mb-6">
+          <div className="flex items-center gap-4">
+            <div className="w-20 h-20 rounded-full bg-zinc-800 border-2 border-orange-500 overflow-hidden">
+              {profile?.avatar_url ? (
+                <img src={profile.avatar_url} alt="" className="w-full h-full object-cover" />
+              ) : (
+                <div className="w-full h-full flex items-center justify-center text-2xl font-bold text-orange-500">
+                  {profile?.username?.[0]?.toUpperCase() || '?'}
+                </div>
+              )}
+            </div>
+            <div>
+              <h1 className="text-xl font-bold text-white">{profile?.username || 'User'}</h1>
+              <p className="text-zinc-400 text-sm">{profile?.email}</p>
+              {isAdmin && (
+                <span className="inline-flex items-center gap-1 mt-1 text-xs text-orange-400 bg-orange-500/10 px-2 py-0.5 rounded-full">
+                  <FaShieldAlt /> Admin
+                </span>
+              )}
+            </div>
+          </div>
+          
+          <div className="flex gap-2">
+            <button className="p-2 bg-zinc-800 rounded-lg text-zinc-400 hover:text-white">
+              <FaCog />
+            </button>
+            <button onClick={handleSignOut} className="p-2 bg-zinc-800 rounded-lg text-zinc-400 hover:text-red-400">
+              <FaSignOutAlt />
+            </button>
+          </div>
+        </div>
+
+        {/* Stats */}
+        <div className="grid grid-cols-3 gap-3">
+          <div className="bg-zinc-900/80 backdrop-blur rounded-xl p-3 text-center">
+            <p className="text-2xl font-bold text-white">{favorites.length}</p>
+            <p className="text-xs text-zinc-400">Favorites</p>
+          </div>
+          <div className="bg-zinc-900/80 backdrop-blur rounded-xl p-3 text-center">
+            <p className="text-2xl font-bold text-white">{closet.length}</p>
+            <p className="text-xs text-zinc-400">Closet</p>
+          </div>
+          <button
+            onClick={() => navigate('/nft')}
+            className="bg-gradient-to-r from-violet-500/20 to-fuchsia-500/20 border border-violet-500/30 rounded-xl p-3 text-center hover:border-violet-400"
+          >
+            <p className="text-lg font-bold text-violet-300"><FaGem className="inline" /></p>
+            <p className="text-xs text-violet-300">My NFTs</p>
+          </button>
+        </div>
+      </div>
+
+      {/* Admin Button */}
+      {isAdmin && (
+        <div className="px-6 mb-4">
+          <button
+            onClick={() => navigate('/admin')}
+            className="w-full py-3 bg-gradient-to-r from-orange-500 to-red-500 rounded-xl text-white font-bold flex items-center justify-center gap-2"
+          >
+            <FaShieldAlt /> Open Admin Dashboard
+          </button>
+        </div>
+      )}
+
+      {/* Tabs */}
+      <div className="sticky top-0 bg-zinc-950 border-b border-zinc-800 z-10">
+        <div className="flex px-6">
+          <button
+            onClick={() => setActiveTab('favorites')}
+            className={`flex-1 py-4 text-sm font-medium flex items-center justify-center gap-2 border-b-2 transition-colors ${
+              activeTab === 'favorites'
+                ? 'text-orange-500 border-orange-500'
+                : 'text-zinc-400 border-transparent'
+            }`}
+          >
+            <FaHeart /> Favorites
+          </button>
+          <button
+            onClick={() => setActiveTab('closet')}
+            className={`flex-1 py-4 text-sm font-medium flex items-center justify-center gap-2 border-b-2 transition-colors ${
+              activeTab === 'closet'
+                ? 'text-orange-500 border-orange-500'
+                : 'text-zinc-400 border-transparent'
+            }`}
+          >
+            <FaShoppingBag /> My Closet
+          </button>
+        </div>
+      </div>
+
+      {/* Content */}
+      <div className="p-4">
+        {activeTab === 'favorites' && (
+          favorites.length === 0 ? (
+            <div className="text-center py-16">
+              <FaHeart className="text-4xl text-zinc-700 mx-auto mb-4" />
+              <p className="text-zinc-400">No favorites yet</p>
+              <p className="text-zinc-500 text-sm mt-1">Like sneakers to save them here</p>
+            </div>
+          ) : (
+            <div className="grid grid-cols-2 gap-3">
+              {favorites.map(shoe => (
+                <SneakerCard key={shoe.id} shoe={shoe} variant="grid" />
+              ))}
+            </div>
+          )
+        )}
+
+        {activeTab === 'closet' && (
+          closet.length === 0 ? (
+            <div className="text-center py-16">
+              <FaShoppingBag className="text-4xl text-zinc-700 mx-auto mb-4" />
+              <p className="text-zinc-400">No sneakers in your closet</p>
+              <p className="text-zinc-500 text-sm mt-1">Add sneakers you own to mint NFTs</p>
+            </div>
+          ) : (
+            <div className="grid grid-cols-2 gap-3">
+              {closet.map(shoe => (
+                <SneakerCard key={shoe.id} shoe={shoe} variant="grid" />
+              ))}
+            </div>
+          )
+        )}
+      </div>
+    </div>
+  );
+};
+
+export default ProfilePage;
