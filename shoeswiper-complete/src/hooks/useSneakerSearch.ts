@@ -1,8 +1,7 @@
 import { useState } from 'react';
-import { createClient } from '@supabase/supabase-js';
 import { Shoe } from '../lib/types';
-
-const supabase = createClient(import.meta.env.VITE_SUPABASE_URL, import.meta.env.VITE_SUPABASE_ANON_KEY);
+import { DEMO_MODE, searchShoes } from '../lib/mockData';
+import { supabase } from '../lib/supabaseClient';
 
 export interface SearchFilters {
   brands?: string[];
@@ -20,8 +19,31 @@ export const useSneakerSearch = () => {
 
   const searchSneakers = async (query: string, filters: SearchFilters = {}) => {
     setIsSearching(true);
-    
+
     try {
+      // DEMO MODE: Use mock data
+      if (DEMO_MODE) {
+        let results = searchShoes(query);
+
+        // Apply filters
+        if (filters.brands && filters.brands.length > 0) {
+          results = results.filter(shoe => filters.brands!.includes(shoe.brand));
+        }
+        if (filters.gender) {
+          results = results.filter(shoe => shoe.gender === filters.gender);
+        }
+        if (filters.styleTags && filters.styleTags.length > 0) {
+          results = results.filter(shoe =>
+            shoe.style_tags.some(tag => filters.styleTags!.includes(tag))
+          );
+        }
+
+        setResults(results.slice(0, 50));
+        setIsSearching(false);
+        return;
+      }
+
+      // PRODUCTION MODE: Use Supabase
       let dbQuery = supabase.from('shoes').select('*').eq('is_active', true);
 
       // 1. Text Search (if query exists)
