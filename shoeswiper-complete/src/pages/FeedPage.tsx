@@ -1,5 +1,5 @@
-import React, { useEffect, useState } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
+import React, { useEffect, useState, useRef } from 'react';
+import { motion, AnimatePresence, PanInfo } from 'framer-motion';
 import { FaHeart, FaShare, FaBookmark, FaAmazon } from 'react-icons/fa';
 import { useSneakers } from '../hooks/useSneakers';
 import { getAffiliateUrl, shouldShowPrice, formatPrice } from '../lib/supabaseClient';
@@ -10,6 +10,8 @@ const FeedPage: React.FC = () => {
   const [shoes, setShoes] = useState<Shoe[]>([]);
   const [currentIndex, setCurrentIndex] = useState(0);
   const [page, setPage] = useState(0);
+  const [direction, setDirection] = useState(0);
+  const constraintsRef = useRef(null);
 
   useEffect(() => {
     loadShoes();
@@ -39,6 +41,42 @@ const FeedPage: React.FC = () => {
     window.open(getAffiliateUrl(shoe.amazon_url), '_blank');
   };
 
+  // Swipe handler - TikTok style vertical swipe
+  const handleDragEnd = (event: MouseEvent | TouchEvent | PointerEvent, info: PanInfo) => {
+    const swipeThreshold = 50;
+    const velocityThreshold = 500;
+
+    // Swipe up = next shoe
+    if (info.offset.y < -swipeThreshold || info.velocity.y < -velocityThreshold) {
+      if (currentIndex < shoes.length - 1) {
+        setDirection(1);
+        setCurrentIndex(currentIndex + 1);
+      }
+    }
+    // Swipe down = previous shoe
+    else if (info.offset.y > swipeThreshold || info.velocity.y > velocityThreshold) {
+      if (currentIndex > 0) {
+        setDirection(-1);
+        setCurrentIndex(currentIndex - 1);
+      }
+    }
+  };
+
+  const slideVariants = {
+    enter: (direction: number) => ({
+      y: direction > 0 ? '100%' : '-100%',
+      opacity: 0
+    }),
+    center: {
+      y: 0,
+      opacity: 1
+    },
+    exit: (direction: number) => ({
+      y: direction > 0 ? '-100%' : '100%',
+      opacity: 0
+    })
+  };
+
   const currentShoe = shoes[currentIndex];
 
   if (loading && shoes.length === 0) {
@@ -64,14 +102,21 @@ const FeedPage: React.FC = () => {
   }
 
   return (
-    <div className="h-screen bg-black overflow-hidden snap-mandatory snap-y hide-scrollbar">
-      <AnimatePresence mode="wait">
+    <div ref={constraintsRef} className="h-screen bg-black overflow-hidden touch-none">
+      <AnimatePresence mode="wait" custom={direction}>
         <motion.div
           key={currentShoe.id}
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          exit={{ opacity: 0 }}
-          className="relative h-screen w-full feed-card snap-start"
+          custom={direction}
+          variants={slideVariants}
+          initial="enter"
+          animate="center"
+          exit="exit"
+          transition={{ type: 'spring', stiffness: 300, damping: 30 }}
+          drag="y"
+          dragConstraints={{ top: 0, bottom: 0 }}
+          dragElastic={0.2}
+          onDragEnd={handleDragEnd}
+          className="relative h-screen w-full cursor-grab active:cursor-grabbing"
         >
           {/* Background Image */}
           <img
@@ -159,31 +204,24 @@ const FeedPage: React.FC = () => {
             </button>
           </div>
 
-          {/* Navigation Hint */}
+          {/* Swipe Hint */}
           <div className="absolute bottom-24 left-1/2 -translate-x-1/2">
-            <div className="flex gap-1">
-              {shoes.slice(Math.max(0, currentIndex - 2), currentIndex + 3).map((_, idx) => (
-                <div
-                  key={idx}
-                  className={`w-1 h-1 rounded-full ${idx === 2 ? 'bg-white' : 'bg-white/30'}`}
-                />
-              ))}
+            <div className="flex flex-col items-center gap-2">
+              <div className="flex gap-1">
+                {shoes.slice(Math.max(0, currentIndex - 2), currentIndex + 3).map((_, idx) => (
+                  <div
+                    key={idx}
+                    className={`w-1 h-1 rounded-full ${idx === Math.min(2, currentIndex) ? 'bg-white' : 'bg-white/30'}`}
+                  />
+                ))}
+              </div>
+              {currentIndex === 0 && (
+                <p className="text-zinc-500 text-xs animate-pulse">Swipe up for more</p>
+              )}
             </div>
           </div>
         </motion.div>
       </AnimatePresence>
-
-      {/* Swipe Navigation */}
-      <div className="absolute inset-0 flex">
-        <button
-          className="w-1/2 h-full"
-          onClick={() => setCurrentIndex(Math.max(0, currentIndex - 1))}
-        />
-        <button
-          className="w-1/2 h-full"
-          onClick={() => setCurrentIndex(currentIndex + 1)}
-        />
-      </div>
     </div>
   );
 };
