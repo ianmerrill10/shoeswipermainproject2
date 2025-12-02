@@ -1,8 +1,7 @@
 import React, { useEffect, useState } from 'react';
-import { createClient } from '@supabase/supabase-js';
 import { FaUserSlash, FaUserCheck, FaSearch } from 'react-icons/fa';
-
-const supabase = createClient(import.meta.env.VITE_SUPABASE_URL, import.meta.env.VITE_SUPABASE_ANON_KEY);
+import { DEMO_MODE } from '../../lib/mockData';
+import { supabase } from '../../lib/supabaseClient';
 
 export const UserManager: React.FC = () => {
   const [users, setUsers] = useState<any[]>([]);
@@ -10,6 +9,19 @@ export const UserManager: React.FC = () => {
 
   useEffect(() => {
     const fetchUsers = async () => {
+      // DEMO MODE: Show demo user
+      if (DEMO_MODE) {
+        setUsers([{
+          id: 'demo-user',
+          email: 'demo@shoeswiper.com',
+          username: 'Demo User',
+          created_at: new Date().toISOString(),
+          is_banned: false
+        }]);
+        return;
+      }
+
+      // PRODUCTION MODE: Fetch from Supabase
       const { data } = await supabase.from('profiles').select('*');
       setUsers(data || []);
     };
@@ -17,6 +29,14 @@ export const UserManager: React.FC = () => {
   }, []);
 
   const toggleBan = async (id: string, currentStatus: boolean) => {
+    // DEMO MODE: Just update local state
+    if (DEMO_MODE) {
+      console.log('[Demo] Toggle ban:', id);
+      setUsers(users.map(u => u.id === id ? { ...u, is_banned: !currentStatus } : u));
+      return;
+    }
+
+    // PRODUCTION MODE: Update in Supabase
     await supabase.from('profiles').update({ is_banned: !currentStatus }).eq('id', id);
     setUsers(users.map(u => u.id === id ? { ...u, is_banned: !currentStatus } : u));
   };

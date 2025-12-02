@@ -1,10 +1,7 @@
 import { useState } from 'react';
-import { createClient } from '@supabase/supabase-js';
 import { Shoe } from '../lib/types';
-
-const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
-const supabaseKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
-const supabase = createClient(supabaseUrl, supabaseKey);
+import { DEMO_MODE, MOCK_SHOES } from '../lib/mockData';
+import { supabase } from '../lib/supabaseClient';
 
 export interface OutfitAnalysis {
   rating: number;
@@ -22,6 +19,16 @@ export const useOutfitAnalysis = () => {
 
   // Helper to fetch recommendations using our SQL function
   const fetchRecommendations = async (styles: string[], colors: string[]) => {
+    // DEMO MODE: Use mock data
+    if (DEMO_MODE) {
+      const matches = MOCK_SHOES.filter(shoe =>
+        shoe.style_tags.some(tag => styles.includes(tag.toLowerCase()))
+      ).slice(0, 5);
+      setRecommendations(matches.length > 0 ? matches : MOCK_SHOES.slice(0, 5));
+      return;
+    }
+
+    // PRODUCTION MODE: Use Supabase
     try {
       // Call the RPC function we created in SQL
       const { data, error } = await supabase.rpc('match_shoes_for_outfit', {
@@ -57,6 +64,22 @@ export const useOutfitAnalysis = () => {
     setIsAnalyzing(true);
     setError(null);
 
+    // DEMO MODE: Show demo analysis
+    if (DEMO_MODE) {
+      const mockResult: OutfitAnalysis = {
+        rating: 8,
+        style_tags: ['streetwear', 'casual'],
+        dominant_colors: ['black', 'white'],
+        detected_shoe: 'Demo Analysis',
+        feedback: 'Great style! Here are some sneakers that would match perfectly.'
+      };
+      setAnalysis(mockResult);
+      await fetchRecommendations(mockResult.style_tags, mockResult.dominant_colors);
+      setIsAnalyzing(false);
+      return;
+    }
+
+    // PRODUCTION MODE: Use Supabase AI
     try {
       const base64Image = await new Promise<string>((resolve) => {
         const reader = new FileReader();
@@ -72,7 +95,7 @@ export const useOutfitAnalysis = () => {
 
       const result: OutfitAnalysis = aiData;
       setAnalysis(result);
-      
+
       // Perform the smart match
       await fetchRecommendations(result.style_tags, result.dominant_colors);
 
