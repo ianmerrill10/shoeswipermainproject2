@@ -47,6 +47,15 @@ export interface Shoe {
   // Timestamps
   created_at: string;
   updated_at: string;
+
+  // Music (for feed experience)
+  music?: {
+    song: string;
+    artist: string;
+    spotifyUrl?: string;
+    appleMusicUrl?: string;
+    amazonMusicUrl?: string;
+  };
 }
 
 // ============================================
