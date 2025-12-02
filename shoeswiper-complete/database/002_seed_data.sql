@@ -72,7 +72,7 @@ INSERT INTO shoes (name, brand, category_slug, price, retail_price, image_url, a
  ARRAY['white'],
  'unisex',
  ARRAY['7', '8', '9', '10', '11', '12'],
- 'Nothing as icons an icon. The Air Max 90 stays true to its OG running roots with the iconic Waffle sole, stitched overlays and classic TPU details.',
+ 'Nothing as iconic as an icon. The Air Max 90 stays true to its OG running roots with the iconic Waffle sole, stitched overlays and classic TPU details.',
  true, false, 256, 534, 85),
 
 ('Air Max 90 Black/White', 'Nike', 'lifestyle', 130.00, 130.00,
@@ -134,7 +134,7 @@ INSERT INTO shoes (name, brand, category_slug, price, retail_price, image_url, a
  ARRAY['various'],
  'unisex',
  ARRAY['7', '8', '9', '10', '11', '12'],
- 'An icon for casual kicks. The Air Jordan 1 Low offers a clean, classic look that''s icons in every colorway.',
+ 'An icon for casual kicks. The Air Jordan 1 Low offers a clean, classic look that''s iconic in every colorway.',
  true, false, 356, 712, 86),
 
 ('Air Jordan 1 Mid', 'Jordan', 'lifestyle', 125.00, 125.00,
@@ -144,7 +144,7 @@ INSERT INTO shoes (name, brand, category_slug, price, retail_price, image_url, a
  ARRAY['various'],
  'unisex',
  ARRAY['7', '8', '9', '10', '11', '12', '13'],
- 'The Air Jordan 1 Mid offers a fresh look that''s icons. Premium leather and signature Wings logo.',
+ 'The Air Jordan 1 Mid offers a fresh look that''s iconic. Premium leather and signature Wings logo.',
  true, false, 398, 789, 88),
 
 ('Air Jordan 1 Retro High OG', 'Jordan', 'basketball', 180.00, 180.00,
