@@ -1,15 +1,20 @@
 import { useState, useEffect } from 'react';
-import { createClient } from '@supabase/supabase-js';
 import { Shoe } from '../lib/types';
-
-const supabase = createClient(import.meta.env.VITE_SUPABASE_URL, import.meta.env.VITE_SUPABASE_ANON_KEY);
-const ADMIN_EMAIL = 'dadsellsgadgets@gmail.com';
+import { DEMO_MODE, MOCK_SHOES } from '../lib/mockData';
+import { supabase, ADMIN_EMAIL } from '../lib/supabaseClient';
 
 export const useAdmin = () => {
   const [loading, setLoading] = useState(false);
   const [isAdmin, setIsAdmin] = useState<boolean | null>(null);
 
   useEffect(() => {
+    // DEMO MODE: Always admin
+    if (DEMO_MODE) {
+      setIsAdmin(true);
+      return;
+    }
+
+    // PRODUCTION MODE: Check user
     const checkUser = async () => {
       const { data: { user } } = await supabase.auth.getUser();
       setIsAdmin(user?.email === ADMIN_EMAIL);
@@ -29,6 +34,13 @@ export const useAdmin = () => {
   };
 
   const logAction = async (action: string, table: string, id: string | undefined, details: any) => {
+    // DEMO MODE: Just log to console
+    if (DEMO_MODE) {
+      console.log(`[Demo] Audit: ${action} on ${table}`, details);
+      return;
+    }
+
+    // PRODUCTION MODE: Log to Supabase
     await supabase.from('audit_logs').insert({
       admin_email: ADMIN_EMAIL,
       action,
@@ -39,6 +51,12 @@ export const useAdmin = () => {
   };
 
   const getProducts = async () => {
+    // DEMO MODE: Return mock data
+    if (DEMO_MODE) {
+      return MOCK_SHOES;
+    }
+
+    // PRODUCTION MODE: Use Supabase
     const { data, error } = await supabase
       .from('shoes')
       .select('*')
@@ -48,6 +66,13 @@ export const useAdmin = () => {
   };
 
   const saveProduct = async (product: Partial<Shoe>) => {
+    // DEMO MODE: Just log
+    if (DEMO_MODE) {
+      console.log('[Demo] Save product:', product);
+      return [product];
+    }
+
+    // PRODUCTION MODE: Use Supabase
     setLoading(true);
     try {
       const cleanProduct = {
@@ -72,6 +97,13 @@ export const useAdmin = () => {
   };
 
   const deleteProduct = async (id: string) => {
+    // DEMO MODE: Just log
+    if (DEMO_MODE) {
+      console.log('[Demo] Delete product:', id);
+      return;
+    }
+
+    // PRODUCTION MODE: Use Supabase
     setLoading(true);
     try {
       const { error } = await supabase.from('shoes').delete().eq('id', id);
@@ -83,9 +115,19 @@ export const useAdmin = () => {
   };
 
   const getAnalytics = async () => {
+    // DEMO MODE: Return mock analytics
+    if (DEMO_MODE) {
+      return {
+        totalUsers: 1,
+        totalProducts: MOCK_SHOES.length,
+        clicks: []
+      };
+    }
+
+    // PRODUCTION MODE: Use Supabase
     const { count: userCount } = await supabase.from('profiles').select('*', { count: 'exact', head: true });
     const { count: productCount } = await supabase.from('shoes').select('*', { count: 'exact', head: true });
-    
+
     const { data: clicks } = await supabase
       .from('affiliate_clicks')
       .select('clicked_at')
