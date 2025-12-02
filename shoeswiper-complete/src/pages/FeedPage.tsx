@@ -1,6 +1,7 @@
 import React, { useEffect, useState, useRef } from 'react';
 import { FaHeart, FaShare, FaBookmark, FaAmazon, FaMusic } from 'react-icons/fa';
 import { useSneakers } from '../hooks/useSneakers';
+import { useAnalytics } from '../hooks/useAnalytics';
 import { getAffiliateUrl, shouldShowPrice, formatPrice } from '../lib/supabaseClient';
 import { Shoe } from '../lib/types';
 import ShoePanel from '../components/ShoePanel';
@@ -8,6 +9,7 @@ import MusicPanel from '../components/MusicPanel';
 
 const FeedPage: React.FC = () => {
   const { getInfiniteFeed, trackView, trackClick, loading } = useSneakers();
+  const { trackPanelOpen, trackShare, trackFavorite, trackShoeClick } = useAnalytics();
   const [shoes, setShoes] = useState<Shoe[]>([]);
   const [currentIndex, setCurrentIndex] = useState(0);
   const [page, setPage] = useState(0);
@@ -56,10 +58,10 @@ const FeedPage: React.FC = () => {
         card?.scrollIntoView({ behavior: 'smooth' });
       } else if (e.key === 'ArrowLeft') {
         e.preventDefault();
-        setShowShoePanel(true);
+        handleOpenShoePanel();
       } else if (e.key === 'ArrowRight') {
         e.preventDefault();
-        setShowMusicPanel(true);
+        handleOpenMusicPanel();
       } else if (e.key === 'Escape') {
         setShowShoePanel(false);
         setShowMusicPanel(false);
@@ -93,10 +95,10 @@ const FeedPage: React.FC = () => {
       if (Math.abs(diffX) > Math.abs(diffY) && Math.abs(diffX) > 50) {
         if (diffX > 0) {
           // Swiped right - open ShoePanel
-          setShowShoePanel(true);
+          handleOpenShoePanel();
         } else {
           // Swiped left - open MusicPanel
-          setShowMusicPanel(true);
+          handleOpenMusicPanel();
         }
       }
     };
@@ -134,7 +136,47 @@ const FeedPage: React.FC = () => {
 
   const handleBuyClick = (shoe: Shoe) => {
     trackClick(shoe.id);
+    trackShoeClick(shoe.id);
     window.open(getAffiliateUrl(shoe.amazon_url), '_blank');
+  };
+
+  const handleOpenShoePanel = () => {
+    if (shoes[currentIndex]) {
+      trackPanelOpen('shoe', shoes[currentIndex].id);
+    }
+    setShowShoePanel(true);
+  };
+
+  const handleOpenMusicPanel = () => {
+    if (shoes[currentIndex]) {
+      trackPanelOpen('music', shoes[currentIndex].id);
+    }
+    setShowMusicPanel(true);
+  };
+
+  const handleShare = async (shoe: Shoe) => {
+    const url = getAffiliateUrl(shoe.amazon_url);
+    if (navigator.share) {
+      try {
+        await navigator.share({
+          title: shoe.name,
+          text: `Check out these ${shoe.brand} ${shoe.name}!`,
+          url,
+        });
+        trackShare(shoe.id, 'native');
+      } catch (err) {
+        console.log('Share cancelled');
+      }
+    } else {
+      navigator.clipboard.writeText(url);
+      trackShare(shoe.id, 'clipboard');
+      alert('Link copied to clipboard!');
+    }
+  };
+
+  const handleFavorite = (shoe: Shoe) => {
+    trackFavorite(shoe.id, 'add');
+    // TODO: Implement actual favorite storage
   };
 
   if (loading && shoes.length === 0) {
@@ -239,22 +281,31 @@ const FeedPage: React.FC = () => {
 
           {/* Side Actions */}
           <div className="absolute right-3 bottom-44 flex flex-col gap-5 z-10">
-            <button className="flex flex-col items-center gap-1">
-              <div className="w-11 h-11 bg-black/30 backdrop-blur-sm rounded-full flex items-center justify-center">
+            <button
+              onClick={() => handleFavorite(shoe)}
+              className="flex flex-col items-center gap-1"
+            >
+              <div className="w-11 h-11 bg-black/30 backdrop-blur-sm rounded-full flex items-center justify-center active:scale-90 transition-transform">
                 <FaHeart className="text-xl text-white" />
               </div>
               <span className="text-xs font-bold text-white drop-shadow">{shoe.favorite_count}</span>
             </button>
 
-            <button className="flex flex-col items-center gap-1">
-              <div className="w-11 h-11 bg-black/30 backdrop-blur-sm rounded-full flex items-center justify-center">
+            <button
+              onClick={() => handleFavorite(shoe)}
+              className="flex flex-col items-center gap-1"
+            >
+              <div className="w-11 h-11 bg-black/30 backdrop-blur-sm rounded-full flex items-center justify-center active:scale-90 transition-transform">
                 <FaBookmark className="text-xl text-white" />
               </div>
               <span className="text-xs font-bold text-white drop-shadow">Save</span>
             </button>
 
-            <button className="flex flex-col items-center gap-1">
-              <div className="w-11 h-11 bg-black/30 backdrop-blur-sm rounded-full flex items-center justify-center">
+            <button
+              onClick={() => handleShare(shoe)}
+              className="flex flex-col items-center gap-1"
+            >
+              <div className="w-11 h-11 bg-black/30 backdrop-blur-sm rounded-full flex items-center justify-center active:scale-90 transition-transform">
                 <FaShare className="text-xl text-white" />
               </div>
               <span className="text-xs font-bold text-white drop-shadow">Share</span>
@@ -264,7 +315,7 @@ const FeedPage: React.FC = () => {
           {/* Music Bar - Bottom of card */}
           {shoe.music && (
             <button
-              onClick={() => setShowMusicPanel(true)}
+              onClick={handleOpenMusicPanel}
               className="absolute bottom-20 left-4 right-4 flex items-center gap-3 bg-black/40 backdrop-blur-sm rounded-full px-3 py-2 z-10"
             >
               {/* Spinning Disc */}

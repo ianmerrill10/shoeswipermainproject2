@@ -1,6 +1,7 @@
 import React from 'react';
 import { FaTimes, FaSpotify, FaApple, FaAmazon } from 'react-icons/fa';
 import { Shoe } from '../lib/types';
+import { useAnalytics, MusicPlatform } from '../hooks/useAnalytics';
 
 interface MusicPanelProps {
   shoe: Shoe;
@@ -10,6 +11,14 @@ interface MusicPanelProps {
 
 const MusicPanel: React.FC<MusicPanelProps> = ({ shoe, isOpen, onClose }) => {
   const music = shoe.music;
+  const { trackMusicClick } = useAnalytics();
+
+  const handleMusicClick = (platform: MusicPlatform, url: string) => {
+    if (music) {
+      trackMusicClick(platform, shoe.id, music.song, music.artist);
+    }
+    window.open(url, '_blank');
+  };
 
   // Generate a placeholder album art based on artist name
   const getAlbumArt = (artist: string) => {
@@ -94,44 +103,38 @@ const MusicPanel: React.FC<MusicPanelProps> = ({ shoe, isOpen, onClose }) => {
 
           {/* Spotify */}
           {music.spotifyUrl && (
-            <a
-              href={music.spotifyUrl}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="flex items-center gap-4 bg-[#1DB954] hover:bg-[#1ed760] text-white font-bold py-4 px-6 rounded-xl transition-colors"
+            <button
+              onClick={() => handleMusicClick('spotify', music.spotifyUrl!)}
+              className="w-full flex items-center gap-4 bg-[#1DB954] hover:bg-[#1ed760] text-white font-bold py-4 px-6 rounded-xl transition-colors"
             >
               <FaSpotify className="text-2xl" />
-              <span className="flex-1">Play on Spotify</span>
+              <span className="flex-1 text-left">Play on Spotify</span>
               <span className="text-sm opacity-75">Free</span>
-            </a>
+            </button>
           )}
 
           {/* Apple Music */}
           {music.appleMusicUrl && (
-            <a
-              href={music.appleMusicUrl}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="flex items-center gap-4 bg-gradient-to-r from-[#FA57C1] to-[#FC5C7D] hover:opacity-90 text-white font-bold py-4 px-6 rounded-xl transition-opacity"
+            <button
+              onClick={() => handleMusicClick('apple_music', music.appleMusicUrl!)}
+              className="w-full flex items-center gap-4 bg-gradient-to-r from-[#FA57C1] to-[#FC5C7D] hover:opacity-90 text-white font-bold py-4 px-6 rounded-xl transition-opacity"
             >
               <FaApple className="text-2xl" />
-              <span className="flex-1">Play on Apple Music</span>
+              <span className="flex-1 text-left">Play on Apple Music</span>
               <span className="text-xs bg-white/20 px-2 py-0.5 rounded">Affiliate</span>
-            </a>
+            </button>
           )}
 
           {/* Amazon Music */}
           {music.amazonMusicUrl && (
-            <a
-              href={music.amazonMusicUrl}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="flex items-center gap-4 bg-[#00A8E1] hover:bg-[#00bfff] text-white font-bold py-4 px-6 rounded-xl transition-colors"
+            <button
+              onClick={() => handleMusicClick('amazon_music', music.amazonMusicUrl!)}
+              className="w-full flex items-center gap-4 bg-[#00A8E1] hover:bg-[#00bfff] text-white font-bold py-4 px-6 rounded-xl transition-colors"
             >
               <FaAmazon className="text-2xl" />
-              <span className="flex-1">Play on Amazon Music</span>
+              <span className="flex-1 text-left">Play on Amazon Music</span>
               <span className="text-xs bg-white/20 px-2 py-0.5 rounded">Affiliate</span>
-            </a>
+            </button>
           )}
         </div>
 
