@@ -110,6 +110,22 @@
   animation: marquee 10s linear infinite;
 }
 
+/* Slide up animation for modals */
+@keyframes slide-up {
+  0% {
+    transform: translateY(100%);
+    opacity: 0;
+  }
+  100% {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+
+.animate-slide-up {
+  animation: slide-up 0.3s ease-out forwards;
+}
+
 /* Feed card full height */
 .feed-card {
   height: 100svh;

@@ -1,10 +1,11 @@
 import React, { useState } from 'react';
-import { FaTimes, FaAmazon, FaBookmark, FaShare, FaChevronLeft, FaChevronRight, FaCheck } from 'react-icons/fa';
+import { FaTimes, FaAmazon, FaBookmark, FaShare, FaChevronLeft, FaChevronRight, FaCheck, FaBell } from 'react-icons/fa';
 import { Shoe } from '../lib/types';
 import { getAffiliateUrl, shouldShowPrice, formatPrice } from '../lib/supabaseClient';
 import { createAffiliateShareData } from '../lib/deepLinks';
 import { useFavorites } from '../hooks/useFavorites';
 import { useAnalytics } from '../hooks/useAnalytics';
+import PriceAlertButton from './PriceAlertButton';
 
 interface ShoePanelProps {
   shoe: Shoe;
@@ -242,6 +243,11 @@ const ShoePanel: React.FC<ShoePanelProps> = ({ shoe, isOpen, onClose }) => {
             <FaAmazon className="text-2xl" />
             BUY ON AMAZON
           </button>
+
+          {/* Price Alert */}
+          <div className="flex justify-center">
+            <PriceAlertButton shoe={shoe} />
+          </div>
 
           <div className="flex gap-3">
             <button
