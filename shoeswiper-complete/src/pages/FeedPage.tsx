@@ -34,6 +34,29 @@ const FeedPage: React.FC = () => {
     }
   }, [currentIndex, shoes.length, loading]);
 
+  // Keyboard navigation
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      const container = containerRef.current;
+      if (!container || shoes.length === 0) return;
+
+      if (e.key === 'ArrowUp') {
+        e.preventDefault();
+        const prevIndex = Math.max(0, currentIndex - 1);
+        const card = container.querySelector(`[data-index="${prevIndex}"]`);
+        card?.scrollIntoView({ behavior: 'smooth' });
+      } else if (e.key === 'ArrowDown') {
+        e.preventDefault();
+        const nextIndex = Math.min(shoes.length - 1, currentIndex + 1);
+        const card = container.querySelector(`[data-index="${nextIndex}"]`);
+        card?.scrollIntoView({ behavior: 'smooth' });
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [currentIndex, shoes.length]);
+
   // Intersection Observer for tracking visible card
   useEffect(() => {
     const container = containerRef.current;
