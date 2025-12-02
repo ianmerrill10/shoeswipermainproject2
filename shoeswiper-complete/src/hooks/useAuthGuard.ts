@@ -4,6 +4,10 @@ import { User } from '@supabase/supabase-js';
 
 const ALLOWED_EMAILS = ['ianmerrill10@gmail.com'];
 
+const isEmailAllowed = (email: string | undefined): boolean => {
+  return email ? ALLOWED_EMAILS.includes(email) : false;
+};
+
 export const useAuthGuard = () => {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
@@ -14,7 +18,7 @@ export const useAuthGuard = () => {
     supabase.auth.getSession().then(({ data: { session } }) => {
       const currentUser = session?.user ?? null;
       setUser(currentUser);
-      setIsAllowed(currentUser?.email ? ALLOWED_EMAILS.includes(currentUser.email) : false);
+      setIsAllowed(isEmailAllowed(currentUser?.email));
       setLoading(false);
     });
 
@@ -22,7 +26,7 @@ export const useAuthGuard = () => {
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
       const currentUser = session?.user ?? null;
       setUser(currentUser);
-      setIsAllowed(currentUser?.email ? ALLOWED_EMAILS.includes(currentUser.email) : false);
+      setIsAllowed(isEmailAllowed(currentUser?.email));
       setLoading(false);
     });
 
