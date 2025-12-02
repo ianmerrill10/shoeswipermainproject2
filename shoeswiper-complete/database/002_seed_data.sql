@@ -100,7 +100,7 @@ INSERT INTO shoes (
     ARRAY['white'],
     'unisex',
     ARRAY['7', '7.5', '8', '8.5', '9', '9.5', '10', '10.5', '11', '11.5', '12'],
-    'Nothing as icons like iconic. The Air Max 90 stays true to its OG running roots.',
+    'Nothing as iconic as the Air Max 90. Stays true to its OG running roots.',
     true,
     false,
     287,
@@ -210,7 +210,7 @@ INSERT INTO shoes (
 -- Air Jordan 1 Low
 (
     'Air Jordan 1 Low',
-    'Nike',
+    'Jordan',
     'lifestyle',
     110.00,
     110.00,
@@ -230,7 +230,7 @@ INSERT INTO shoes (
 -- Air Jordan 1 Mid
 (
     'Air Jordan 1 Mid',
-    'Nike',
+    'Jordan',
     'basketball',
     125.00,
     125.00,
@@ -250,7 +250,7 @@ INSERT INTO shoes (
 -- Air Jordan 1 High OG
 (
     'Air Jordan 1 Retro High OG',
-    'Nike',
+    'Jordan',
     'basketball',
     180.00,
     180.00,
@@ -270,7 +270,7 @@ INSERT INTO shoes (
 -- Air Jordan 4 Retro
 (
     'Air Jordan 4 Retro',
-    'Nike',
+    'Jordan',
     'basketball',
     210.00,
     210.00,
@@ -1092,7 +1092,7 @@ INSERT INTO shoes (
 -- Jordan 3 Retro
 (
     'Air Jordan 3 Retro',
-    'Nike',
+    'Jordan',
     'basketball',
     200.00,
     200.00,
@@ -1112,7 +1112,7 @@ INSERT INTO shoes (
 -- Jordan 11 Retro
 (
     'Air Jordan 11 Retro',
-    'Nike',
+    'Jordan',
     'basketball',
     225.00,
     225.00,
