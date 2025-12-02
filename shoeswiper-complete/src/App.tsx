@@ -1,6 +1,5 @@
 import { Routes, Route, Navigate } from 'react-router-dom';
-import { useState, useEffect } from 'react';
-import { supabase } from './lib/supabaseClient';
+import { useAuthGuard } from './hooks/useAuthGuard';
 
 // Pages
 import FeedPage from './pages/FeedPage';
@@ -8,6 +7,8 @@ import SearchPage from './pages/SearchPage';
 import CheckMyFit from './pages/CheckMyFit';
 import ProfilePage from './pages/ProfilePage';
 import AuthPage from './pages/AuthPage';
+import ComingSoon from './pages/ComingSoon';
+import Unauthorized from './pages/Unauthorized';
 import NFTMarketplace from './components/nft/NFTMarketplace';
 
 // Admin Pages
@@ -20,23 +21,7 @@ import { UserManager } from './pages/admin/UserManager';
 import BottomNavigation from './components/BottomNavigation';
 
 function App() {
-  const [session, setSession] = useState<any>(null);
-  const [loading, setLoading] = useState(true);
-
-  useEffect(() => {
-    // Get initial session
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      setSession(session);
-      setLoading(false);
-    });
-
-    // Listen for auth changes
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
-      setSession(session);
-    });
-
-    return () => subscription.unsubscribe();
-  }, []);
+  const { user, loading, isAllowed } = useAuthGuard();
 
   if (loading) {
     return (
@@ -49,18 +34,38 @@ function App() {
     );
   }
 
+  // If user is logged in but not in allowed list, show Unauthorized page
+  if (user && !isAllowed) {
+    return (
+      <Routes>
+        <Route path="*" element={<Unauthorized />} />
+      </Routes>
+    );
+  }
+
+  // If not logged in or not allowed, show Coming Soon (except for /auth route)
+  if (!isAllowed) {
+    return (
+      <Routes>
+        <Route path="/auth" element={<AuthPage />} />
+        <Route path="*" element={<ComingSoon />} />
+      </Routes>
+    );
+  }
+
+  // User is authenticated and allowed - show full app
   return (
     <div className="min-h-screen bg-zinc-950">
       <Routes>
         {/* Auth Routes */}
-        <Route path="/auth" element={!session ? <AuthPage /> : <Navigate to="/" />} />
+        <Route path="/auth" element={<Navigate to="/" />} />
 
         {/* Main App Routes */}
         <Route path="/" element={<FeedPage />} />
         <Route path="/search" element={<SearchPage />} />
         <Route path="/check-fit" element={<CheckMyFit />} />
-        <Route path="/profile" element={session ? <ProfilePage /> : <Navigate to="/auth" />} />
-        <Route path="/nft" element={session ? <NFTMarketplace /> : <Navigate to="/auth" />} />
+        <Route path="/profile" element={<ProfilePage />} />
+        <Route path="/nft" element={<NFTMarketplace />} />
 
         {/* Admin Routes - Protected by AdminLayout */}
         <Route path="/admin" element={<AdminLayout />}>
