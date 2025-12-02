@@ -1,86 +1,1141 @@
 -- ============================================
 -- SHOESWIPER SEED DATA
+-- Amazon Affiliate Tag: shoeswiper-20
+-- Generated: 2025-12-02
 -- Run AFTER 001_schema.sql
 -- ============================================
 
--- Insert Brands
-INSERT INTO brands (name, slug) VALUES 
-('Nike', 'nike'),
-('Adidas', 'adidas'),
-('Jordan', 'jordan'),
-('New Balance', 'new-balance'),
-('ASICS', 'asics'),
-('Puma', 'puma'),
-('Converse', 'converse'),
-('Vans', 'vans'),
-('HOKA', 'hoka'),
-('Salomon', 'salomon')
+-- Clear existing data (optional, uncomment if needed)
+-- TRUNCATE brands, categories, shoes RESTART IDENTITY CASCADE;
+
+-- ============================================
+-- BRANDS
+-- ============================================
+INSERT INTO brands (name, slug, description) VALUES
+('Nike', 'nike', 'Just Do It. World''s leading athletic footwear brand.'),
+('Adidas', 'adidas', 'Impossible is Nothing. German sportswear giant.'),
+('New Balance', 'new-balance', 'Fearlessly Independent Since 1906.'),
+('Converse', 'converse', 'Iconic American sneaker brand since 1908.'),
+('Vans', 'vans', 'Off The Wall. Skateboarding and lifestyle footwear.'),
+('Puma', 'puma', 'Forever Faster. German multinational athletic brand.'),
+('Reebok', 'reebok', 'Sport the Unexpected. Classic fitness footwear.'),
+('ASICS', 'asics', 'Sound Mind, Sound Body. Japanese athletic equipment.'),
+('Jordan', 'jordan', 'Nike subsidiary. Premium basketball heritage.'),
+('Yeezy', 'yeezy', 'Adidas collaboration. High-fashion streetwear.')
 ON CONFLICT (slug) DO NOTHING;
 
--- Insert Categories
+-- ============================================
+-- CATEGORIES
+-- ============================================
 INSERT INTO categories (name, slug, icon) VALUES
+('Lifestyle', 'lifestyle', '👟'),
 ('Running', 'running', '🏃'),
 ('Basketball', 'basketball', '🏀'),
-('Lifestyle', 'lifestyle', '👟'),
 ('Skateboarding', 'skateboarding', '🛹'),
 ('Training', 'training', '💪'),
-('Outdoor', 'outdoor', '🏔️')
+('Casual', 'casual', '😎')
 ON CONFLICT (slug) DO NOTHING;
 
 -- ============================================
--- SEED SHOES (All with affiliate tag shoeswiper-20)
+-- SHOES (50+ items)
+-- All Amazon URLs include ?tag=shoeswiper-20
 -- ============================================
 
-INSERT INTO shoes (name, brand, price, image_url, amazon_url, style_tags, color_tags, gender, is_featured, vibe_score) VALUES
--- Jordan
-('Air Jordan 1 Retro High OG Chicago', 'Jordan', 180.00, 'https://images.unsplash.com/photo-1600269452121-4f2416e55c28?w=800', 'https://amazon.com/dp/B01M0327J8?tag=shoeswiper-20', ARRAY['streetwear', 'retro', 'hype', 'basketball'], ARRAY['red', 'white', 'black'], 'men', true, 95),
-('Air Jordan 4 Retro Military Black', 'Jordan', 210.00, 'https://images.unsplash.com/photo-1584735175315-9d5df23be652?w=800', 'https://amazon.com/dp/B09T12345?tag=shoeswiper-20', ARRAY['streetwear', 'bulky', 'hype'], ARRAY['white', 'black', 'grey'], 'men', true, 92),
-('Air Jordan 3 Retro White Cement', 'Jordan', 200.00, 'https://images.unsplash.com/photo-1575537302964-96cd47c06b1b?w=800', 'https://amazon.com/dp/B02345678?tag=shoeswiper-20', ARRAY['basketball', 'retro', 'hype'], ARRAY['white', 'grey', 'red'], 'men', true, 90),
-('Air Jordan 11 Retro Cool Grey', 'Jordan', 225.00, 'https://images.unsplash.com/photo-1551107696-a4b0c5a0d9a2?w=800', 'https://amazon.com/dp/B03456789?tag=shoeswiper-20', ARRAY['basketball', 'formal', 'hype'], ARRAY['grey', 'white'], 'men', true, 93),
-('Air Jordan 1 Low', 'Jordan', 110.00, 'https://images.unsplash.com/photo-1597045566677-8cf032ed6634?w=800', 'https://amazon.com/dp/B04567890?tag=shoeswiper-20', ARRAY['casual', 'streetwear', 'essential'], ARRAY['various'], 'unisex', false, 78),
+-- === NIKE (15+ items) ===
+INSERT INTO shoes (
+    name, brand, category_slug, price, retail_price, image_url, amazon_url,
+    style_tags, color_tags, gender, sizes_available, description,
+    is_active, is_featured, favorite_count, view_count, vibe_score
+) VALUES
+-- Nike Air Force 1 Low White
+(
+    'Air Force 1 ''07 Low White',
+    'Nike',
+    'lifestyle',
+    115.00,
+    115.00,
+    'https://images.unsplash.com/photo-1595950653106-6c9ebd614d3a?w=800',
+    'https://www.amazon.com/dp/B07RZ6HKBS?tag=shoeswiper-20',
+    ARRAY['classic', 'streetwear', 'casual', 'clean'],
+    ARRAY['white'],
+    'unisex',
+    ARRAY['7', '7.5', '8', '8.5', '9', '9.5', '10', '10.5', '11', '11.5', '12', '13'],
+    'The radiance lives on in the Nike Air Force 1 ''07. Crisp leather, bold colors and the perfect amount of flash.',
+    true,
+    true,
+    485,
+    923,
+    95
+),
+-- Nike Air Force 1 Low Black
+(
+    'Air Force 1 ''07 Low Black',
+    'Nike',
+    'lifestyle',
+    115.00,
+    115.00,
+    'https://images.unsplash.com/photo-1600185365926-3a2ce3cdb9eb?w=800',
+    'https://www.amazon.com/s?k=Nike+Air+Force+1+Black&tag=shoeswiper-20',
+    ARRAY['classic', 'streetwear', 'casual', 'clean'],
+    ARRAY['black'],
+    'unisex',
+    ARRAY['7', '7.5', '8', '8.5', '9', '9.5', '10', '10.5', '11', '11.5', '12', '13'],
+    'The legend lives on with the black edition of Nike''s most iconic silhouette.',
+    true,
+    false,
+    342,
+    756,
+    88
+),
+-- Nike Air Max 90 White
+(
+    'Air Max 90 White',
+    'Nike',
+    'lifestyle',
+    130.00,
+    130.00,
+    'https://images.unsplash.com/photo-1605348532760-6753d2c43329?w=800',
+    'https://www.amazon.com/s?k=Nike+Air+Max+90+White&tag=shoeswiper-20',
+    ARRAY['retro', 'classic', 'casual', 'athletic'],
+    ARRAY['white'],
+    'unisex',
+    ARRAY['7', '7.5', '8', '8.5', '9', '9.5', '10', '10.5', '11', '11.5', '12'],
+    'Nothing as icons like iconic. The Air Max 90 stays true to its OG running roots.',
+    true,
+    false,
+    287,
+    612,
+    85
+),
+-- Nike Air Max 90 Black/White
+(
+    'Air Max 90 Black/White',
+    'Nike',
+    'lifestyle',
+    130.00,
+    130.00,
+    'https://images.unsplash.com/photo-1542291026-7eec264c27ff?w=800',
+    'https://www.amazon.com/s?k=Nike+Air+Max+90+Black+White&tag=shoeswiper-20',
+    ARRAY['retro', 'classic', 'casual', 'bold'],
+    ARRAY['black', 'white'],
+    'unisex',
+    ARRAY['7', '7.5', '8', '8.5', '9', '9.5', '10', '10.5', '11', '11.5', '12'],
+    'Classic two-tone colorway on the legendary Air Max 90 silhouette.',
+    true,
+    false,
+    256,
+    589,
+    84
+),
+-- Nike Air Max 97 Silver Bullet
+(
+    'Air Max 97 Silver Bullet',
+    'Nike',
+    'lifestyle',
+    175.00,
+    175.00,
+    'https://images.unsplash.com/photo-1584735175315-9d5df23860e6?w=800',
+    'https://www.amazon.com/s?k=Nike+Air+Max+97+Silver+Bullet&tag=shoeswiper-20',
+    ARRAY['retro', 'metallic', 'streetwear', 'bold'],
+    ARRAY['silver'],
+    'men',
+    ARRAY['8', '8.5', '9', '9.5', '10', '10.5', '11', '11.5', '12', '13'],
+    'The OG Silver Bullet returns. Full-length visible Air and reflective design.',
+    true,
+    true,
+    378,
+    845,
+    91
+),
+-- Nike Dunk Low Panda
+(
+    'Dunk Low Panda',
+    'Nike',
+    'lifestyle',
+    110.00,
+    110.00,
+    'https://images.unsplash.com/photo-1607853202273-797f1c22a38e?w=800',
+    'https://www.amazon.com/dp/B08QZCKGXJ?tag=shoeswiper-20',
+    ARRAY['streetwear', 'trendy', 'hypebeast', 'clean'],
+    ARRAY['black', 'white'],
+    'unisex',
+    ARRAY['6', '6.5', '7', '7.5', '8', '8.5', '9', '9.5', '10', '10.5', '11', '12'],
+    'The most hyped colorway of the Dunk Low. Black and white perfection.',
+    true,
+    true,
+    498,
+    987,
+    97
+),
+-- Nike Dunk Low Grey Fog
+(
+    'Dunk Low Grey Fog',
+    'Nike',
+    'lifestyle',
+    110.00,
+    110.00,
+    'https://images.unsplash.com/photo-1605348532760-6753d2c43329?w=800',
+    'https://www.amazon.com/s?k=Nike+Dunk+Low+Grey+Fog&tag=shoeswiper-20',
+    ARRAY['streetwear', 'minimalist', 'clean', 'casual'],
+    ARRAY['grey', 'white'],
+    'unisex',
+    ARRAY['6', '6.5', '7', '7.5', '8', '8.5', '9', '9.5', '10', '10.5', '11', '12'],
+    'Subtle and versatile. The Grey Fog brings understated style to the Dunk Low.',
+    true,
+    false,
+    312,
+    678,
+    86
+),
+-- Nike Dunk Low Retro University Red
+(
+    'Dunk Low Retro University Red',
+    'Nike',
+    'lifestyle',
+    110.00,
+    110.00,
+    'https://images.unsplash.com/photo-1542291026-7eec264c27ff?w=800',
+    'https://www.amazon.com/s?k=Nike+Dunk+Low+University+Red&tag=shoeswiper-20',
+    ARRAY['streetwear', 'bold', 'retro', 'classic'],
+    ARRAY['red', 'white'],
+    'unisex',
+    ARRAY['6', '6.5', '7', '7.5', '8', '8.5', '9', '9.5', '10', '10.5', '11', '12'],
+    'Bold university red brings the heat to this classic Dunk Low silhouette.',
+    true,
+    false,
+    267,
+    534,
+    83
+),
+-- Air Jordan 1 Low
+(
+    'Air Jordan 1 Low',
+    'Nike',
+    'lifestyle',
+    110.00,
+    110.00,
+    'https://images.unsplash.com/photo-1600269452121-4f2416e55c28?w=800',
+    'https://www.amazon.com/s?k=Air+Jordan+1+Low&tag=shoeswiper-20',
+    ARRAY['classic', 'streetwear', 'casual', 'timeless'],
+    ARRAY['white', 'black'],
+    'unisex',
+    ARRAY['7', '7.5', '8', '8.5', '9', '9.5', '10', '10.5', '11', '11.5', '12'],
+    'Iconic Jordan 1 styling in a low-top profile. Perfect for everyday wear.',
+    true,
+    false,
+    289,
+    623,
+    82
+),
+-- Air Jordan 1 Mid
+(
+    'Air Jordan 1 Mid',
+    'Nike',
+    'basketball',
+    125.00,
+    125.00,
+    'https://images.unsplash.com/photo-1607853202273-797f1c22a38e?w=800',
+    'https://www.amazon.com/s?k=Air+Jordan+1+Mid&tag=shoeswiper-20',
+    ARRAY['classic', 'streetwear', 'basketball', 'timeless'],
+    ARRAY['black', 'red', 'white'],
+    'unisex',
+    ARRAY['7', '7.5', '8', '8.5', '9', '9.5', '10', '10.5', '11', '11.5', '12', '13'],
+    'The perfect middle ground. Jordan 1 Mid delivers heritage style.',
+    true,
+    false,
+    356,
+    712,
+    85
+),
+-- Air Jordan 1 High OG
+(
+    'Air Jordan 1 Retro High OG',
+    'Nike',
+    'basketball',
+    180.00,
+    180.00,
+    'https://images.unsplash.com/photo-1600269452121-4f2416e55c28?w=800',
+    'https://www.amazon.com/s?k=Air+Jordan+1+High+OG&tag=shoeswiper-20',
+    ARRAY['hypebeast', 'classic', 'streetwear', 'basketball', 'timeless'],
+    ARRAY['black', 'red', 'white'],
+    'unisex',
+    ARRAY['7', '7.5', '8', '8.5', '9', '9.5', '10', '10.5', '11', '11.5', '12', '13'],
+    'The shoe that started it all. Original construction, premium materials.',
+    true,
+    true,
+    467,
+    934,
+    96
+),
+-- Air Jordan 4 Retro
+(
+    'Air Jordan 4 Retro',
+    'Nike',
+    'basketball',
+    210.00,
+    210.00,
+    'https://images.unsplash.com/photo-1584735175315-9d5df23860e6?w=800',
+    'https://www.amazon.com/s?k=Air+Jordan+4+Retro&tag=shoeswiper-20',
+    ARRAY['hypebeast', 'chunky', 'streetwear', 'basketball'],
+    ARRAY['white', 'grey', 'black'],
+    'men',
+    ARRAY['8', '8.5', '9', '9.5', '10', '10.5', '11', '11.5', '12', '13'],
+    'First Air Jordan with visible Air cushioning. Legendary silhouette.',
+    true,
+    true,
+    423,
+    876,
+    93
+),
+-- Nike Blazer Mid 77
+(
+    'Blazer Mid ''77 Vintage',
+    'Nike',
+    'lifestyle',
+    105.00,
+    105.00,
+    'https://images.unsplash.com/photo-1595950653106-6c9ebd614d3a?w=800',
+    'https://www.amazon.com/s?k=Nike+Blazer+Mid+77&tag=shoeswiper-20',
+    ARRAY['vintage', 'retro', 'casual', 'classic'],
+    ARRAY['white', 'black'],
+    'unisex',
+    ARRAY['6', '6.5', '7', '7.5', '8', '8.5', '9', '9.5', '10', '10.5', '11', '12'],
+    'Vintage basketball style meets modern street culture. Exposed foam tongue.',
+    true,
+    false,
+    234,
+    512,
+    79
+),
+-- Nike Cortez
+(
+    'Cortez Basic',
+    'Nike',
+    'lifestyle',
+    90.00,
+    90.00,
+    'https://images.unsplash.com/photo-1600185365926-3a2ce3cdb9eb?w=800',
+    'https://www.amazon.com/s?k=Nike+Cortez&tag=shoeswiper-20',
+    ARRAY['retro', 'classic', 'vintage', 'casual'],
+    ARRAY['white', 'red', 'blue'],
+    'unisex',
+    ARRAY['6', '6.5', '7', '7.5', '8', '8.5', '9', '9.5', '10', '10.5', '11', '12'],
+    'Nike''s first track shoe. A timeless icon since 1972.',
+    true,
+    false,
+    198,
+    423,
+    76
+),
+-- Nike Vomero 5
+(
+    'Zoom Vomero 5',
+    'Nike',
+    'running',
+    160.00,
+    160.00,
+    'https://images.unsplash.com/photo-1542291026-7eec264c27ff?w=800',
+    'https://www.amazon.com/s?k=Nike+Vomero+5&tag=shoeswiper-20',
+    ARRAY['chunky', 'techwear', 'trendy', 'athletic'],
+    ARRAY['grey', 'silver'],
+    'unisex',
+    ARRAY['7', '7.5', '8', '8.5', '9', '9.5', '10', '10.5', '11', '11.5', '12'],
+    'Y2K vibes meet modern tech. The Vomero 5 is a streetwear essential.',
+    true,
+    true,
+    367,
+    789,
+    89
+),
 
--- Nike
-('Nike Dunk Low Panda', 'Nike', 110.00, 'https://images.unsplash.com/photo-1606107557195-0e29a4b5b4aa?w=800', 'https://amazon.com/dp/B09556789?tag=shoeswiper-20', ARRAY['casual', 'streetwear', 'essential'], ARRAY['black', 'white'], 'unisex', true, 88),
-('Nike Air Force 1 07', 'Nike', 110.00, 'https://images.unsplash.com/photo-1549298916-b41d501d3772?w=800', 'https://amazon.com/dp/B00012345?tag=shoeswiper-20', ARRAY['classic', 'essential', 'casual'], ARRAY['white'], 'unisex', false, 85),
-('Nike Air Max 90', 'Nike', 130.00, 'https://images.unsplash.com/photo-1605348532760-6753d2c43329?w=800', 'https://amazon.com/dp/B08123456?tag=shoeswiper-20', ARRAY['retro', 'running', 'casual'], ARRAY['grey', 'black'], 'men', false, 82),
-('Nike Blazer Mid 77', 'Nike', 105.00, 'https://images.unsplash.com/photo-1595950653106-6c9ebd614d3a?w=800', 'https://amazon.com/dp/B08X12345?tag=shoeswiper-20', ARRAY['retro', 'casual', 'vintage'], ARRAY['white', 'black'], 'unisex', false, 80),
-('Nike Air Max 97 Silver Bullet', 'Nike', 175.00, 'https://images.unsplash.com/photo-1542291026-7eec264c27ff?w=800', 'https://amazon.com/dp/B07123456?tag=shoeswiper-20', ARRAY['retro', 'metallic', 'streetwear'], ARRAY['silver'], 'men', true, 87),
-('Nike Cortez', 'Nike', 90.00, 'https://images.unsplash.com/photo-1600185365926-3a2ce3cdb9eb?w=800', 'https://amazon.com/dp/B01234567?tag=shoeswiper-20', ARRAY['retro', 'classic', 'casual'], ARRAY['white', 'red', 'blue'], 'unisex', false, 75),
+-- === ADIDAS (10+ items) ===
+-- Adidas Samba OG White
+(
+    'Samba OG White',
+    'Adidas',
+    'lifestyle',
+    100.00,
+    100.00,
+    'https://images.unsplash.com/photo-1597045566677-8cf032ed6634?w=800',
+    'https://www.amazon.com/s?k=Adidas+Samba+OG+White&tag=shoeswiper-20',
+    ARRAY['vintage', 'casual', 'streetwear', 'classic'],
+    ARRAY['white', 'black', 'gum'],
+    'unisex',
+    ARRAY['6', '6.5', '7', '7.5', '8', '8.5', '9', '9.5', '10', '10.5', '11', '12'],
+    'Indoor soccer heritage meets street style. The hottest shoe of the year.',
+    true,
+    true,
+    489,
+    967,
+    98
+),
+-- Adidas Samba OG Black
+(
+    'Samba OG Black',
+    'Adidas',
+    'lifestyle',
+    100.00,
+    100.00,
+    'https://images.unsplash.com/photo-1608231387042-66d1773070a5?w=800',
+    'https://www.amazon.com/s?k=Adidas+Samba+OG+Black&tag=shoeswiper-20',
+    ARRAY['vintage', 'casual', 'streetwear', 'classic'],
+    ARRAY['black', 'white', 'gum'],
+    'unisex',
+    ARRAY['6', '6.5', '7', '7.5', '8', '8.5', '9', '9.5', '10', '10.5', '11', '12'],
+    'Classic black colorway of the trending Samba OG. Gum sole completes the look.',
+    true,
+    true,
+    456,
+    912,
+    95
+),
+-- Adidas Gazelle Indoor
+(
+    'Gazelle Indoor',
+    'Adidas',
+    'lifestyle',
+    120.00,
+    120.00,
+    'https://images.unsplash.com/photo-1603787081207-362bcef7c144?w=800',
+    'https://www.amazon.com/s?k=Adidas+Gazelle+Indoor&tag=shoeswiper-20',
+    ARRAY['vintage', 'retro', 'casual', 'trendy'],
+    ARRAY['blue', 'white'],
+    'unisex',
+    ARRAY['6', '6.5', '7', '7.5', '8', '8.5', '9', '9.5', '10', '10.5', '11', '12'],
+    'Indoor court vibes with archive-inspired design. Suede upper, gum outsole.',
+    true,
+    false,
+    312,
+    678,
+    87
+),
+-- Adidas Stan Smith
+(
+    'Stan Smith',
+    'Adidas',
+    'lifestyle',
+    95.00,
+    95.00,
+    'https://images.unsplash.com/photo-1560769629-975ec94e6a86?w=800',
+    'https://www.amazon.com/s?k=Adidas+Stan+Smith&tag=shoeswiper-20',
+    ARRAY['minimalist', 'clean', 'classic', 'casual'],
+    ARRAY['white', 'green'],
+    'unisex',
+    ARRAY['5', '5.5', '6', '6.5', '7', '7.5', '8', '8.5', '9', '9.5', '10', '10.5', '11', '12'],
+    'Tennis legend meets everyday icon. Clean lines, perforated 3-Stripes.',
+    true,
+    false,
+    278,
+    589,
+    82
+),
+-- Adidas Superstar
+(
+    'Superstar',
+    'Adidas',
+    'lifestyle',
+    100.00,
+    100.00,
+    'https://images.unsplash.com/photo-1556906781-9a412961c28c?w=800',
+    'https://www.amazon.com/s?k=Adidas+Superstar&tag=shoeswiper-20',
+    ARRAY['classic', 'streetwear', 'hip-hop', 'retro'],
+    ARRAY['white', 'black'],
+    'unisex',
+    ARRAY['5', '5.5', '6', '6.5', '7', '7.5', '8', '8.5', '9', '9.5', '10', '10.5', '11', '12'],
+    'Shell toe legend since 1969. From basketball to hip-hop culture icon.',
+    true,
+    false,
+    298,
+    623,
+    84
+),
+-- Adidas Campus 00s
+(
+    'Campus 00s',
+    'Adidas',
+    'lifestyle',
+    110.00,
+    110.00,
+    'https://images.unsplash.com/photo-1608231387042-66d1773070a5?w=800',
+    'https://www.amazon.com/s?k=Adidas+Campus+00s&tag=shoeswiper-20',
+    ARRAY['vintage', 'casual', 'trendy', 'streetwear'],
+    ARRAY['black', 'white'],
+    'unisex',
+    ARRAY['6', '6.5', '7', '7.5', '8', '8.5', '9', '9.5', '10', '10.5', '11', '12'],
+    'Updated Campus silhouette with thicker sole and premium suede upper.',
+    true,
+    false,
+    267,
+    534,
+    83
+),
+-- Adidas Forum Low
+(
+    'Forum Low',
+    'Adidas',
+    'lifestyle',
+    110.00,
+    110.00,
+    'https://images.unsplash.com/photo-1560769629-975ec94e6a86?w=800',
+    'https://www.amazon.com/s?k=Adidas+Forum+Low&tag=shoeswiper-20',
+    ARRAY['retro', 'basketball', 'streetwear', 'classic'],
+    ARRAY['white', 'blue'],
+    'unisex',
+    ARRAY['6', '6.5', '7', '7.5', '8', '8.5', '9', '9.5', '10', '10.5', '11', '12'],
+    'Basketball heritage with the signature X-strap. Bold retro style.',
+    true,
+    false,
+    234,
+    478,
+    80
+),
+-- Adidas Ultraboost
+(
+    'Ultraboost Light',
+    'Adidas',
+    'running',
+    190.00,
+    190.00,
+    'https://images.unsplash.com/photo-1556906781-9a412961c28c?w=800',
+    'https://www.amazon.com/s?k=Adidas+Ultraboost&tag=shoeswiper-20',
+    ARRAY['athletic', 'running', 'comfort', 'performance'],
+    ARRAY['black', 'white'],
+    'unisex',
+    ARRAY['7', '7.5', '8', '8.5', '9', '9.5', '10', '10.5', '11', '11.5', '12'],
+    'Lightest Ultraboost ever. Revolutionary Boost cushioning technology.',
+    true,
+    false,
+    312,
+    689,
+    86
+),
+-- Adidas NMD_R1
+(
+    'NMD_R1',
+    'Adidas',
+    'lifestyle',
+    150.00,
+    150.00,
+    'https://images.unsplash.com/photo-1587563871167-1ee9c731aefb?w=800',
+    'https://www.amazon.com/s?k=Adidas+NMD+R1&tag=shoeswiper-20',
+    ARRAY['streetwear', 'modern', 'comfort', 'casual'],
+    ARRAY['black', 'white', 'red'],
+    'unisex',
+    ARRAY['7', '7.5', '8', '8.5', '9', '9.5', '10', '10.5', '11', '11.5', '12'],
+    'Urban nomad style with Boost midsole comfort. Signature colored plugs.',
+    true,
+    false,
+    256,
+    534,
+    81
+),
+-- Yeezy Boost 350 V2
+(
+    'Yeezy Boost 350 V2',
+    'Yeezy',
+    'lifestyle',
+    230.00,
+    230.00,
+    'https://images.unsplash.com/photo-1587563871167-1ee9c731aefb?w=800',
+    'https://www.amazon.com/s?k=Yeezy+Boost+350+V2&tag=shoeswiper-20',
+    ARRAY['hypebeast', 'luxury', 'streetwear', 'trendy'],
+    ARRAY['cream', 'white'],
+    'unisex',
+    ARRAY['7', '7.5', '8', '8.5', '9', '9.5', '10', '10.5', '11', '11.5', '12', '13'],
+    'Kanye''s iconic silhouette. Primeknit upper with full-length Boost.',
+    true,
+    true,
+    445,
+    923,
+    94
+),
 
--- Adidas
-('Adidas Samba OG', 'Adidas', 100.00, 'https://images.unsplash.com/photo-1608231387042-66d1773070a5?w=800', 'https://amazon.com/dp/B00078901?tag=shoeswiper-20', ARRAY['vintage', 'casual', 'streetwear'], ARRAY['white', 'black', 'gum'], 'unisex', true, 89),
-('Adidas Yeezy Boost 350 V2 Bone', 'Adidas', 230.00, 'https://images.unsplash.com/photo-1587563871167-1ee9c731aefb?w=800', 'https://amazon.com/dp/B09234567?tag=shoeswiper-20', ARRAY['hype', 'modern', 'comfort'], ARRAY['white', 'cream'], 'unisex', true, 94),
-('Adidas Forum Low', 'Adidas', 90.00, 'https://images.unsplash.com/photo-1560769629-975ec94e6a86?w=800', 'https://amazon.com/dp/B08234567?tag=shoeswiper-20', ARRAY['retro', 'skate', 'casual'], ARRAY['blue', 'white'], 'men', false, 77),
-('Adidas Ultraboost Light', 'Adidas', 190.00, 'https://images.unsplash.com/photo-1556906781-9a412961c28c?w=800', 'https://amazon.com/dp/B0B234567?tag=shoeswiper-20', ARRAY['running', 'athletic', 'comfort'], ARRAY['black'], 'women', false, 84),
-('Adidas Gazelle Bold Platform', 'Adidas', 120.00, 'https://images.unsplash.com/photo-1603787081207-362bcef7c144?w=800', 'https://amazon.com/dp/B0C123456?tag=shoeswiper-20', ARRAY['platform', 'vintage', 'streetwear'], ARRAY['pink', 'white'], 'women', true, 86),
+-- === NEW BALANCE (8+ items) ===
+-- New Balance 550 White/Green
+(
+    '550 White Green',
+    'New Balance',
+    'lifestyle',
+    130.00,
+    130.00,
+    'https://images.unsplash.com/photo-1539185441755-769473a23570?w=800',
+    'https://www.amazon.com/s?k=New+Balance+550+White+Green&tag=shoeswiper-20',
+    ARRAY['retro', 'casual', 'streetwear', 'clean'],
+    ARRAY['white', 'green'],
+    'unisex',
+    ARRAY['6', '6.5', '7', '7.5', '8', '8.5', '9', '9.5', '10', '10.5', '11', '12'],
+    'Brought back from the archives. 80s basketball style, modern streetwear icon.',
+    true,
+    true,
+    467,
+    912,
+    95
+),
+-- New Balance 550 White/Navy
+(
+    '550 White Navy',
+    'New Balance',
+    'lifestyle',
+    130.00,
+    130.00,
+    'https://images.unsplash.com/photo-1604671801908-6f0c6a092c05?w=800',
+    'https://www.amazon.com/s?k=New+Balance+550+White+Navy&tag=shoeswiper-20',
+    ARRAY['retro', 'casual', 'streetwear', 'clean'],
+    ARRAY['white', 'navy'],
+    'unisex',
+    ARRAY['6', '6.5', '7', '7.5', '8', '8.5', '9', '9.5', '10', '10.5', '11', '12'],
+    'Classic navy colorway of the trending 550. Timeless combination.',
+    true,
+    false,
+    389,
+    812,
+    91
+),
+-- New Balance 574 Classic
+(
+    '574 Core',
+    'New Balance',
+    'lifestyle',
+    90.00,
+    90.00,
+    'https://images.unsplash.com/photo-1539185441755-769473a23570?w=800',
+    'https://www.amazon.com/s?k=New+Balance+574&tag=shoeswiper-20',
+    ARRAY['classic', 'casual', 'vintage', 'comfort'],
+    ARRAY['grey'],
+    'unisex',
+    ARRAY['6', '6.5', '7', '7.5', '8', '8.5', '9', '9.5', '10', '10.5', '11', '12', '13'],
+    'The most iconic New Balance ever. ENCAP midsole comfort since 1988.',
+    true,
+    false,
+    234,
+    489,
+    78
+),
+-- New Balance 990v5 Grey
+(
+    '990v5 Made in USA',
+    'New Balance',
+    'lifestyle',
+    185.00,
+    185.00,
+    'https://images.unsplash.com/photo-1608231387042-66d1773070a5?w=800',
+    'https://www.amazon.com/s?k=New+Balance+990v5+Grey&tag=shoeswiper-20',
+    ARRAY['premium', 'comfort', 'timeless', 'dad-shoe'],
+    ARRAY['grey'],
+    'unisex',
+    ARRAY['7', '7.5', '8', '8.5', '9', '9.5', '10', '10.5', '11', '11.5', '12', '13'],
+    'Made in USA premium quality. The original dad shoe, now a fashion statement.',
+    true,
+    true,
+    378,
+    756,
+    90
+),
+-- New Balance 990v6
+(
+    '990v6 Made in USA',
+    'New Balance',
+    'running',
+    200.00,
+    200.00,
+    'https://images.unsplash.com/photo-1600185365483-26d7a4cc7519?w=800',
+    'https://www.amazon.com/s?k=New+Balance+990v6&tag=shoeswiper-20',
+    ARRAY['premium', 'comfort', 'running', 'luxury'],
+    ARRAY['grey'],
+    'unisex',
+    ARRAY['7', '7.5', '8', '8.5', '9', '9.5', '10', '10.5', '11', '11.5', '12', '13'],
+    'Latest evolution of the 990 legacy. FuelCell midsole technology.',
+    true,
+    false,
+    312,
+    678,
+    88
+),
+-- New Balance 2002R
+(
+    '2002R',
+    'New Balance',
+    'lifestyle',
+    150.00,
+    150.00,
+    'https://images.unsplash.com/photo-1551107696-a4b0c5a0d9a2?w=800',
+    'https://www.amazon.com/s?k=New+Balance+2002R&tag=shoeswiper-20',
+    ARRAY['retro', 'chunky', 'streetwear', 'comfort'],
+    ARRAY['grey', 'cream'],
+    'unisex',
+    ARRAY['6', '6.5', '7', '7.5', '8', '8.5', '9', '9.5', '10', '10.5', '11', '12'],
+    'Y2K inspired runner with N-ergy cushioning. Deconstructed vibes.',
+    true,
+    false,
+    289,
+    612,
+    85
+),
+-- New Balance 530
+(
+    '530',
+    'New Balance',
+    'lifestyle',
+    100.00,
+    100.00,
+    'https://images.unsplash.com/photo-1604671801908-6f0c6a092c05?w=800',
+    'https://www.amazon.com/s?k=New+Balance+530&tag=shoeswiper-20',
+    ARRAY['retro', 'running', 'casual', 'clean'],
+    ARRAY['white', 'silver'],
+    'unisex',
+    ARRAY['6', '6.5', '7', '7.5', '8', '8.5', '9', '9.5', '10', '10.5', '11', '12'],
+    '90s running heritage with ABZORB cushioning. Clean retro style.',
+    true,
+    false,
+    212,
+    456,
+    79
+),
+-- New Balance 327
+(
+    '327',
+    'New Balance',
+    'lifestyle',
+    100.00,
+    100.00,
+    'https://images.unsplash.com/photo-1539185441755-769473a23570?w=800',
+    'https://www.amazon.com/s?k=New+Balance+327&tag=shoeswiper-20',
+    ARRAY['retro', 'trendy', 'streetwear', 'bold'],
+    ARRAY['green', 'white'],
+    'unisex',
+    ARRAY['6', '6.5', '7', '7.5', '8', '8.5', '9', '9.5', '10', '10.5', '11', '12'],
+    'Exaggerated proportions meet 70s running style. Oversized N logo.',
+    true,
+    false,
+    245,
+    523,
+    81
+),
 
--- New Balance
-('New Balance 550 Green', 'New Balance', 110.00, 'https://images.unsplash.com/photo-1539185441755-769473a23570?w=800', 'https://amazon.com/dp/B09345678?tag=shoeswiper-20', ARRAY['retro', 'casual', 'streetwear'], ARRAY['white', 'green'], 'men', true, 88),
-('New Balance 9060', 'New Balance', 150.00, 'https://images.unsplash.com/photo-1551107696-a4b0c5a0d9a2?w=800', 'https://amazon.com/dp/B0B345678?tag=shoeswiper-20', ARRAY['chunky', 'futuristic', 'streetwear'], ARRAY['grey', 'cream'], 'unisex', true, 91),
-('New Balance 2002R Protection Pack', 'New Balance', 160.00, 'https://images.unsplash.com/photo-1600185365483-26d7a4cc7519?w=800', 'https://amazon.com/dp/B09456789?tag=shoeswiper-20', ARRAY['deconstructed', 'streetwear', 'hype'], ARRAY['grey'], 'unisex', false, 85),
-('New Balance 530', 'New Balance', 100.00, 'https://images.unsplash.com/photo-1604671801908-6f0c6a092c05?w=800', 'https://amazon.com/dp/B08456789?tag=shoeswiper-20', ARRAY['retro', 'running', 'casual'], ARRAY['white', 'silver'], 'women', false, 79),
+-- === CONVERSE (3+ items) ===
+-- Converse Chuck Taylor All Star High
+(
+    'Chuck Taylor All Star High',
+    'Converse',
+    'casual',
+    65.00,
+    65.00,
+    'https://images.unsplash.com/photo-1463100099107-aa0980c362e6?w=800',
+    'https://www.amazon.com/s?k=Converse+Chuck+Taylor+High&tag=shoeswiper-20',
+    ARRAY['classic', 'vintage', 'casual', 'iconic'],
+    ARRAY['black', 'white'],
+    'unisex',
+    ARRAY['5', '5.5', '6', '6.5', '7', '7.5', '8', '8.5', '9', '9.5', '10', '10.5', '11', '12', '13'],
+    'The original basketball shoe turned cultural icon. Since 1917.',
+    true,
+    false,
+    267,
+    578,
+    82
+),
+-- Converse Chuck Taylor All Star Low
+(
+    'Chuck Taylor All Star Low',
+    'Converse',
+    'casual',
+    60.00,
+    60.00,
+    'https://images.unsplash.com/photo-1463100099107-aa0980c362e6?w=800',
+    'https://www.amazon.com/s?k=Converse+Chuck+Taylor+Low&tag=shoeswiper-20',
+    ARRAY['classic', 'casual', 'minimalist', 'iconic'],
+    ARRAY['white'],
+    'unisex',
+    ARRAY['5', '5.5', '6', '6.5', '7', '7.5', '8', '8.5', '9', '9.5', '10', '10.5', '11', '12', '13'],
+    'Low-top version of the legendary Chuck Taylor. Everyday essential.',
+    true,
+    false,
+    234,
+    512,
+    79
+),
+-- Converse Chuck 70
+(
+    'Chuck 70 High',
+    'Converse',
+    'casual',
+    85.00,
+    85.00,
+    'https://images.unsplash.com/photo-1463100099107-aa0980c362e6?w=800',
+    'https://www.amazon.com/s?k=Converse+Chuck+70&tag=shoeswiper-20',
+    ARRAY['vintage', 'premium', 'classic', 'retro'],
+    ARRAY['parchment', 'black'],
+    'unisex',
+    ARRAY['5', '5.5', '6', '6.5', '7', '7.5', '8', '8.5', '9', '9.5', '10', '10.5', '11', '12', '13'],
+    'Premium reconstruction of the 1970s Chuck Taylor. Better materials, vintage colors.',
+    true,
+    false,
+    289,
+    623,
+    84
+),
 
--- Gorpcore / Running
-('Salomon XT-6', 'Salomon', 190.00, 'https://images.unsplash.com/photo-1606890737304-57a1ca8a5b62?w=800', 'https://amazon.com/dp/B08567890?tag=shoeswiper-20', ARRAY['gorpcore', 'outdoor', 'techwear'], ARRAY['black', 'multi'], 'unisex', true, 90),
-('HOKA Clifton 9', 'HOKA', 145.00, 'https://images.unsplash.com/photo-1595341888016-a392ef81b7de?w=800', 'https://amazon.com/dp/B0B567890?tag=shoeswiper-20', ARRAY['running', 'comfort', 'athletic'], ARRAY['blue', 'orange'], 'men', false, 83),
-('ASICS Gel-Kayano 14', 'ASICS', 150.00, 'https://images.unsplash.com/photo-1606107557195-0e29a4b5b4aa?w=800', 'https://amazon.com/dp/B09567890?tag=shoeswiper-20', ARRAY['retro', 'runner', 'metallic'], ARRAY['silver', 'cream'], 'women', true, 87),
+-- === VANS (3+ items) ===
+-- Vans Old Skool
+(
+    'Old Skool',
+    'Vans',
+    'skateboarding',
+    70.00,
+    70.00,
+    'https://images.unsplash.com/photo-1525966222134-fcfa99b8ae77?w=800',
+    'https://www.amazon.com/s?k=Vans+Old+Skool&tag=shoeswiper-20',
+    ARRAY['skate', 'classic', 'streetwear', 'punk'],
+    ARRAY['black', 'white'],
+    'unisex',
+    ARRAY['5', '5.5', '6', '6.5', '7', '7.5', '8', '8.5', '9', '9.5', '10', '10.5', '11', '12', '13'],
+    'First Vans shoe with the iconic sidestripe. Skate legend since 1977.',
+    true,
+    false,
+    312,
+    678,
+    85
+),
+-- Vans Sk8-Hi
+(
+    'Sk8-Hi',
+    'Vans',
+    'skateboarding',
+    75.00,
+    75.00,
+    'https://images.unsplash.com/photo-1525966222134-fcfa99b8ae77?w=800',
+    'https://www.amazon.com/s?k=Vans+Sk8-Hi&tag=shoeswiper-20',
+    ARRAY['skate', 'classic', 'punk', 'streetwear'],
+    ARRAY['black', 'white'],
+    'unisex',
+    ARRAY['5', '5.5', '6', '6.5', '7', '7.5', '8', '8.5', '9', '9.5', '10', '10.5', '11', '12', '13'],
+    'High-top skate legend with padded ankle support. Off The Wall since 1978.',
+    true,
+    false,
+    278,
+    589,
+    83
+),
+-- Vans Authentic
+(
+    'Authentic',
+    'Vans',
+    'casual',
+    55.00,
+    55.00,
+    'https://images.unsplash.com/photo-1525966222134-fcfa99b8ae77?w=800',
+    'https://www.amazon.com/s?k=Vans+Authentic&tag=shoeswiper-20',
+    ARRAY['classic', 'casual', 'minimalist', 'skate'],
+    ARRAY['black', 'white'],
+    'unisex',
+    ARRAY['5', '5.5', '6', '6.5', '7', '7.5', '8', '8.5', '9', '9.5', '10', '10.5', '11', '12', '13'],
+    'The original Vans shoe. Simple canvas construction, waffle outsole.',
+    true,
+    false,
+    189,
+    412,
+    76
+),
 
--- Classics
-('Vans Old Skool', 'Vans', 70.00, 'https://images.unsplash.com/photo-1525966222134-fcfa99b8ae77?w=800', 'https://amazon.com/dp/B00067890?tag=shoeswiper-20', ARRAY['skate', 'classic', 'punk'], ARRAY['black', 'white'], 'unisex', false, 76),
-('Converse Chuck 70 High', 'Converse', 85.00, 'https://images.unsplash.com/photo-1463100099107-aa0980c362e6?w=800', 'https://amazon.com/dp/B00078901?tag=shoeswiper-20', ARRAY['classic', 'vintage', 'casual'], ARRAY['parchment'], 'unisex', false, 78),
+-- === PUMA (2+ items) ===
+-- Puma Suede Classic
+(
+    'Suede Classic XXI',
+    'Puma',
+    'lifestyle',
+    75.00,
+    75.00,
+    'https://images.unsplash.com/photo-1608231387042-66d1773070a5?w=800',
+    'https://www.amazon.com/s?k=Puma+Suede+Classic&tag=shoeswiper-20',
+    ARRAY['retro', 'casual', 'streetwear', 'classic'],
+    ARRAY['black', 'white'],
+    'unisex',
+    ARRAY['6', '6.5', '7', '7.5', '8', '8.5', '9', '9.5', '10', '10.5', '11', '12'],
+    'B-boy culture icon since 1968. Premium suede, formstrip branding.',
+    true,
+    false,
+    234,
+    489,
+    78
+),
+-- Puma RS-X
+(
+    'RS-X',
+    'Puma',
+    'lifestyle',
+    110.00,
+    110.00,
+    'https://images.unsplash.com/photo-1560769629-975ec94e6a86?w=800',
+    'https://www.amazon.com/s?k=Puma+RS-X&tag=shoeswiper-20',
+    ARRAY['chunky', 'retro', 'bold', 'streetwear'],
+    ARRAY['multi', 'white'],
+    'unisex',
+    ARRAY['7', '7.5', '8', '8.5', '9', '9.5', '10', '10.5', '11', '11.5', '12'],
+    'Extreme reinvention of the Running System. Bold colors, chunky sole.',
+    true,
+    false,
+    198,
+    423,
+    77
+),
 
--- Puma
-('Puma Suede Classic', 'Puma', 75.00, 'https://images.unsplash.com/photo-1608231387042-66d1773070a5?w=800', 'https://amazon.com/dp/B05678901?tag=shoeswiper-20', ARRAY['retro', 'casual', 'streetwear'], ARRAY['black', 'white'], 'unisex', false, 74),
-('Puma RS-X', 'Puma', 110.00, 'https://images.unsplash.com/photo-1560769629-975ec94e6a86?w=800', 'https://amazon.com/dp/B06789012?tag=shoeswiper-20', ARRAY['chunky', 'techwear', 'streetwear'], ARRAY['multi'], 'unisex', false, 77),
+-- === REEBOK (2+ items) ===
+-- Reebok Club C 85
+(
+    'Club C 85',
+    'Reebok',
+    'lifestyle',
+    80.00,
+    80.00,
+    'https://images.unsplash.com/photo-1560769629-975ec94e6a86?w=800',
+    'https://www.amazon.com/s?k=Reebok+Club+C+85&tag=shoeswiper-20',
+    ARRAY['classic', 'minimalist', 'clean', 'retro'],
+    ARRAY['white', 'green'],
+    'unisex',
+    ARRAY['6', '6.5', '7', '7.5', '8', '8.5', '9', '9.5', '10', '10.5', '11', '12'],
+    'Tennis court classic from 1985. Soft garment leather, clean lines.',
+    true,
+    false,
+    256,
+    534,
+    81
+),
+-- Reebok Classic Leather
+(
+    'Classic Leather',
+    'Reebok',
+    'lifestyle',
+    85.00,
+    85.00,
+    'https://images.unsplash.com/photo-1556906781-9a412961c28c?w=800',
+    'https://www.amazon.com/s?k=Reebok+Classic+Leather&tag=shoeswiper-20',
+    ARRAY['retro', 'classic', 'casual', 'timeless'],
+    ARRAY['white'],
+    'unisex',
+    ARRAY['6', '6.5', '7', '7.5', '8', '8.5', '9', '9.5', '10', '10.5', '11', '12'],
+    'Heritage running style since 1983. Soft leather, EVA midsole cushioning.',
+    true,
+    false,
+    212,
+    467,
+    79
+),
 
--- Kids
-('Nike Air Force 1 Kids', 'Nike', 85.00, 'https://images.unsplash.com/photo-1549298916-b41d501d3772?w=800', 'https://amazon.com/dp/B09K12345?tag=shoeswiper-20', ARRAY['classic', 'essential'], ARRAY['white'], 'kids', false, 80),
-('Adidas Stan Smith Kids', 'Adidas', 65.00, 'https://images.unsplash.com/photo-1560769629-975ec94e6a86?w=800', 'https://amazon.com/dp/B08K12345?tag=shoeswiper-20', ARRAY['classic', 'minimalist'], ARRAY['white', 'green'], 'kids', false, 78),
-('Converse Chuck Taylor Kids', 'Converse', 45.00, 'https://images.unsplash.com/photo-1463100099107-aa0980c362e6?w=800', 'https://amazon.com/dp/B07K12345?tag=shoeswiper-20', ARRAY['classic', 'casual'], ARRAY['red'], 'kids', false, 75);
+-- === ASICS (2+ items) ===
+-- ASICS Gel-1130
+(
+    'GEL-1130',
+    'ASICS',
+    'running',
+    120.00,
+    120.00,
+    'https://images.unsplash.com/photo-1606107557195-0e29a4b5b4aa?w=800',
+    'https://www.amazon.com/s?k=ASICS+Gel+1130&tag=shoeswiper-20',
+    ARRAY['retro', 'running', 'trendy', 'techwear'],
+    ARRAY['white', 'silver'],
+    'unisex',
+    ARRAY['6', '6.5', '7', '7.5', '8', '8.5', '9', '9.5', '10', '10.5', '11', '12'],
+    '2000s running heritage revived. GEL technology cushioning.',
+    true,
+    true,
+    345,
+    723,
+    88
+),
+-- ASICS Gel-Kayano 14
+(
+    'GEL-Kayano 14',
+    'ASICS',
+    'running',
+    150.00,
+    150.00,
+    'https://images.unsplash.com/photo-1606107557195-0e29a4b5b4aa?w=800',
+    'https://www.amazon.com/s?k=ASICS+Gel+Kayano+14&tag=shoeswiper-20',
+    ARRAY['retro', 'metallic', 'running', 'trendy'],
+    ARRAY['silver', 'cream'],
+    'unisex',
+    ARRAY['6', '6.5', '7', '7.5', '8', '8.5', '9', '9.5', '10', '10.5', '11', '12'],
+    'Y2K aesthetic meets modern comfort. One of the hottest retro runners.',
+    true,
+    true,
+    378,
+    789,
+    91
+),
 
--- Randomize engagement metrics for realism
+-- === ADDITIONAL NIKE ITEMS ===
+-- Nike Air Max 1
+(
+    'Air Max 1 ''86 OG',
+    'Nike',
+    'lifestyle',
+    140.00,
+    140.00,
+    'https://images.unsplash.com/photo-1542291026-7eec264c27ff?w=800',
+    'https://www.amazon.com/s?k=Nike+Air+Max+1&tag=shoeswiper-20',
+    ARRAY['retro', 'classic', 'vintage', 'iconic'],
+    ARRAY['red', 'white', 'grey'],
+    'unisex',
+    ARRAY['7', '7.5', '8', '8.5', '9', '9.5', '10', '10.5', '11', '11.5', '12'],
+    'The shoe that started the visible Air revolution. Tinker Hatfield''s masterpiece.',
+    true,
+    false,
+    312,
+    678,
+    87
+),
+-- Nike Air Max Plus
+(
+    'Air Max Plus',
+    'Nike',
+    'lifestyle',
+    175.00,
+    175.00,
+    'https://images.unsplash.com/photo-1584735175315-9d5df23860e6?w=800',
+    'https://www.amazon.com/s?k=Nike+Air+Max+Plus&tag=shoeswiper-20',
+    ARRAY['bold', 'streetwear', 'chunky', 'retro'],
+    ARRAY['black', 'orange'],
+    'men',
+    ARRAY['8', '8.5', '9', '9.5', '10', '10.5', '11', '11.5', '12', '13'],
+    'TN Air cushioning meets aggressive design. A streetwear staple since 1998.',
+    true,
+    false,
+    267,
+    589,
+    84
+),
+-- Nike SB Dunk Low
+(
+    'SB Dunk Low Pro',
+    'Nike',
+    'skateboarding',
+    110.00,
+    110.00,
+    'https://images.unsplash.com/photo-1605348532760-6753d2c43329?w=800',
+    'https://www.amazon.com/s?k=Nike+SB+Dunk+Low&tag=shoeswiper-20',
+    ARRAY['skate', 'streetwear', 'hypebeast', 'classic'],
+    ARRAY['black', 'white'],
+    'unisex',
+    ARRAY['6', '6.5', '7', '7.5', '8', '8.5', '9', '9.5', '10', '10.5', '11', '12'],
+    'Skateboarding-ready Dunk with Zoom Air cushioning. The collab king.',
+    true,
+    true,
+    398,
+    823,
+    92
+),
+
+-- === ADDITIONAL ADIDAS ITEMS ===
+-- Adidas Spezial
+(
+    'Handball Spezial',
+    'Adidas',
+    'lifestyle',
+    100.00,
+    100.00,
+    'https://images.unsplash.com/photo-1608231387042-66d1773070a5?w=800',
+    'https://www.amazon.com/s?k=Adidas+Handball+Spezial&tag=shoeswiper-20',
+    ARRAY['vintage', 'retro', 'casual', 'trendy'],
+    ARRAY['blue', 'white', 'gum'],
+    'unisex',
+    ARRAY['6', '6.5', '7', '7.5', '8', '8.5', '9', '9.5', '10', '10.5', '11', '12'],
+    'Terrace culture icon. Suede upper with gum sole perfection.',
+    true,
+    true,
+    412,
+    867,
+    93
+),
+-- Adidas Gazelle
+(
+    'Gazelle',
+    'Adidas',
+    'lifestyle',
+    100.00,
+    100.00,
+    'https://images.unsplash.com/photo-1603787081207-362bcef7c144?w=800',
+    'https://www.amazon.com/s?k=Adidas+Gazelle&tag=shoeswiper-20',
+    ARRAY['vintage', 'classic', 'casual', 'timeless'],
+    ARRAY['black', 'white'],
+    'unisex',
+    ARRAY['5', '5.5', '6', '6.5', '7', '7.5', '8', '8.5', '9', '9.5', '10', '10.5', '11', '12'],
+    'Since 1968. The Gazelle defines casual sneaker culture.',
+    true,
+    false,
+    289,
+    623,
+    85
+),
+
+-- === ADDITIONAL NEW BALANCE ITEMS ===
+-- New Balance 1906R
+(
+    '1906R',
+    'New Balance',
+    'lifestyle',
+    150.00,
+    150.00,
+    'https://images.unsplash.com/photo-1551107696-a4b0c5a0d9a2?w=800',
+    'https://www.amazon.com/s?k=New+Balance+1906R&tag=shoeswiper-20',
+    ARRAY['chunky', 'retro', 'trendy', 'streetwear'],
+    ARRAY['silver', 'blue'],
+    'unisex',
+    ARRAY['6', '6.5', '7', '7.5', '8', '8.5', '9', '9.5', '10', '10.5', '11', '12'],
+    'Protection Pack vibes meet 2000s runner aesthetic. N-ergy cushioning.',
+    true,
+    false,
+    334,
+    712,
+    88
+),
+
+-- === ADDITIONAL JORDAN ITEMS ===
+-- Jordan 3 Retro
+(
+    'Air Jordan 3 Retro',
+    'Nike',
+    'basketball',
+    200.00,
+    200.00,
+    'https://images.unsplash.com/photo-1607853202273-797f1c22a38e?w=800',
+    'https://www.amazon.com/s?k=Air+Jordan+3+Retro&tag=shoeswiper-20',
+    ARRAY['hypebeast', 'classic', 'basketball', 'timeless'],
+    ARRAY['white', 'grey', 'red'],
+    'men',
+    ARRAY['8', '8.5', '9', '9.5', '10', '10.5', '11', '11.5', '12', '13'],
+    'The elephant print legend. First Jordan with visible Air.',
+    true,
+    true,
+    423,
+    889,
+    94
+),
+-- Jordan 11 Retro
+(
+    'Air Jordan 11 Retro',
+    'Nike',
+    'basketball',
+    225.00,
+    225.00,
+    'https://images.unsplash.com/photo-1600269452121-4f2416e55c28?w=800',
+    'https://www.amazon.com/s?k=Air+Jordan+11+Retro&tag=shoeswiper-20',
+    ARRAY['luxury', 'basketball', 'hypebeast', 'formal'],
+    ARRAY['black', 'white'],
+    'men',
+    ARRAY['8', '8.5', '9', '9.5', '10', '10.5', '11', '11.5', '12', '13'],
+    'Patent leather luxury. The most formal Jordan ever made.',
+    true,
+    true,
+    456,
+    934,
+    96
+);
+
+-- ============================================
+-- UPDATE ENGAGEMENT METRICS
+-- Randomize for realism within specified ranges
+-- ============================================
 UPDATE shoes SET 
-  view_count = floor(random() * 5000 + 100)::int,
-  favorite_count = floor(random() * 500 + 20)::int,
-  click_count = floor(random() * 1000 + 50)::int
-WHERE view_count = 0;
+    view_count = floor(random() * 900 + 100)::int,
+    favorite_count = floor(random() * 450 + 50)::int,
+    click_count = floor(random() * 500 + 50)::int
+WHERE view_count = 0 OR view_count IS NULL;
