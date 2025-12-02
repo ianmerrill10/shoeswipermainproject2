@@ -4,6 +4,7 @@ import { supabase, ADMIN_EMAIL } from '../lib/supabaseClient';
 import { FaCog, FaSignOutAlt, FaHeart, FaShoppingBag, FaShieldAlt, FaGem } from 'react-icons/fa';
 import { Profile, Shoe } from '../lib/types';
 import { SneakerCard } from '../components/SneakerCard';
+import ReferralCard from '../components/ReferralCard';
 
 type Tab = 'favorites' | 'closet';
 
@@ -150,6 +151,11 @@ const ProfilePage: React.FC = () => {
           </button>
         </div>
       )}
+
+      {/* Referral Program */}
+      <div className="px-6 mb-4">
+        <ReferralCard />
+      </div>
 
       {/* Tabs */}
       <div className="sticky top-0 bg-zinc-950 border-b border-zinc-800 z-10">
