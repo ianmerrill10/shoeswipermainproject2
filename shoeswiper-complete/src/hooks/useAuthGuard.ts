@@ -1,13 +1,11 @@
 import { useEffect, useState } from 'react';
-import { DEMO_MODE } from '../lib/mockData';
+import { DEMO_MODE, ALLOWED_EMAILS } from '../lib/config';
 
 // Only import Supabase types/client if not in demo mode
 type User = {
   id: string;
   email?: string;
 };
-
-const ALLOWED_EMAILS = ['ianmerrill10@gmail.com'];
 
 const isEmailAllowed = (email: string | undefined): boolean => {
   return email ? ALLOWED_EMAILS.includes(email) : false;

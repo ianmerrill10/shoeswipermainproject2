@@ -25,5 +25,9 @@ export const AMAZON_API_CONFIG = {
 // Admin email for access control
 export const ADMIN_EMAIL = 'dadsellsgadgets@gmail.com';
 
-// Allowed emails for Google login protection
-export const ALLOWED_EMAILS = ['ianmerrill10@gmail.com'];
+// Allowed emails for Google login protection (SINGLE SOURCE OF TRUTH)
+// Add emails here to grant app access after Google OAuth login
+export const ALLOWED_EMAILS = [
+  'ianmerrill10@gmail.com',
+  ADMIN_EMAIL,  // Admin always has access
+];
