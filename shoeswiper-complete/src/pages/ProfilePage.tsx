@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { supabase, ADMIN_EMAIL } from '../lib/supabaseClient';
 import { FaCog, FaSignOutAlt, FaHeart, FaShoppingBag, FaShieldAlt, FaGem, FaBell } from 'react-icons/fa';
@@ -15,63 +15,39 @@ const ProfilePage: React.FC = () => {
   const { isEnabled: pushEnabled } = usePushNotifications();
   const [profile, setProfile] = useState<Profile | null>(null);
   const [favorites, setFavorites] = useState<Shoe[]>([]);
-  const [closet, setCloset] = useState<Shoe[]>([]);
+  const [closet, _setCloset] = useState<Shoe[]>([]);
   const [activeTab, setActiveTab] = useState<Tab>('favorites');
   const [loading, setLoading] = useState(true);
   const [showNotificationSettings, setShowNotificationSettings] = useState(false);
 
-  useEffect(() => {
-    loadProfile();
-  }, []);
-
-  const loadProfile = async () => {
+  const loadProfile = useCallback(async () => {
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) {
       navigate('/auth');
       return;
     }
 
-    // Get profile
+    setLoading(true);
     const { data: profileData } = await supabase
       .from('profiles')
       .select('*')
       .eq('id', user.id)
       .single();
 
-    if (profileData) {
-      setProfile(profileData);
-    } else {
-      setProfile({
-        id: user.id,
-        email: user.email,
-        username: user.user_metadata?.username || 'User',
-        avatar_url: user.user_metadata?.avatar_url,
-        created_at: user.created_at,
-      });
-    }
+    setProfile(profileData);
 
-    // Get favorites
-    const { data: favData } = await supabase
-      .from('favorites')
-      .select('shoe:shoes(*)')
-      .eq('user_id', user.id);
-
-    if (favData) {
-      setFavorites(favData.map((f: { shoe: unknown }) => f.shoe).filter(Boolean) as typeof favorites);
-    }
-
-    // Get closet
-    const { data: closetData } = await supabase
+    const { data: favoritesData } = await supabase
       .from('user_sneakers')
-      .select('shoe:shoes(*)')
+      .select('*, shoe:shoes(*)')
       .eq('user_id', user.id);
 
-    if (closetData) {
-      setCloset(closetData.map((c: { shoe: unknown }) => c.shoe).filter(Boolean) as typeof closet);
-    }
-
+    setFavorites(favoritesData?.map((f: unknown) => (f as { shoe: Shoe }).shoe) || []);
     setLoading(false);
-  };
+  }, [navigate]);
+
+  useEffect(() => {
+    loadProfile();
+  }, [loadProfile]);
 
   const handleSignOut = async () => {
     await supabase.auth.signOut();

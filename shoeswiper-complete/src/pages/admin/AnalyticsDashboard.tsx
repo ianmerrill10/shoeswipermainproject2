@@ -50,6 +50,7 @@ export const AnalyticsDashboard: React.FC = () => {
     getAnalyticsSummary().then(data => {
       setAnalyticsData(data);
     });
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   if (!stats) return <div className="text-zinc-400">Loading Analytics...</div>;

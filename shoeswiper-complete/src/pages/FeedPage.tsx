@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useRef } from 'react';
+import React, { useEffect, useState, useRef, useCallback } from 'react';
 import { FaHeart, FaShare, FaBookmark, FaAmazon, FaMusic, FaCheck, FaBell } from 'react-icons/fa';
 import { useSneakers } from '../hooks/useSneakers';
 import { useAnalytics } from '../hooks/useAnalytics';
@@ -25,28 +25,28 @@ const FeedPage: React.FC = () => {
   const [showShareToast, setShowShareToast] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
 
-  useEffect(() => {
-    loadShoes();
-  }, []);
-
-  const loadShoes = async () => {
+  const loadShoes = useCallback(async () => {
     const data = await getInfiniteFeed(page, 10);
     setShoes(prev => [...prev, ...data]);
     setPage(prev => prev + 1);
-  };
+  }, [page, getInfiniteFeed]);
+
+  useEffect(() => {
+    loadShoes();
+  }, [loadShoes]);
 
   useEffect(() => {
     if (shoes[currentIndex]) {
       trackView(shoes[currentIndex].id);
     }
-  }, [currentIndex, shoes]);
+  }, [currentIndex, shoes, trackView]);
 
   // Load more when near end
   useEffect(() => {
     if (currentIndex >= shoes.length - 3 && !loading) {
       loadShoes();
     }
-  }, [currentIndex, shoes.length, loading]);
+  }, [currentIndex, shoes.length, loading, loadShoes]);
 
   // Keyboard navigation
   useEffect(() => {
@@ -79,7 +79,7 @@ const FeedPage: React.FC = () => {
 
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [currentIndex, shoes.length]);
+  }, [currentIndex, shoes.length, handleOpenShoePanel, handleOpenMusicPanel]);
 
   // Touch swipe gestures for mobile
   useEffect(() => {
@@ -119,7 +119,7 @@ const FeedPage: React.FC = () => {
       container.removeEventListener('touchstart', handleTouchStart);
       container.removeEventListener('touchend', handleTouchEnd);
     };
-  }, []);
+  }, [handleOpenShoePanel, handleOpenMusicPanel]);
 
   // Intersection Observer for tracking visible card
   useEffect(() => {
@@ -149,19 +149,19 @@ const FeedPage: React.FC = () => {
     window.open(getAffiliateUrl(shoe.amazon_url), '_blank');
   };
 
-  const handleOpenShoePanel = () => {
+  const handleOpenShoePanel = useCallback(() => {
     if (shoes[currentIndex]) {
       trackPanelOpen('shoe', shoes[currentIndex].id);
     }
     setShowShoePanel(true);
-  };
+  }, [shoes, currentIndex, trackPanelOpen]);
 
-  const handleOpenMusicPanel = () => {
+  const handleOpenMusicPanel = useCallback(() => {
     if (shoes[currentIndex]) {
       trackPanelOpen('music', shoes[currentIndex].id);
     }
     setShowMusicPanel(true);
-  };
+  }, [shoes, currentIndex, trackPanelOpen]);
 
   const handleShare = async (shoe: Shoe) => {
     // Generate smart share data with deep links and affiliate tracking

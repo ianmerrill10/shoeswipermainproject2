@@ -83,6 +83,33 @@ export const usePushNotifications = () => {
     }
   }, [isSupported]);
 
+  // Save subscription to server (for production push from backend)
+  const saveSubscriptionToServer = useCallback(async (registration: ServiceWorkerRegistration) => {
+    try {
+      const subscription = await registration.pushManager.subscribe({
+        userVisibleOnly: true,
+        // In production, you'd use a VAPID key here
+        // applicationServerKey: urlBase64ToUint8Array(VAPID_PUBLIC_KEY)
+      });
+
+      const { supabase } = await import('../lib/supabaseClient');
+      const { data: { user } } = await supabase.auth.getUser();
+
+      if (user) {
+        await supabase.from('push_subscriptions').upsert({
+          user_id: user.id,
+          subscription: JSON.stringify(subscription),
+          created_at: new Date().toISOString(),
+          settings: settings,
+        }, {
+          onConflict: 'user_id',
+        });
+      }
+    } catch (err) {
+      console.error('[Push] Error saving subscription:', err);
+    }
+  }, [settings]);
+
   // Request notification permission
   const requestPermission = useCallback(async (): Promise<boolean> => {
     if (!isSupported) {
@@ -125,34 +152,7 @@ export const usePushNotifications = () => {
       console.error('[Push] Error requesting permission:', err);
       return false;
     }
-  }, [isSupported, swRegistration, settings, registerServiceWorker]);
-
-  // Save subscription to server (for production push from backend)
-  const saveSubscriptionToServer = useCallback(async (registration: ServiceWorkerRegistration) => {
-    try {
-      const subscription = await registration.pushManager.subscribe({
-        userVisibleOnly: true,
-        // In production, you'd use a VAPID key here
-        // applicationServerKey: urlBase64ToUint8Array(VAPID_PUBLIC_KEY)
-      });
-
-      const { supabase } = await import('../lib/supabaseClient');
-      const { data: { user } } = await supabase.auth.getUser();
-
-      if (user) {
-        await supabase.from('push_subscriptions').upsert({
-          user_id: user.id,
-          subscription: JSON.stringify(subscription),
-          created_at: new Date().toISOString(),
-          settings: settings,
-        }, {
-          onConflict: 'user_id',
-        });
-      }
-    } catch (err) {
-      console.error('[Push] Error saving subscription:', err);
-    }
-  }, [settings]);
+  }, [isSupported, swRegistration, settings, registerServiceWorker, saveSubscriptionToServer]);
 
   // Disable push notifications
   const disablePush = useCallback(async () => {

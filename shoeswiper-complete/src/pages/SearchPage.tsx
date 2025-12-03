@@ -16,6 +16,7 @@ const SearchPage: React.FC = () => {
   useEffect(() => {
     // Load initial results
     searchSneakers('', {});
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const handleSearch = (e: React.FormEvent) => {
