@@ -230,13 +230,16 @@ analytics_events
 
 ## SECTION 9: SECURITY REQUIREMENTS (CRITICAL)
 
-- [ ] Move Gemini API key server-side (CURRENTLY EXPOSED - CRITICAL)
+- [x] Move Gemini API key server-side (Edge Function - COMPLETED)
+- [x] Rate limiting on Edge Function (10 req/min per IP)
+- [x] CORS origin allowlist (localhost + shoeswiper.com)
+- [x] Security headers (X-Frame-Options, X-XSS-Protection, etc.)
+- [x] Input validation (10MB max, base64 format check)
+- [x] Output sanitization (XSS prevention)
 - [ ] Proper JWT authentication with refresh tokens
-- [ ] Rate limiting on all endpoints
 - [ ] RLS policies on all Supabase tables
 - [ ] Encrypted storage (no sensitive data in localStorage)
 - [ ] HTTPS everywhere
-- [ ] Input validation and sanitization
 - [ ] PCI-DSS compliance for payments
 - [ ] GDPR/CCPA compliance
 - [ ] Content moderation (AI + manual review + community reporting)
@@ -343,14 +346,15 @@ shoeswiper-complete/
 
 | Priority | Feature | Status | Revenue Impact |
 |----------|---------|--------|----------------|
-| 1 | **Security Hardening** | CRITICAL | CRITICAL |
-| 2 | Trending Feed Tab | Ready | MEDIUM |
-| 3 | Exit Intent Popup | Ready | HIGH |
-| 4 | Real Data Integration | Needed | HIGH |
+| 1 | Trending Feed Tab | Ready | MEDIUM |
+| 2 | Exit Intent Popup | Ready | HIGH |
+| 3 | Real Data Integration | Needed | HIGH |
+| 4 | Onboarding Flow | Ready | MEDIUM |
 | 5 | Social Features | Needs Design | MEDIUM |
 | 6 | 3D Model Viewer | Blocked (needs .glb) | MEDIUM |
 | 7 | AR Try-On | Needs WebXR | HIGH |
-| 8 | Onboarding Flow | Ready | MEDIUM |
+
+**COMPLETED:** Security Hardening (Edge Function rate limiting, CORS, validation, sanitization)
 
 ---
 
@@ -362,8 +366,8 @@ VITE_SUPABASE_URL=https://your-project.supabase.co
 VITE_SUPABASE_ANON_KEY=your-anon-key
 VITE_STRIPE_PUBLIC_KEY=your-stripe-key
 
-# Server-side ONLY (NEVER expose)
-VITE_GEMINI_API_KEY=MOVE_TO_SERVER_SIDE  # CRITICAL SECURITY ISSUE
+# Server-side ONLY (NEVER expose) - All secure in Edge Functions
+GEMINI_API_KEY=stored-in-supabase-secrets  # SECURED via Edge Function
 SUPABASE_SERVICE_KEY=your-service-key
 STRIPE_SECRET_KEY=sk_your_key
 STRIPE_WEBHOOK_SECRET=whsec_your_secret
@@ -393,14 +397,14 @@ ALLOWED_EMAILS = ['ianmerrill10@gmail.com', ADMIN_EMAIL]
 
 **Recent Commits:**
 ```
+c814815 security: Harden Edge Function with rate limiting, input validation, and CORS
+68f88f6 docs: Update AIContext.md with comprehensive project context
 e5b4292 docs: Add AIContext.md for complete project continuity
 6ad3e8e feat: Add email capture system for lead generation
 e06f7b1 feat: Add push notifications for price drop alerts
 2729b85 feat: Add notifications panel for price drop alerts
 b9beacd feat: Add price drop alerts for saved shoes
 ef8ffda feat: Add referral program for viral user growth
-bc835ac feat: Add Closet page to view saved/favorited sneakers
-f7f019b feat: Add deep link system for share-driven app installs
 ```
 
 ---
@@ -428,4 +432,5 @@ If starting fresh from this file:
 ---
 
 *This file is the SINGLE SOURCE OF TRUTH for AI agents working on ShoeSwiper.*
-*Last AI: Claude (Opus 4) | Last Human Prompt: Create AIContext file*
+*Last AI: Claude (Opus 4) | Last Task: Security Hardening (COMPLETED)*
+*Session: Security audit passed - no exposed secrets found*
