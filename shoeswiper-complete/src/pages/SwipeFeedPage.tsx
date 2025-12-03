@@ -43,6 +43,20 @@ const SwipeFeedPage: React.FC = () => {
     setPage(prev => prev + 1);
   }, [page, getInfiniteFeed]);
 
+  const handleOpenShoePanel = useCallback(() => {
+    if (shoes[currentIndex]) {
+      trackPanelOpen('shoe', shoes[currentIndex].id);
+      openShoePanel(shoes[currentIndex].id);
+    }
+  }, [shoes, currentIndex, trackPanelOpen, openShoePanel]);
+
+  const handleOpenMusicPanel = useCallback(() => {
+    if (shoes[currentIndex]) {
+      trackPanelOpen('music', shoes[currentIndex].id);
+      openMusicPanel();
+    }
+  }, [shoes, currentIndex, trackPanelOpen, openMusicPanel]);
+
   useEffect(() => {
     loadShoes();
   }, [loadShoes]);
@@ -86,27 +100,13 @@ const SwipeFeedPage: React.FC = () => {
 
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [currentIndex, shoes.length, closeShoePanel, closeMusicPanel, closeNotificationsPanel]);
+  }, [currentIndex, shoes.length, handleOpenShoePanel, handleOpenMusicPanel, closeShoePanel, closeMusicPanel, closeNotificationsPanel]);
 
   const handleBuyClick = (shoe: Shoe) => {
     trackClick(shoe.id);
     trackShoeClick(shoe.id);
     window.open(getAffiliateUrl(shoe.amazon_url), '_blank');
   };
-
-  const handleOpenShoePanel = useCallback(() => {
-    if (shoes[currentIndex]) {
-      trackPanelOpen('shoe', shoes[currentIndex].id);
-      openShoePanel(shoes[currentIndex].id);
-    }
-  }, [shoes, currentIndex, trackPanelOpen, openShoePanel]);
-
-  const handleOpenMusicPanel = useCallback(() => {
-    if (shoes[currentIndex]) {
-      trackPanelOpen('music', shoes[currentIndex].id);
-      openMusicPanel();
-    }
-  }, [shoes, currentIndex, trackPanelOpen, openMusicPanel]);
 
   const handleShare = async (shoe: Shoe) => {
     // Generate smart share data with deep links and affiliate tracking

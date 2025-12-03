@@ -26,11 +26,11 @@ export const useReducedMotion = (): UseReducedMotionReturn => {
       setPrefersReducedMotion(event.matches);
     };
 
-    // Use addEventListener for modern browsers, addListener for legacy
+    // Use addEventListener for modern browsers, addListener for legacy (Safari <14, IE)
     if (mediaQuery.addEventListener) {
       mediaQuery.addEventListener('change', handleChange);
     } else {
-      // Legacy support
+      // Legacy support for Safari <14 and older browsers
       mediaQuery.addListener(handleChange);
     }
 
@@ -38,7 +38,7 @@ export const useReducedMotion = (): UseReducedMotionReturn => {
       if (mediaQuery.removeEventListener) {
         mediaQuery.removeEventListener('change', handleChange);
       } else {
-        // Legacy support
+        // Legacy support for Safari <14 and older browsers
         mediaQuery.removeListener(handleChange);
       }
     };
