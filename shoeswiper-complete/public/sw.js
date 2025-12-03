@@ -46,9 +46,19 @@ function isStaticAsset(url) {
 
 // Check if request is for an API call
 function isApiRequest(url) {
-  return url.hostname.includes('supabase') || 
-         url.pathname.startsWith('/api') ||
-         url.hostname.includes('amazonaws.com');
+  // Match Supabase API endpoints (e.g., *.supabase.co)
+  if (url.hostname.endsWith('.supabase.co') || url.hostname.endsWith('.supabase.in')) {
+    return true;
+  }
+  // Match local API endpoints
+  if (url.pathname.startsWith('/api/')) {
+    return true;
+  }
+  // Match AWS endpoints (e.g., *.amazonaws.com)
+  if (url.hostname.endsWith('.amazonaws.com')) {
+    return true;
+  }
+  return false;
 }
 
 // Check if request is a navigation request
@@ -107,7 +117,11 @@ async function staleWhileRevalidate(request) {
     return networkResponse;
   }).catch((error) => {
     console.log('[SW] Stale While Revalidate network failed:', error);
-    return cachedResponse;
+    if (cachedResponse) {
+      return cachedResponse;
+    }
+    // No cache available, throw error to let browser handle it
+    throw error;
   });
   
   return cachedResponse || fetchPromise;
