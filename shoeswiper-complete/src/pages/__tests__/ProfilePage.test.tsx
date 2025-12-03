@@ -203,12 +203,13 @@ describe('ProfilePage', () => {
       expect(screen.getByText('testuser')).toBeInTheDocument();
     });
 
-    // Find the sign out button (second button typically)
-    const buttons = document.querySelectorAll('button');
-    const signOutButton = buttons[1]; // Usually second button
-    
-    if (signOutButton) {
-      fireEvent.click(signOutButton);
+    // Find sign out button - it's in the header with settings button
+    // Look for buttons in the header area
+    const allButtons = screen.getAllByRole('button');
+    // Click the second button in header (sign out)
+    const headerButtons = allButtons.slice(0, 3); // First few buttons are in header
+    if (headerButtons.length > 1) {
+      fireEvent.click(headerButtons[1]);
     }
 
     await waitFor(() => {
