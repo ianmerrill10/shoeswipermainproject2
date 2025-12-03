@@ -7,6 +7,32 @@
 
 import { Shoe } from './types';
 
+// ============================================
+// MUSIC AFFILIATE CONFIGURATION
+// Amazon: tag=shoeswiper-20 (Amazon Associates)
+// Apple Music: at=1000lJFj (Replace with your Apple Services Performance Partners token)
+// Spotify: No affiliate program - links for user convenience only
+// ============================================
+const APPLE_AFFILIATE_TOKEN = '1000lJFj'; // TODO: Replace with your Apple affiliate token
+const AMAZON_AFFILIATE_TAG = 'shoeswiper-20';
+
+// Music tracks with monetized affiliate links
+const MUSIC_TRACKS = [
+  { song: 'SICKO MODE', artist: 'Travis Scott', spotifyUrl: 'https://open.spotify.com/track/2xLMifQCjDGFmkHkpNLD9h', appleMusicUrl: `https://music.apple.com/us/album/sicko-mode/1421241217?i=1421241853&at=${APPLE_AFFILIATE_TOKEN}`, amazonMusicUrl: `https://amazon.com/dp/B07GXJW5SF?tag=${AMAZON_AFFILIATE_TAG}` },
+  { song: 'Started From The Bottom', artist: 'Drake', spotifyUrl: 'https://open.spotify.com/track/4F4xZ8MpZ3OqMaG5cBNHhH', appleMusicUrl: `https://music.apple.com/us/album/started-from-the-bottom/1440890708?i=1440891396&at=${APPLE_AFFILIATE_TOKEN}`, amazonMusicUrl: `https://amazon.com/dp/B00BFMYZGE?tag=${AMAZON_AFFILIATE_TAG}` },
+  { song: 'HUMBLE', artist: 'Kendrick Lamar', spotifyUrl: 'https://open.spotify.com/track/7KXjTSCq5nL1LoYtL7XAwS', appleMusicUrl: `https://music.apple.com/us/album/humble/1440881047?i=1440881378&at=${APPLE_AFFILIATE_TOKEN}`, amazonMusicUrl: `https://amazon.com/dp/B06Y1Q8GRJ?tag=${AMAZON_AFFILIATE_TAG}` },
+  { song: 'Stronger', artist: 'Kanye West', spotifyUrl: 'https://open.spotify.com/track/0j2T0R9dR9qdJYsB7ciXhf', appleMusicUrl: `https://music.apple.com/us/album/stronger/1451901307?i=1451901308&at=${APPLE_AFFILIATE_TOKEN}`, amazonMusicUrl: `https://amazon.com/dp/B000V6O18G?tag=${AMAZON_AFFILIATE_TAG}` },
+  { song: 'Around The World', artist: 'Daft Punk', spotifyUrl: 'https://open.spotify.com/track/1pKYYY0dkg23sQQXi0Q5zN', appleMusicUrl: `https://music.apple.com/us/album/around-the-world/697194953?i=697195404&at=${APPLE_AFFILIATE_TOKEN}`, amazonMusicUrl: `https://amazon.com/dp/B00138CLGW?tag=${AMAZON_AFFILIATE_TAG}` },
+  { song: 'Blinding Lights', artist: 'The Weeknd', spotifyUrl: 'https://open.spotify.com/track/0VjIjW4GlUZAMYd2vXMi3b', appleMusicUrl: `https://music.apple.com/us/album/blinding-lights/1488408555?i=1488408568&at=${APPLE_AFFILIATE_TOKEN}`, amazonMusicUrl: `https://amazon.com/dp/B081J3QZ7L?tag=${AMAZON_AFFILIATE_TAG}` },
+  { song: 'Levitating', artist: 'Dua Lipa', spotifyUrl: 'https://open.spotify.com/track/463CkQjx2Zk1yXoBuierM9', appleMusicUrl: `https://music.apple.com/us/album/levitating/1510821672?i=1510821689&at=${APPLE_AFFILIATE_TOKEN}`, amazonMusicUrl: `https://amazon.com/dp/B086QYBXPR?tag=${AMAZON_AFFILIATE_TAG}` },
+  { song: 'Money Trees', artist: 'Kendrick Lamar', spotifyUrl: 'https://open.spotify.com/track/2HbKqm4o0w5wEeEFXm2sD4', appleMusicUrl: `https://music.apple.com/us/album/money-trees/1440818886?i=1440819328&at=${APPLE_AFFILIATE_TOKEN}`, amazonMusicUrl: `https://amazon.com/dp/B009AQFNC0?tag=${AMAZON_AFFILIATE_TAG}` },
+  { song: 'goosebumps', artist: 'Travis Scott', spotifyUrl: 'https://open.spotify.com/track/6gBFPUFcJLzWGx4lenP6h2', appleMusicUrl: `https://music.apple.com/us/album/goosebumps/1453585079?i=1453585310&at=${APPLE_AFFILIATE_TOKEN}`, amazonMusicUrl: `https://amazon.com/dp/B01JO9X3OW?tag=${AMAZON_AFFILIATE_TAG}` },
+  { song: 'One Dance', artist: 'Drake', spotifyUrl: 'https://open.spotify.com/track/1zi7xx7UVEFkmKfv06H8x0', appleMusicUrl: `https://music.apple.com/us/album/one-dance/1440841363?i=1440841749&at=${APPLE_AFFILIATE_TOKEN}`, amazonMusicUrl: `https://amazon.com/dp/B01DWRQ3N6?tag=${AMAZON_AFFILIATE_TAG}` },
+];
+
+// Helper to get music for a shoe (based on index)
+const getMusicForShoe = (id: number) => MUSIC_TRACKS[id % MUSIC_TRACKS.length];
+
 // Helper to generate a mock shoe
 const createShoe = (
   id: number,
@@ -33,6 +59,7 @@ const createShoe = (
   is_featured: isFeatured,
   created_at: new Date().toISOString(),
   updated_at: new Date().toISOString(),
+  music: getMusicForShoe(id),
 });
 
 // Get stock image based on brand
