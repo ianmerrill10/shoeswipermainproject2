@@ -4,6 +4,7 @@ import { useSneakers } from '../hooks/useSneakers';
 import { useAnalytics } from '../hooks/useAnalytics';
 import { useFavorites } from '../hooks/useFavorites';
 import { usePriceAlerts } from '../hooks/usePriceAlerts';
+import { useUIStore } from '../store';
 import { getAffiliateUrl, shouldShowPrice, formatPrice } from '../lib/supabaseClient';
 import { createAffiliateShareData } from '../lib/deepLinks';
 import { Shoe } from '../lib/types';
@@ -16,12 +17,20 @@ const FeedPage: React.FC = () => {
   const { trackPanelOpen, trackShare, trackFavorite, trackShoeClick } = useAnalytics();
   const { toggleFavorite, isFavorite } = useFavorites();
   const { unreadCount } = usePriceAlerts();
+  const {
+    isShoePanelOpen,
+    isMusicPanelOpen,
+    isNotificationsPanelOpen,
+    openShoePanel,
+    closeShoePanel,
+    openMusicPanel,
+    closeMusicPanel,
+    openNotificationsPanel,
+    closeNotificationsPanel,
+  } = useUIStore();
   const [shoes, setShoes] = useState<Shoe[]>([]);
   const [currentIndex, setCurrentIndex] = useState(0);
   const [page, setPage] = useState(0);
-  const [showShoePanel, setShowShoePanel] = useState(false);
-  const [showMusicPanel, setShowMusicPanel] = useState(false);
-  const [showNotifications, setShowNotifications] = useState(false);
   const [showShareToast, setShowShareToast] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
 
@@ -71,15 +80,15 @@ const FeedPage: React.FC = () => {
         e.preventDefault();
         handleOpenMusicPanel();
       } else if (e.key === 'Escape') {
-        setShowShoePanel(false);
-        setShowMusicPanel(false);
-        setShowNotifications(false);
+        closeShoePanel();
+        closeMusicPanel();
+        closeNotificationsPanel();
       }
     };
 
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [currentIndex, shoes.length, handleOpenShoePanel, handleOpenMusicPanel]);
+  }, [currentIndex, shoes.length, handleOpenShoePanel, handleOpenMusicPanel, closeShoePanel, closeMusicPanel, closeNotificationsPanel]);
 
   // Touch swipe gestures for mobile
   useEffect(() => {
@@ -152,16 +161,16 @@ const FeedPage: React.FC = () => {
   const handleOpenShoePanel = useCallback(() => {
     if (shoes[currentIndex]) {
       trackPanelOpen('shoe', shoes[currentIndex].id);
+      openShoePanel(shoes[currentIndex].id);
     }
-    setShowShoePanel(true);
-  }, [shoes, currentIndex, trackPanelOpen]);
+  }, [shoes, currentIndex, trackPanelOpen, openShoePanel]);
 
   const handleOpenMusicPanel = useCallback(() => {
     if (shoes[currentIndex]) {
       trackPanelOpen('music', shoes[currentIndex].id);
+      openMusicPanel();
     }
-    setShowMusicPanel(true);
-  }, [shoes, currentIndex, trackPanelOpen]);
+  }, [shoes, currentIndex, trackPanelOpen, openMusicPanel]);
 
   const handleShare = async (shoe: Shoe) => {
     // Generate smart share data with deep links and affiliate tracking
@@ -231,7 +240,7 @@ const FeedPage: React.FC = () => {
     >
       {/* Notification Bell - Fixed Position */}
       <button
-        onClick={() => setShowNotifications(true)}
+        onClick={openNotificationsPanel}
         className="fixed top-4 right-4 z-30 w-11 h-11 bg-black/40 backdrop-blur-sm rounded-full flex items-center justify-center active:scale-90 transition-transform"
       >
         <FaBell className="text-white text-lg" />
@@ -386,8 +395,8 @@ const FeedPage: React.FC = () => {
       {shoes[currentIndex] && (
         <ShoePanel
           shoe={shoes[currentIndex]}
-          isOpen={showShoePanel}
-          onClose={() => setShowShoePanel(false)}
+          isOpen={isShoePanelOpen}
+          onClose={closeShoePanel}
         />
       )}
 
@@ -395,15 +404,15 @@ const FeedPage: React.FC = () => {
       {shoes[currentIndex] && (
         <MusicPanel
           shoe={shoes[currentIndex]}
-          isOpen={showMusicPanel}
-          onClose={() => setShowMusicPanel(false)}
+          isOpen={isMusicPanelOpen}
+          onClose={closeMusicPanel}
         />
       )}
 
       {/* Notifications Panel */}
       <NotificationsPanel
-        isOpen={showNotifications}
-        onClose={() => setShowNotifications(false)}
+        isOpen={isNotificationsPanelOpen}
+        onClose={closeNotificationsPanel}
       />
 
       {/* Share Success Toast */}
