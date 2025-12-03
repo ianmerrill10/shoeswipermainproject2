@@ -2,6 +2,18 @@
 // INPUT VALIDATION UTILITIES
 // Security hardening for ShoeSwiper
 // ============================================
+//
+// SECURITY NOTE: HTML sanitization functions in this module use regex-based
+// approaches which have inherent limitations. While they provide defense-in-depth,
+// for the most robust XSS protection in production, consider using a dedicated
+// HTML sanitization library like DOMPurify.
+//
+// Key security measures:
+// - sanitizeSearchQuery: Removes HTML tags AND escapes all < > characters as final defense
+// - sanitizeHtml: Uses loop-based removal with multiple passes for nested content
+// - validateUrl: Blocks dangerous protocols (javascript:, data:, vbscript:)
+//
+// ============================================
 
 // ============================================
 // TYPES
@@ -221,9 +233,21 @@ export function sanitizeSearchQuery(query: string): string {
   }
 
   let sanitized = query.trim();
+  let previousLength: number;
+  let iterations = 0;
+  const maxIterations = 100; // Prevent infinite loops
 
-  // Remove HTML tags
-  sanitized = sanitized.replace(/<[^>]*>/g, '');
+  // Loop until no more changes are made
+  do {
+    previousLength = sanitized.length;
+    iterations++;
+    
+    // Remove all HTML-like tags aggressively
+    sanitized = sanitized.replace(/<[^>]*>/g, '');
+    sanitized = sanitized.replace(/<[^>]*$/g, ''); // Remove incomplete opening tags
+    sanitized = sanitized.replace(/^[^<]*>/g, ''); // Remove incomplete closing tags
+    
+  } while (sanitized.length !== previousLength && iterations < maxIterations);
 
   // Remove SQL injection patterns
   for (const pattern of SQL_INJECTION_PATTERNS) {
@@ -231,6 +255,7 @@ export function sanitizeSearchQuery(query: string): string {
   }
 
   // Escape special characters that could be used in XSS or injection
+  // This is the final line of defense - even if tags slip through, they'll be escaped
   sanitized = sanitized
     .replace(/&/g, '&amp;')
     .replace(/</g, '&lt;')
@@ -393,7 +418,10 @@ export function sanitizeText(text: string, maxLength: number = DEFAULT_MAX_TEXT_
 }
 
 /**
- * Sanitizes HTML by removing dangerous tags and attributes
+ * Sanitizes HTML by removing dangerous tags and attributes.
+ * Note: For the most secure HTML sanitization, consider using a library
+ * like DOMPurify. This implementation removes dangerous patterns but
+ * cannot guarantee complete protection against all XSS vectors.
  * @param html - The HTML to sanitize
  * @returns Sanitized HTML
  */
@@ -403,26 +431,45 @@ export function sanitizeHtml(html: string): string {
   }
 
   let sanitized = html.trim();
+  
+  // First pass: completely remove script and style tags with their content
+  // Use non-greedy matching and handle various closing tag formats
+  let previousLength: number;
+  let iterations = 0;
+  const maxIterations = 100; // Prevent infinite loops
 
-  // Remove script tags and their content
-  sanitized = sanitized.replace(/<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi, '');
+  // Loop until no more changes are made (handles nested content)
+  do {
+    previousLength = sanitized.length;
+    iterations++;
 
-  // Remove style tags and their content
-  sanitized = sanitized.replace(/<style\b[^<]*(?:(?!<\/style>)<[^<]*)*<\/style>/gi, '');
+    // Remove script tags and content - handle any whitespace in tags
+    sanitized = sanitized.replace(/<\s*script[^]*?<\s*\/\s*script[^>]*>/gi, '');
+    sanitized = sanitized.replace(/<\s*script[^>]*>/gi, '');
+    sanitized = sanitized.replace(/<\s*\/\s*script[^>]*>/gi, '');
 
-  // Remove event handlers (onclick, onerror, onload, etc.)
-  sanitized = sanitized.replace(/\s*on\w+\s*=\s*["'][^"']*["']/gi, '');
-  sanitized = sanitized.replace(/\s*on\w+\s*=\s*[^\s>]*/gi, '');
+    // Remove style tags and content
+    sanitized = sanitized.replace(/<\s*style[^]*?<\s*\/\s*style[^>]*>/gi, '');
+    sanitized = sanitized.replace(/<\s*style[^>]*>/gi, '');
+    sanitized = sanitized.replace(/<\s*\/\s*style[^>]*>/gi, '');
 
-  // Remove javascript: and data: URLs from href/src attributes
-  sanitized = sanitized.replace(/(href|src)\s*=\s*["']?\s*javascript:[^"'\s>]*/gi, '$1=""');
-  sanitized = sanitized.replace(/(href|src)\s*=\s*["']?\s*data:[^"'\s>]*/gi, '$1=""');
+    // Remove event handlers - be more aggressive
+    sanitized = sanitized.replace(/\bon\w+\s*=/gi, 'data-removed=');
+
+    // Remove javascript:, data:, vbscript: URLs everywhere
+    sanitized = sanitized.replace(/javascript\s*:/gi, 'removed:');
+    sanitized = sanitized.replace(/data\s*:/gi, 'removed:');
+    sanitized = sanitized.replace(/vbscript\s*:/gi, 'removed:');
+
+  } while (sanitized.length !== previousLength && iterations < maxIterations);
 
   // Remove dangerous tags (keep content)
-  const dangerousTags = ['iframe', 'object', 'embed', 'form', 'input', 'button', 'meta', 'link', 'base'];
+  const dangerousTags = ['iframe', 'object', 'embed', 'form', 'input', 'button', 'meta', 'link', 'base', 'svg', 'math', 'template'];
   for (const tag of dangerousTags) {
-    const openTagRegex = new RegExp(`<${tag}\\b[^>]*>`, 'gi');
-    const closeTagRegex = new RegExp(`</${tag}>`, 'gi');
+    // Handle opening tags with any attributes and potential spaces
+    const openTagRegex = new RegExp(`<\\s*${tag}\\b[^>]*>`, 'gi');
+    // Handle closing tags with potential spaces
+    const closeTagRegex = new RegExp(`<\\s*/\\s*${tag}[^>]*>`, 'gi');
     sanitized = sanitized.replace(openTagRegex, '');
     sanitized = sanitized.replace(closeTagRegex, '');
   }
