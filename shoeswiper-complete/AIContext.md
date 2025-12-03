@@ -51,6 +51,17 @@ The test file was out of sync with the implementation.
 
 **Conclusion:** The Gemini API key was ALREADY properly secured server-side. The concern in prior documentation was outdated.
 
+#### 5. Security Audit - JWT Authentication
+**Status:** ✅ VERIFIED ALREADY IMPLEMENTED
+
+**Investigation:**
+- Supabase Auth already handles JWT tokens and refresh tokens automatically
+- `useAuth.ts` uses `onAuthStateChange` to catch token refreshes
+- `useAuthGuard.ts` adds email allowlist on top of Supabase auth
+- Supabase client auto-refreshes tokens before expiry, rotates tokens, stores in localStorage
+
+**Conclusion:** JWT with refresh tokens is built into Supabase Auth. Custom implementation would be a step backward.
+
 ---
 
 ### ✅ Completed Tasks (Session 1 - Database & Testing)
@@ -183,7 +194,7 @@ The test file was out of sync with the implementation.
 
 #### HIGH PRIORITY - Security (Priority 1)
 1. ~~**Move Gemini API key server-side**~~ ✅ VERIFIED SECURE - Already uses Edge Function with `Deno.env.get("GEMINI_API_KEY")`
-2. Implement JWT authentication with refresh tokens
+2. ~~**Implement JWT authentication with refresh tokens**~~ ✅ VERIFIED - Supabase Auth handles this automatically (auto-refresh, token rotation, `onAuthStateChange`)
 3. Add rate limiting on all endpoints
 4. Add input validation and sanitization
 5. Implement content moderation system
