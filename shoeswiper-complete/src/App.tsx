@@ -1,5 +1,6 @@
 import { Routes, Route, Navigate } from 'react-router-dom';
 import { useAuthGuard } from './hooks/useAuthGuard';
+import { useExitIntent } from './hooks/useExitIntent';
 
 // Pages
 import FeedPage from './pages/FeedPage';
@@ -20,9 +21,15 @@ import { UserManager } from './pages/admin/UserManager';
 
 // Components
 import BottomNavigation from './components/BottomNavigation';
+import ExitIntentPopup from './components/ExitIntentPopup';
 
 function App() {
   const { user, loading, isAllowed } = useAuthGuard();
+  const { isShowing, closePopup, dismissPermanently } = useExitIntent({
+    delay: 5000,           // Wait 5 seconds before enabling
+    minSessionTime: 15000, // User must be on site for at least 15 seconds
+    cooldownHours: 24,     // Show only once per day
+  });
 
   if (loading) {
     return (
@@ -84,6 +91,13 @@ function App() {
       {!['/auth', '/admin'].some(path => window.location.pathname.startsWith(path)) && (
         <BottomNavigation />
       )}
+
+      {/* Exit Intent Popup - for email capture when user tries to leave */}
+      <ExitIntentPopup
+        isOpen={isShowing}
+        onClose={closePopup}
+        onDismissPermanently={dismissPermanently}
+      />
     </div>
   );
 }

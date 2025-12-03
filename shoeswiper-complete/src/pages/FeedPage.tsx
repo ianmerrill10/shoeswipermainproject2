@@ -1,6 +1,7 @@
-import React, { useEffect, useState, useRef } from 'react';
-import { FaHeart, FaShare, FaBookmark, FaAmazon, FaMusic, FaCheck, FaBell } from 'react-icons/fa';
+import React, { useEffect, useState, useRef, useCallback } from 'react';
+import { FaHeart, FaShare, FaBookmark, FaAmazon, FaMusic, FaCheck, FaBell, FaFire } from 'react-icons/fa';
 import { useSneakers } from '../hooks/useSneakers';
+import { useTrendingFeed, FeedTab } from '../hooks/useTrendingFeed';
 import { useAnalytics } from '../hooks/useAnalytics';
 import { useFavorites } from '../hooks/useFavorites';
 import { usePriceAlerts } from '../hooks/usePriceAlerts';
@@ -13,46 +14,82 @@ import NotificationsPanel from '../components/NotificationsPanel';
 
 const FeedPage: React.FC = () => {
   const { getInfiniteFeed, trackView, trackClick, loading } = useSneakers();
+  const { getTrendingFeed, loading: trendingLoading } = useTrendingFeed();
   const { trackPanelOpen, trackShare, trackFavorite, trackShoeClick } = useAnalytics();
   const { toggleFavorite, isFavorite } = useFavorites();
   const { unreadCount } = usePriceAlerts();
+  
+  // Feed state
+  const [activeTab, setActiveTab] = useState<FeedTab>('forYou');
   const [shoes, setShoes] = useState<Shoe[]>([]);
+  const [trendingShoes, setTrendingShoes] = useState<Shoe[]>([]);
   const [currentIndex, setCurrentIndex] = useState(0);
   const [page, setPage] = useState(0);
+  const [trendingPage, setTrendingPage] = useState(0);
+  
+  // UI state
   const [showShoePanel, setShowShoePanel] = useState(false);
   const [showMusicPanel, setShowMusicPanel] = useState(false);
   const [showNotifications, setShowNotifications] = useState(false);
   const [showShareToast, setShowShareToast] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
 
-  useEffect(() => {
-    loadShoes();
-  }, []);
+  // Get current feed based on active tab
+  const currentFeed = activeTab === 'forYou' ? shoes : trendingShoes;
+  const isLoading = activeTab === 'forYou' ? loading : trendingLoading;
 
-  const loadShoes = async () => {
+  // Load For You feed
+  const loadForYouShoes = useCallback(async () => {
     const data = await getInfiniteFeed(page, 10);
     setShoes(prev => [...prev, ...data]);
     setPage(prev => prev + 1);
+  }, [getInfiniteFeed, page]);
+
+  // Load Trending feed
+  const loadTrendingShoes = useCallback(async () => {
+    const data = await getTrendingFeed(trendingPage, 10);
+    setTrendingShoes(prev => [...prev, ...data]);
+    setTrendingPage(prev => prev + 1);
+  }, [getTrendingFeed, trendingPage]);
+
+  // Initial load
+  useEffect(() => {
+    loadForYouShoes();
+    loadTrendingShoes();
+  }, []);
+
+  // Handle tab change
+  const handleTabChange = (tab: FeedTab) => {
+    setActiveTab(tab);
+    setCurrentIndex(0);
+    // Scroll to top when switching tabs
+    if (containerRef.current) {
+      containerRef.current.scrollTo({ top: 0, behavior: 'smooth' });
+    }
   };
 
   useEffect(() => {
-    if (shoes[currentIndex]) {
-      trackView(shoes[currentIndex].id);
+    if (currentFeed[currentIndex]) {
+      trackView(currentFeed[currentIndex].id);
     }
-  }, [currentIndex, shoes]);
+  }, [currentIndex, currentFeed, trackView]);
 
   // Load more when near end
   useEffect(() => {
-    if (currentIndex >= shoes.length - 3 && !loading) {
-      loadShoes();
+    if (currentIndex >= currentFeed.length - 3 && !isLoading) {
+      if (activeTab === 'forYou') {
+        loadForYouShoes();
+      } else {
+        loadTrendingShoes();
+      }
     }
-  }, [currentIndex, shoes.length, loading]);
+  }, [currentIndex, currentFeed.length, isLoading, activeTab, loadForYouShoes, loadTrendingShoes]);
 
   // Keyboard navigation
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       const container = containerRef.current;
-      if (!container || shoes.length === 0) return;
+      if (!container || currentFeed.length === 0) return;
 
       if (e.key === 'ArrowUp') {
         e.preventDefault();
@@ -61,7 +98,7 @@ const FeedPage: React.FC = () => {
         card?.scrollIntoView({ behavior: 'smooth' });
       } else if (e.key === 'ArrowDown') {
         e.preventDefault();
-        const nextIndex = Math.min(shoes.length - 1, currentIndex + 1);
+        const nextIndex = Math.min(currentFeed.length - 1, currentIndex + 1);
         const card = container.querySelector(`[data-index="${nextIndex}"]`);
         card?.scrollIntoView({ behavior: 'smooth' });
       } else if (e.key === 'ArrowLeft') {
@@ -79,7 +116,7 @@ const FeedPage: React.FC = () => {
 
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [currentIndex, shoes.length]);
+  }, [currentIndex, currentFeed.length]);
 
   // Touch swipe gestures for mobile
   useEffect(() => {
@@ -141,7 +178,7 @@ const FeedPage: React.FC = () => {
     container.querySelectorAll('.feed-card').forEach((card) => observer.observe(card));
 
     return () => observer.disconnect();
-  }, [shoes]);
+  }, [currentFeed]);
 
   const handleBuyClick = (shoe: Shoe) => {
     trackClick(shoe.id);
@@ -150,15 +187,15 @@ const FeedPage: React.FC = () => {
   };
 
   const handleOpenShoePanel = () => {
-    if (shoes[currentIndex]) {
-      trackPanelOpen('shoe', shoes[currentIndex].id);
+    if (currentFeed[currentIndex]) {
+      trackPanelOpen('shoe', currentFeed[currentIndex].id);
     }
     setShowShoePanel(true);
   };
 
   const handleOpenMusicPanel = () => {
-    if (shoes[currentIndex]) {
-      trackPanelOpen('music', shoes[currentIndex].id);
+    if (currentFeed[currentIndex]) {
+      trackPanelOpen('music', currentFeed[currentIndex].id);
     }
     setShowMusicPanel(true);
   };
@@ -196,7 +233,7 @@ const FeedPage: React.FC = () => {
     }
   };
 
-  if (loading && shoes.length === 0) {
+  if (isLoading && currentFeed.length === 0) {
     return (
       <div className="h-screen bg-zinc-950 flex items-center justify-center">
         <div className="text-center">
@@ -207,7 +244,7 @@ const FeedPage: React.FC = () => {
     );
   }
 
-  if (shoes.length === 0) {
+  if (currentFeed.length === 0) {
     return (
       <div className="h-screen bg-zinc-950 flex items-center justify-center">
         <div className="text-center">
@@ -229,6 +266,31 @@ const FeedPage: React.FC = () => {
         msOverflowStyle: 'none'
       }}
     >
+      {/* Feed Tab Switcher - Fixed Position */}
+      <div className="fixed top-4 left-1/2 -translate-x-1/2 z-30 flex bg-black/60 backdrop-blur-md rounded-full p-1">
+        <button
+          onClick={() => handleTabChange('forYou')}
+          className={`px-4 py-2 rounded-full text-sm font-bold transition-all ${
+            activeTab === 'forYou'
+              ? 'bg-white text-black'
+              : 'text-white hover:bg-white/10'
+          }`}
+        >
+          For You
+        </button>
+        <button
+          onClick={() => handleTabChange('trending')}
+          className={`px-4 py-2 rounded-full text-sm font-bold transition-all flex items-center gap-1.5 ${
+            activeTab === 'trending'
+              ? 'bg-orange-500 text-white'
+              : 'text-white hover:bg-white/10'
+          }`}
+        >
+          <FaFire className={activeTab === 'trending' ? 'text-white' : 'text-orange-500'} />
+          Trending
+        </button>
+      </div>
+
       {/* Notification Bell - Fixed Position */}
       <button
         onClick={() => setShowNotifications(true)}
@@ -242,13 +304,21 @@ const FeedPage: React.FC = () => {
         )}
       </button>
 
-      {shoes.map((shoe, index) => (
+      {currentFeed.map((shoe, index) => (
         <div
-          key={shoe.id}
+          key={`${activeTab}-${shoe.id}`}
           data-index={index}
           className="feed-card h-screen min-h-screen snap-start snap-always relative"
           style={{ scrollSnapAlign: 'start', scrollSnapStop: 'always' }}
         >
+          {/* Trending Badge - Only on Trending Tab */}
+          {activeTab === 'trending' && index < 3 && (
+            <div className="absolute top-20 left-4 z-20 flex items-center gap-2 bg-gradient-to-r from-orange-500 to-red-500 px-3 py-1.5 rounded-full">
+              <FaFire className="text-white text-sm" />
+              <span className="text-white text-sm font-bold">#{index + 1} Trending</span>
+            </div>
+          )}
+
           {/* Background Image */}
           <img
             src={shoe.image_url}
@@ -383,18 +453,18 @@ const FeedPage: React.FC = () => {
       ))}
 
       {/* Shoe Panel - Opens on Left Arrow */}
-      {shoes[currentIndex] && (
+      {currentFeed[currentIndex] && (
         <ShoePanel
-          shoe={shoes[currentIndex]}
+          shoe={currentFeed[currentIndex]}
           isOpen={showShoePanel}
           onClose={() => setShowShoePanel(false)}
         />
       )}
 
       {/* Music Panel - Opens on Right Arrow */}
-      {shoes[currentIndex] && (
+      {currentFeed[currentIndex] && (
         <MusicPanel
-          shoe={shoes[currentIndex]}
+          shoe={currentFeed[currentIndex]}
           isOpen={showMusicPanel}
           onClose={() => setShowMusicPanel(false)}
         />
