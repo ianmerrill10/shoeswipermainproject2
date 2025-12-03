@@ -12,6 +12,7 @@ const AuthPage = lazy(() => import('./pages/AuthPage'));
 const ComingSoon = lazy(() => import('./pages/ComingSoon'));
 const Unauthorized = lazy(() => import('./pages/Unauthorized'));
 const NFTMarketplace = lazy(() => import('./components/nft/NFTMarketplace'));
+const SellerDashboard = lazy(() => import('./pages/SellerDashboard'));
 
 // Lazy-loaded Admin Pages
 const AnalyticsDashboard = lazy(() => import('./pages/admin/AnalyticsDashboard').then(m => ({ default: m.AnalyticsDashboard })));
@@ -104,6 +105,7 @@ function App() {
           <Route path="/check-fit" element={<CheckMyFit />} />
           <Route path="/profile" element={<ProfilePage />} />
           <Route path="/nft" element={<NFTMarketplace />} />
+          <Route path="/seller" element={<SellerDashboard />} />
 
           {/* Admin Routes - Protected by AdminLayout */}
           <Route path="/admin" element={<AdminLayout />}>
