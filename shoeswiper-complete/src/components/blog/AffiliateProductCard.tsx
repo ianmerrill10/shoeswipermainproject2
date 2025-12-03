@@ -1,4 +1,5 @@
 import React from 'react';
+import { FaAmazon } from 'react-icons/fa';
 import { AffiliateProduct } from '../../lib/blogTypes';
 import { useRecordAffiliateClick } from '../../hooks/useBlog';
 import { BlogType } from '../../lib/blogTypes';
@@ -51,9 +52,10 @@ export default function AffiliateProductCard({
           target="_blank"
           rel="noopener noreferrer sponsored"
           onClick={handleClick}
-          className="px-3 py-1.5 bg-orange-500 text-white text-sm font-medium rounded hover:bg-orange-600 transition-colors"
+          className="px-3 py-1.5 bg-gradient-to-r from-orange-500 to-orange-600 text-white text-sm font-medium rounded hover:scale-105 transition-transform flex items-center gap-1"
         >
-          Buy
+          <FaAmazon className="w-4 h-4" aria-hidden="true" />
+          Buy Now
         </a>
       </div>
     );
@@ -102,22 +104,10 @@ export default function AffiliateProductCard({
               target="_blank"
               rel="noopener noreferrer sponsored"
               onClick={handleClick}
-              className="ml-auto px-4 py-2 bg-orange-500 text-white font-semibold rounded-lg hover:bg-orange-600 transition-colors flex items-center gap-2"
+              className="ml-auto px-4 py-2 bg-gradient-to-r from-orange-500 to-orange-600 text-white font-semibold rounded-lg hover:scale-105 transition-transform flex items-center gap-2"
             >
-              <svg
-                className="w-4 h-4"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z"
-                />
-              </svg>
-              Shop on Amazon
+              <FaAmazon className="w-4 h-4" aria-hidden="true" />
+              Buy Now
             </a>
           </div>
         </div>
@@ -212,26 +202,14 @@ export default function AffiliateProductCard({
           target="_blank"
           rel="noopener noreferrer sponsored"
           onClick={handleClick}
-          className={`w-full py-3 px-4 rounded-lg font-semibold text-center flex items-center justify-center gap-2 transition-colors ${
+          className={`w-full py-3 px-4 rounded-lg font-semibold text-center flex items-center justify-center gap-2 hover:scale-105 transition-transform ${
             product.inStock
-              ? 'bg-orange-500 text-white hover:bg-orange-600'
+              ? 'bg-gradient-to-r from-orange-500 to-orange-600 text-white'
               : 'bg-gray-300 text-gray-500 cursor-not-allowed'
           }`}
         >
-          <svg
-            className="w-5 h-5"
-            fill="none"
-            stroke="currentColor"
-            viewBox="0 0 24 24"
-          >
-            <path
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              strokeWidth={2}
-              d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z"
-            />
-          </svg>
-          {product.inStock ? 'Shop Now' : 'Out of Stock'}
+          <FaAmazon className="w-5 h-5" aria-hidden="true" />
+          {product.inStock ? 'Buy Now' : 'Out of Stock'}
         </a>
 
         {/* Affiliate Disclosure */}

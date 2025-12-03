@@ -1,8 +1,9 @@
 import React from 'react';
 import { motion } from 'framer-motion';
-import { FaShareAlt, FaAmazon, FaArrowRight } from 'react-icons/fa';
+import { FaShareAlt, FaAmazon } from 'react-icons/fa';
 import { Shoe } from '../../lib/types';
 import { OutfitAnalysis } from '../../hooks/useOutfitAnalysis';
+import { getAffiliateUrl } from '../../lib/supabaseClient';
 
 interface Props {
   outfitImage: string;
@@ -68,12 +69,12 @@ export const ShareResults: React.FC<Props> = ({ analysis, recommendations }) => 
                 </div>
 
                 <a 
-                  href={shoe.amazon_url}
+                  href={getAffiliateUrl(shoe.amazon_url)}
                   target="_blank"
                   rel="noopener noreferrer"
                   className="bg-white text-black px-3 py-2 rounded-lg text-xs font-bold flex items-center gap-1 shadow hover:scale-105 transition-transform"
                 >
-                  <FaAmazon /> Shop <FaArrowRight className="text-[10px]" />
+                  <FaAmazon /> Buy Now
                 </a>
               </div>
             </div>
