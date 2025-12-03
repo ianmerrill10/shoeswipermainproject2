@@ -17,7 +17,6 @@
  * await buyNFT(nftId);
  */
 
-// useNFTMarketplace.ts
 import { useCallback, useState } from "react";
 import { supabase } from "@/lib/supabaseClient";
 import type { 

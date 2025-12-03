@@ -5,7 +5,6 @@
  * 
  * Uses React Query for automatic caching with configurable stale times.
  * 
- * @module useBlog
  * @example
  * // Fetch paginated blog posts
  * const { data: posts, isLoading } = useBlogPosts('sneakers', { page: 1 });
