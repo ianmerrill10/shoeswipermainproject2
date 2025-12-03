@@ -1,0 +1,7 @@
+# Default owner for everything in the repo
+* @ianmerrill10
+
+# Critical files require owner review
+SECURITY.md @ianmerrill10
+.env* @ianmerrill10
+*.sql @ianmerrill10

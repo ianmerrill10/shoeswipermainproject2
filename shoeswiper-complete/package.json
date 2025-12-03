@@ -4,6 +4,9 @@
   "description": "TikTok-style sneaker discovery marketplace with AI outfit matching and NFT authenticity",
   "private": true,
   "type": "module",
+  "engines": {
+    "node": ">=20.0.0"
+  },
   "scripts": {
     "dev": "vite",
     "build": "vite build",
