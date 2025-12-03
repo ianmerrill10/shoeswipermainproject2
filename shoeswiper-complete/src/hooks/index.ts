@@ -15,3 +15,6 @@ export type { SwipeDirection } from './useAnimations';
 
 // Seller verification
 export { useSellerVerification } from './useSellerVerification';
+
+// Escrow payments
+export { useEscrow, ESCROW_STATUS_DISPLAY } from './useEscrow';
