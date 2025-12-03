@@ -241,12 +241,13 @@ export const usePriceAlerts = () => {
     return alerts.find(a => a.shoeId === shoeId);
   }, [alerts]);
 
-  // Simulate a price drop (for DEMO mode)
+  // Simulate a price drop (for DEMO mode) - also triggers push notification
   const simulatePriceDrop = useCallback(async (shoeId: string, newPrice: number) => {
     const alert = alerts.find(a => a.shoeId === shoeId);
     if (!alert) return;
 
     if (newPrice <= alert.targetPrice && !alert.triggered) {
+      const oldPrice = alert.currentPrice || alert.originalPrice || 0;
       const notification: PriceNotification = {
         id: `notif-${Date.now()}`,
         shoeId: alert.shoeId,
@@ -254,10 +255,10 @@ export const usePriceAlerts = () => {
         shoeBrand: alert.shoeBrand,
         shoeImage: alert.shoeImage,
         amazonUrl: alert.amazonUrl,
-        oldPrice: alert.currentPrice || alert.originalPrice || 0,
+        oldPrice,
         newPrice,
-        savedAmount: (alert.currentPrice || alert.originalPrice || 0) - newPrice,
-        percentOff: Math.round(((alert.currentPrice || alert.originalPrice || 0) - newPrice) / (alert.currentPrice || alert.originalPrice || 1) * 100),
+        savedAmount: oldPrice - newPrice,
+        percentOff: Math.round((oldPrice - newPrice) / (oldPrice || 1) * 100),
         createdAt: new Date().toISOString(),
         read: false,
       };
@@ -275,6 +276,30 @@ export const usePriceAlerts = () => {
       const updatedNotifications = [notification, ...notifications];
       setNotifications(updatedNotifications);
       localStorage.setItem(PRICE_NOTIFICATIONS_KEY, JSON.stringify(updatedNotifications));
+
+      // Trigger push notification if enabled
+      try {
+        if ('Notification' in window && Notification.permission === 'granted') {
+          const percentOff = Math.round((oldPrice - newPrice) / (oldPrice || 1) * 100);
+          const registration = await navigator.serviceWorker?.ready;
+          if (registration?.active) {
+            registration.active.postMessage({
+              type: 'SHOW_LOCAL_NOTIFICATION',
+              payload: {
+                title: `Price Drop: ${alert.shoeName}`,
+                body: `Now $${newPrice} (was $${oldPrice}) - Save ${percentOff}%!`,
+                data: {
+                  shoeId: alert.shoeId,
+                  amazonUrl: alert.amazonUrl,
+                  type: 'price_drop',
+                },
+              },
+            });
+          }
+        }
+      } catch (err) {
+        console.log('[PriceAlerts] Push notification not available');
+      }
 
       console.log(`[Demo] Price drop alert triggered for ${alert.shoeName}! Now $${newPrice}`);
     }

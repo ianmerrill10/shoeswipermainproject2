@@ -1,20 +1,24 @@
 import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { supabase, ADMIN_EMAIL } from '../lib/supabaseClient';
-import { FaCog, FaSignOutAlt, FaHeart, FaShoppingBag, FaShieldAlt, FaGem } from 'react-icons/fa';
+import { FaCog, FaSignOutAlt, FaHeart, FaShoppingBag, FaShieldAlt, FaGem, FaBell } from 'react-icons/fa';
 import { Profile, Shoe } from '../lib/types';
 import { SneakerCard } from '../components/SneakerCard';
 import ReferralCard from '../components/ReferralCard';
+import NotificationSettings from '../components/NotificationSettings';
+import { usePushNotifications } from '../hooks/usePushNotifications';
 
 type Tab = 'favorites' | 'closet';
 
 const ProfilePage: React.FC = () => {
   const navigate = useNavigate();
+  const { isEnabled: pushEnabled } = usePushNotifications();
   const [profile, setProfile] = useState<Profile | null>(null);
   const [favorites, setFavorites] = useState<Shoe[]>([]);
   const [closet, setCloset] = useState<Shoe[]>([]);
   const [activeTab, setActiveTab] = useState<Tab>('favorites');
   const [loading, setLoading] = useState(true);
+  const [showNotificationSettings, setShowNotificationSettings] = useState(false);
 
   useEffect(() => {
     loadProfile();
@@ -157,6 +161,33 @@ const ProfilePage: React.FC = () => {
         <ReferralCard />
       </div>
 
+      {/* Notification Settings */}
+      <div className="px-6 mb-4">
+        <button
+          onClick={() => setShowNotificationSettings(true)}
+          className="w-full bg-zinc-900 rounded-xl p-4 flex items-center justify-between hover:bg-zinc-800 transition-colors"
+        >
+          <div className="flex items-center gap-3">
+            <div className={`w-10 h-10 rounded-full flex items-center justify-center ${
+              pushEnabled ? 'bg-green-500/20' : 'bg-zinc-800'
+            }`}>
+              <FaBell className={pushEnabled ? 'text-green-500' : 'text-zinc-500'} />
+            </div>
+            <div className="text-left">
+              <p className="text-white font-medium">Push Notifications</p>
+              <p className="text-zinc-500 text-xs">
+                {pushEnabled ? 'Enabled - Get price drop alerts' : 'Enable to get deal alerts'}
+              </p>
+            </div>
+          </div>
+          <div className={`px-2 py-1 rounded text-xs font-bold ${
+            pushEnabled ? 'bg-green-500/20 text-green-400' : 'bg-orange-500/20 text-orange-400'
+          }`}>
+            {pushEnabled ? 'ON' : 'OFF'}
+          </div>
+        </button>
+      </div>
+
       {/* Tabs */}
       <div className="sticky top-0 bg-zinc-950 border-b border-zinc-800 z-10">
         <div className="flex px-6">
@@ -217,6 +248,12 @@ const ProfilePage: React.FC = () => {
           )
         )}
       </div>
+
+      {/* Notification Settings Panel */}
+      <NotificationSettings
+        isOpen={showNotificationSettings}
+        onClose={() => setShowNotificationSettings(false)}
+      />
     </div>
   );
 };
