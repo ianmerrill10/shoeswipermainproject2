@@ -18,3 +18,6 @@ export { useSellerVerification } from './useSellerVerification';
 
 // Escrow payments
 export { useEscrow, ESCROW_STATUS_DISPLAY } from './useEscrow';
+
+// Product data (Amazon PA-API)
+export { useProductData, useSingleProductData, useBatchProductData } from './useProductData';
