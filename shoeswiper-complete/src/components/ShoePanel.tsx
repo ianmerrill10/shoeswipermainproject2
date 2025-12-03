@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { FaTimes, FaAmazon, FaBookmark, FaShare, FaChevronLeft, FaChevronRight, FaCheck } from 'react-icons/fa';
 import { Shoe } from '../lib/types';
 import { getAffiliateUrl, shouldShowPrice, formatPrice } from '../lib/supabaseClient';
@@ -19,6 +19,11 @@ const ShoePanel: React.FC<ShoePanelProps> = ({ shoe, isOpen, onClose }) => {
   const [showShareToast, setShowShareToast] = useState(false);
   const { toggleFavorite, isFavorite } = useFavorites();
   const { trackFavorite, trackShare } = useAnalytics();
+  
+  // Refs for focus management
+  const panelRef = useRef<HTMLDivElement>(null);
+  const closeButtonRef = useRef<HTMLButtonElement>(null);
+  const previousFocusRef = useRef<HTMLElement | null>(null);
 
   // Generate view angles (in production these would be real image URLs)
   const viewAngles = [
@@ -31,6 +36,69 @@ const ShoePanel: React.FC<ShoePanelProps> = ({ shoe, isOpen, onClose }) => {
 
   // Default sizes if none provided
   const sizes = shoe.sizes_available || ['7', '7.5', '8', '8.5', '9', '9.5', '10', '10.5', '11', '11.5', '12', '13'];
+
+  // Focus trap and keyboard handling
+  const handleKeyDown = useCallback((e: KeyboardEvent) => {
+    if (!isOpen) return;
+    
+    if (e.key === 'Escape') {
+      e.preventDefault();
+      onClose();
+      return;
+    }
+    
+    // Arrow key navigation for images
+    if (e.key === 'ArrowLeft') {
+      e.preventDefault();
+      setCurrentImageIndex((prev) => (prev === 0 ? viewAngles.length - 1 : prev - 1));
+    } else if (e.key === 'ArrowRight') {
+      e.preventDefault();
+      setCurrentImageIndex((prev) => (prev === viewAngles.length - 1 ? 0 : prev + 1));
+    }
+    
+    // Focus trap
+    if (e.key === 'Tab') {
+      const panel = panelRef.current;
+      if (!panel) return;
+      
+      const focusableElements = panel.querySelectorAll<HTMLElement>(
+        'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])'
+      );
+      const firstElement = focusableElements[0];
+      const lastElement = focusableElements[focusableElements.length - 1];
+      
+      if (e.shiftKey && document.activeElement === firstElement) {
+        e.preventDefault();
+        lastElement?.focus();
+      } else if (!e.shiftKey && document.activeElement === lastElement) {
+        e.preventDefault();
+        firstElement?.focus();
+      }
+    }
+  }, [isOpen, onClose, viewAngles.length]);
+
+  // Set up focus management
+  useEffect(() => {
+    if (isOpen) {
+      // Save current focus
+      previousFocusRef.current = document.activeElement as HTMLElement;
+      // Focus the close button when panel opens
+      setTimeout(() => closeButtonRef.current?.focus(), 100);
+      
+      document.addEventListener('keydown', handleKeyDown);
+    }
+    
+    return () => {
+      document.removeEventListener('keydown', handleKeyDown);
+    };
+  }, [isOpen, handleKeyDown]);
+
+  // Restore focus when panel closes
+  useEffect(() => {
+    if (!isOpen && previousFocusRef.current) {
+      previousFocusRef.current.focus();
+    }
+  }, [isOpen]);
 
   const handleBuyClick = () => {
     window.open(getAffiliateUrl(shoe.amazon_url), '_blank');
@@ -87,61 +155,79 @@ const ShoePanel: React.FC<ShoePanelProps> = ({ shoe, isOpen, onClose }) => {
           isOpen ? 'opacity-100' : 'opacity-0 pointer-events-none'
         }`}
         onClick={onClose}
+        aria-hidden="true"
       />
 
       {/* Panel */}
       <div
+        ref={panelRef}
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="shoe-panel-title"
+        aria-describedby="shoe-panel-description"
         className={`fixed top-0 left-0 h-full w-full max-w-md bg-zinc-950 z-50 transform transition-transform duration-300 ease-out overflow-y-auto ${
           isOpen ? 'translate-x-0' : '-translate-x-full'
         }`}
       >
         {/* Header */}
         <div className="sticky top-0 bg-zinc-950/95 backdrop-blur-sm border-b border-zinc-800 p-4 flex items-center justify-between z-10">
-          <h2 className="text-lg font-bold text-white">3D View</h2>
+          <h2 id="shoe-panel-title" className="text-lg font-bold text-white">3D View</h2>
           <button
+            ref={closeButtonRef}
             onClick={onClose}
+            aria-label="Close shoe details panel"
             className="w-10 h-10 bg-zinc-800 rounded-full flex items-center justify-center text-white hover:bg-zinc-700 transition-colors"
           >
-            <FaTimes />
+            <FaTimes aria-hidden="true" />
           </button>
         </div>
 
+        {/* Screen reader description */}
+        <p id="shoe-panel-description" className="sr-only">
+          Detailed view of {shoe.brand} {shoe.name}. Use arrow keys to navigate between images. Press Escape to close.
+        </p>
+
         {/* Model Viewer / Main Image */}
-        <div className="relative bg-gradient-to-b from-zinc-900 to-zinc-950 aspect-square flex items-center justify-center">
+        <div className="relative bg-gradient-to-b from-zinc-900 to-zinc-950 aspect-square flex items-center justify-center" role="region" aria-label="Shoe image gallery">
           <img
             src={viewAngles[currentImageIndex].url}
-            alt={`${shoe.name} - ${viewAngles[currentImageIndex].label}`}
+            alt={`${shoe.brand} ${shoe.name} - ${viewAngles[currentImageIndex].label} view`}
             className="max-w-[80%] max-h-[80%] object-contain drop-shadow-2xl"
           />
 
           {/* Navigation arrows */}
           <button
             onClick={prevImage}
+            aria-label={`Previous image. Currently showing ${viewAngles[currentImageIndex].label} view, ${currentImageIndex + 1} of ${viewAngles.length}`}
             className="absolute left-3 top-1/2 -translate-y-1/2 w-10 h-10 bg-black/50 backdrop-blur-sm rounded-full flex items-center justify-center text-white hover:bg-black/70 transition-colors"
           >
-            <FaChevronLeft />
+            <FaChevronLeft aria-hidden="true" />
           </button>
           <button
             onClick={nextImage}
+            aria-label={`Next image. Currently showing ${viewAngles[currentImageIndex].label} view, ${currentImageIndex + 1} of ${viewAngles.length}`}
             className="absolute right-3 top-1/2 -translate-y-1/2 w-10 h-10 bg-black/50 backdrop-blur-sm rounded-full flex items-center justify-center text-white hover:bg-black/70 transition-colors"
           >
-            <FaChevronRight />
+            <FaChevronRight aria-hidden="true" />
           </button>
 
           {/* 3D badge placeholder */}
-          <div className="absolute top-4 left-4 bg-orange-500 text-white text-xs font-bold px-3 py-1 rounded-full">
+          <div className="absolute top-4 left-4 bg-orange-500 text-white text-xs font-bold px-3 py-1 rounded-full" aria-label="360 degree view available">
             360° VIEW
           </div>
         </div>
 
         {/* View Angles Gallery */}
         <div className="p-4 border-b border-zinc-800">
-          <p className="text-zinc-400 text-sm mb-3">View Angles</p>
-          <div className="flex gap-2 overflow-x-auto pb-2">
+          <p className="text-zinc-400 text-sm mb-3" id="view-angles-label">View Angles</p>
+          <div className="flex gap-2 overflow-x-auto pb-2" role="tablist" aria-labelledby="view-angles-label">
             {viewAngles.map((angle, index) => (
               <button
                 key={angle.label}
                 onClick={() => setCurrentImageIndex(index)}
+                role="tab"
+                aria-selected={currentImageIndex === index}
+                aria-label={`${angle.label} view`}
                 className={`flex-shrink-0 w-16 h-16 rounded-lg overflow-hidden border-2 transition-colors ${
                   currentImageIndex === index
                     ? 'border-orange-500'
@@ -150,7 +236,8 @@ const ShoePanel: React.FC<ShoePanelProps> = ({ shoe, isOpen, onClose }) => {
               >
                 <img
                   src={angle.url}
-                  alt={angle.label}
+                  alt=""
+                  aria-hidden="true"
                   className="w-full h-full object-cover"
                 />
               </button>
@@ -165,18 +252,21 @@ const ShoePanel: React.FC<ShoePanelProps> = ({ shoe, isOpen, onClose }) => {
           </span>
           <h3 className="text-xl font-bold text-white mt-2">{shoe.name}</h3>
           {shouldShowPrice(shoe.price) && (
-            <p className="text-2xl font-bold text-orange-400 mt-1">{formatPrice(shoe.price)}</p>
+            <p className="text-2xl font-bold text-orange-400 mt-1" aria-label={`Price ${formatPrice(shoe.price)}`}>{formatPrice(shoe.price)}</p>
           )}
         </div>
 
         {/* Size Selector */}
-        <div className="p-4 border-b border-zinc-800">
-          <p className="text-zinc-400 text-sm mb-3">Select Size (US)</p>
-          <div className="grid grid-cols-4 gap-2">
+        <div className="p-4 border-b border-zinc-800" role="region" aria-labelledby="size-selector-label">
+          <p className="text-zinc-400 text-sm mb-3" id="size-selector-label">Select Size (US)</p>
+          <div className="grid grid-cols-4 gap-2" role="radiogroup" aria-labelledby="size-selector-label">
             {sizes.map((size) => (
               <button
                 key={size}
                 onClick={() => setSelectedSize(size)}
+                role="radio"
+                aria-checked={selectedSize === size}
+                aria-label={`Size ${size}`}
                 className={`py-3 rounded-lg font-bold text-sm transition-colors ${
                   selectedSize === size
                     ? 'bg-orange-500 text-white'
@@ -190,40 +280,40 @@ const ShoePanel: React.FC<ShoePanelProps> = ({ shoe, isOpen, onClose }) => {
         </div>
 
         {/* Specifications */}
-        <div className="p-4 border-b border-zinc-800">
-          <p className="text-zinc-400 text-sm mb-3">Specifications</p>
-          <div className="space-y-2">
+        <div className="p-4 border-b border-zinc-800" role="region" aria-labelledby="specs-label">
+          <p className="text-zinc-400 text-sm mb-3" id="specs-label">Specifications</p>
+          <dl className="space-y-2">
             {shoe.colorway && (
               <div className="flex justify-between text-sm">
-                <span className="text-zinc-500">Colorway</span>
-                <span className="text-white">{shoe.colorway}</span>
+                <dt className="text-zinc-500">Colorway</dt>
+                <dd className="text-white">{shoe.colorway}</dd>
               </div>
             )}
             {shoe.style_code && (
               <div className="flex justify-between text-sm">
-                <span className="text-zinc-500">Style Code</span>
-                <span className="text-white">{shoe.style_code}</span>
+                <dt className="text-zinc-500">Style Code</dt>
+                <dd className="text-white">{shoe.style_code}</dd>
               </div>
             )}
             {shoe.release_date && (
               <div className="flex justify-between text-sm">
-                <span className="text-zinc-500">Release Date</span>
-                <span className="text-white">{shoe.release_date}</span>
+                <dt className="text-zinc-500">Release Date</dt>
+                <dd className="text-white">{shoe.release_date}</dd>
               </div>
             )}
             {shouldShowPrice(shoe.retail_price) && (
               <div className="flex justify-between text-sm">
-                <span className="text-zinc-500">Retail</span>
-                <span className="text-white">{formatPrice(shoe.retail_price)}</span>
+                <dt className="text-zinc-500">Retail</dt>
+                <dd className="text-white">{formatPrice(shoe.retail_price)}</dd>
               </div>
             )}
             {shoe.amazon_asin && (
               <div className="flex justify-between text-sm">
-                <span className="text-zinc-500">ASIN</span>
-                <span className="text-zinc-400 font-mono">{shoe.amazon_asin}</span>
+                <dt className="text-zinc-500">ASIN</dt>
+                <dd className="text-zinc-400 font-mono">{shoe.amazon_asin}</dd>
               </div>
             )}
-          </div>
+          </dl>
         </div>
 
         {/* Description */}
@@ -235,12 +325,13 @@ const ShoePanel: React.FC<ShoePanelProps> = ({ shoe, isOpen, onClose }) => {
         )}
 
         {/* Action Buttons */}
-        <div className="p-4 space-y-3 pb-8">
+        <div className="p-4 space-y-3 pb-8" role="group" aria-label="Purchase and save actions">
           <button
             onClick={handleBuyClick}
+            aria-label={`Buy ${shoe.name} on Amazon`}
             className="w-full bg-white text-black font-black py-4 rounded-xl flex items-center justify-center gap-3 text-base active:scale-95 transition-transform"
           >
-            <FaAmazon className="text-2xl" />
+            <FaAmazon className="text-2xl" aria-hidden="true" />
             BUY ON AMAZON
           </button>
 
@@ -252,20 +343,23 @@ const ShoePanel: React.FC<ShoePanelProps> = ({ shoe, isOpen, onClose }) => {
           <div className="flex gap-3">
             <button
               onClick={handleAddToCloset}
+              aria-label={isInCloset ? `Remove ${shoe.name} from closet` : `Add ${shoe.name} to closet`}
+              aria-pressed={isInCloset}
               className={`flex-1 font-bold py-3 rounded-xl flex items-center justify-center gap-2 transition-colors ${
                 isInCloset
                   ? 'bg-orange-500 text-white'
                   : 'bg-zinc-800 text-white hover:bg-zinc-700'
               }`}
             >
-              {isInCloset ? <FaCheck /> : <FaBookmark />}
+              {isInCloset ? <FaCheck aria-hidden="true" /> : <FaBookmark aria-hidden="true" />}
               {isInCloset ? 'In Closet' : 'Add to Closet'}
             </button>
             <button
               onClick={handleShare}
+              aria-label={`Share ${shoe.name}`}
               className="flex-1 bg-zinc-800 text-white font-bold py-3 rounded-xl flex items-center justify-center gap-2 hover:bg-zinc-700 transition-colors"
             >
-              <FaShare />
+              <FaShare aria-hidden="true" />
               Share
             </button>
           </div>
@@ -273,11 +367,14 @@ const ShoePanel: React.FC<ShoePanelProps> = ({ shoe, isOpen, onClose }) => {
 
         {/* Share Success Toast */}
         <div
+          role="status"
+          aria-live="polite"
+          aria-atomic="true"
           className={`fixed bottom-8 left-1/2 -translate-x-1/2 bg-zinc-700 text-white px-4 py-3 rounded-xl flex items-center gap-2 shadow-lg z-[60] transition-all duration-300 ${
             showShareToast ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4 pointer-events-none'
           }`}
         >
-          <div className="w-6 h-6 bg-green-500 rounded-full flex items-center justify-center">
+          <div className="w-6 h-6 bg-green-500 rounded-full flex items-center justify-center" aria-hidden="true">
             <FaCheck className="text-xs text-white" />
           </div>
           <span className="font-medium text-sm">Copied with affiliate link!</span>

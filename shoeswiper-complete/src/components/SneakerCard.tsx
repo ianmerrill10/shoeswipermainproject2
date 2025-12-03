@@ -36,27 +36,39 @@ export const SneakerCard: React.FC<Props> = ({ shoe, variant = 'grid' }) => {
     ? Math.round(((shoe.price - shoe.sale_price!) / shoe.price) * 100)
     : 0;
 
+  // Generate descriptive alt text for the shoe image
+  const getImageAltText = () => {
+    const parts = [shoe.brand, shoe.name];
+    if (shoe.colorway) parts.push(`in ${shoe.colorway}`);
+    return parts.join(' ');
+  };
+
   // Render Grid Version (Search Results/Profile)
   if (variant === 'grid') {
     return (
-      <div className="bg-zinc-900 border border-zinc-800 rounded-xl overflow-hidden group hover:border-orange-500/50 transition-all">
+      <article 
+        className="bg-zinc-900 border border-zinc-800 rounded-xl overflow-hidden group hover:border-orange-500/50 transition-all"
+        aria-label={`${shoe.brand} ${shoe.name}`}
+      >
         <div className="relative aspect-square bg-zinc-800">
           <img 
             src={shoe.image_url} 
-            alt={shoe.name}
+            alt={getImageAltText()}
             loading="lazy"
             className="w-full h-full object-cover object-center group-hover:scale-105 transition-transform duration-500"
           />
           {isOnSale && (
-            <div className="absolute top-2 left-2 bg-red-500 text-white text-[10px] font-bold px-2 py-1 rounded-full flex items-center gap-1">
-              <FaTag /> -{discount}%
+            <div className="absolute top-2 left-2 bg-red-500 text-white text-[10px] font-bold px-2 py-1 rounded-full flex items-center gap-1" aria-label={`${discount}% off`}>
+              <FaTag aria-hidden="true" /> -{discount}%
             </div>
           )}
           <button 
             onClick={toggleLike}
+            aria-label={isLiked ? `Remove ${shoe.name} from favorites` : `Add ${shoe.name} to favorites`}
+            aria-pressed={isLiked}
             className="absolute top-2 right-2 p-2 rounded-full bg-black/50 backdrop-blur-sm text-white hover:text-red-500 transition-colors"
           >
-            {isLiked ? <FaHeart className="text-red-500" /> : <FaRegHeart />}
+            {isLiked ? <FaHeart className="text-red-500" aria-hidden="true" /> : <FaRegHeart aria-hidden="true" />}
           </button>
         </div>
         
@@ -67,8 +79,8 @@ export const SneakerCard: React.FC<Props> = ({ shoe, variant = 'grid' }) => {
           <div className="mt-3 flex items-center justify-between">
             {showPrice ? (
               <div className="flex flex-col">
-                {isOnSale && <span className="text-[10px] text-zinc-500 line-through">{formatPrice(shoe.price)}</span>}
-                <span className={`font-bold ${isOnSale ? 'text-red-400' : 'text-orange-500'}`}>
+                {isOnSale && <span className="text-[10px] text-zinc-500 line-through" aria-label={`Original price ${formatPrice(shoe.price)}`}>{formatPrice(shoe.price)}</span>}
+                <span className={`font-bold ${isOnSale ? 'text-red-400' : 'text-orange-500'}`} aria-label={`Current price ${formatPrice(isOnSale ? shoe.sale_price : shoe.price)}`}>
                   {formatPrice(isOnSale ? shoe.sale_price : shoe.price)}
                 </span>
               </div>
@@ -78,27 +90,31 @@ export const SneakerCard: React.FC<Props> = ({ shoe, variant = 'grid' }) => {
 
             <button
               onClick={handleBuyClick}
+              aria-label={`Shop ${shoe.name} on Amazon`}
               className="bg-white text-black px-3 py-1.5 rounded-lg text-xs font-bold flex items-center gap-1 hover:bg-zinc-200"
             >
-              <FaAmazon /> Shop
+              <FaAmazon aria-hidden="true" /> Shop
             </button>
           </div>
         </div>
-      </div>
+      </article>
     );
   }
 
   // Render Feed Version (Full Screen TikTok Style)
   return (
-    <div className="relative w-full h-full bg-black">
+    <article 
+      className="relative w-full h-full bg-black"
+      aria-label={`${shoe.brand} ${shoe.name}`}
+    >
       <img 
         src={shoe.image_url} 
-        alt={shoe.name}
+        alt={getImageAltText()}
         className="w-full h-full object-cover opacity-80"
       />
       
       {/* Gradient Overlay */}
-      <div className="absolute inset-0 bg-gradient-to-b from-black/20 via-transparent to-black/90 pointer-events-none" />
+      <div className="absolute inset-0 bg-gradient-to-b from-black/20 via-transparent to-black/90 pointer-events-none" aria-hidden="true" />
 
       {/* Content */}
       <div className="absolute bottom-24 left-0 w-full p-6">
@@ -117,7 +133,7 @@ export const SneakerCard: React.FC<Props> = ({ shoe, variant = 'grid' }) => {
             <h2 className="text-3xl font-black text-white leading-tight mb-2 shadow-sm">{shoe.name}</h2>
             {showPrice ? (
               <div className="flex items-center gap-3">
-                <span className="text-2xl font-bold text-orange-400">{formatPrice(shoe.price)}</span>
+                <span className="text-2xl font-bold text-orange-400" aria-label={`Price ${formatPrice(shoe.price)}`}>{formatPrice(shoe.price)}</span>
                 <span className="text-zinc-400 text-sm">Free Shipping via Amazon</span>
               </div>
             ) : (
@@ -128,21 +144,27 @@ export const SneakerCard: React.FC<Props> = ({ shoe, variant = 'grid' }) => {
 
         <button
           onClick={handleBuyClick}
+          aria-label={`Shop ${shoe.name} on Amazon`}
           className="mt-6 w-full bg-white text-black font-black py-4 rounded-xl flex items-center justify-center gap-2 text-lg hover:scale-[1.02] active:scale-95 transition-all shadow-lg shadow-white/10"
         >
-          <FaAmazon className="text-xl" /> SHOP ON AMAZON
+          <FaAmazon className="text-xl" aria-hidden="true" /> SHOP ON AMAZON
         </button>
       </div>
 
       {/* Side Actions (Like, Share) */}
-      <div className="absolute bottom-32 right-4 flex flex-col gap-6 items-center">
-        <button onClick={toggleLike} className="flex flex-col items-center gap-1">
+      <div className="absolute bottom-32 right-4 flex flex-col gap-6 items-center" role="group" aria-label="Sneaker actions">
+        <button 
+          onClick={toggleLike} 
+          className="flex flex-col items-center gap-1"
+          aria-label={isLiked ? `Remove ${shoe.name} from favorites` : `Add ${shoe.name} to favorites, ${shoe.favorite_count} people liked this`}
+          aria-pressed={isLiked}
+        >
           <div className="p-3 bg-zinc-800/60 backdrop-blur-md rounded-full">
-            {isLiked ? <FaHeart className="text-2xl text-red-500" /> : <FaRegHeart className="text-2xl text-white" />}
+            {isLiked ? <FaHeart className="text-2xl text-red-500" aria-hidden="true" /> : <FaRegHeart className="text-2xl text-white" aria-hidden="true" />}
           </div>
-          <span className="text-xs font-bold text-white">{shoe.favorite_count + (isLiked ? 1 : 0)}</span>
+          <span className="text-xs font-bold text-white" aria-hidden="true">{shoe.favorite_count + (isLiked ? 1 : 0)}</span>
         </button>
       </div>
-    </div>
+    </article>
   );
 };
