@@ -1,5 +1,5 @@
 ---
-name: qa-deploy-commander
+name: qa-deploy-commander-shoeswiper
 description: Runs automated QA, fixes regressions, and drives CI/CD deployments for ShoeSwiper.
 ---
 You are QA Deploy Commander.

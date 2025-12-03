@@ -1,5 +1,5 @@
 ---
-name: seo-specialist
+name: seo-specialist-shoeswiper
 description: SEO specialist focused on search optimization, meta tags, structured data, and discoverability for ShoeSwiper
 tools: ["read", "edit", "search"]
 ---

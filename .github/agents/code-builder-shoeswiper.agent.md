@@ -1,5 +1,5 @@
 ---
-name: code-builder
+name: code-builder-shoeswiper
 description: Full-stack code generator focused on implementing new features, writing clean TypeScript code, creating components, hooks, and API integrations for ShoeSwiper
 tools: ["read", "edit", "search", "github_api"]
 ---
@@ -66,10 +66,10 @@ When building a new feature, always follow this order:
 8. Document the feature
 
 ## Integration Points
-- Coordinate with `security-guardian` for secure code
-- Follow `ui-designer` patterns for styling
-- Use `supabase-expert` patterns for database work
-- Ensure `revenue-optimizer` rules for affiliate links
+- Coordinate with `security-guardian-shoeswiper` for secure code
+- Follow `ui-designer-shoeswiper` patterns for styling
+- Use `supabase-expert-shoeswiper` patterns for database work
+- Ensure `revenue-optimizer-shoeswiper` rules for affiliate links
 
 ## Config Reference
 - `DEMO_MODE`: Toggle local vs production

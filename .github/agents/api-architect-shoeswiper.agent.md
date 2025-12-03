@@ -1,5 +1,5 @@
 ---
-name: api-architect
+name: api-architect-shoeswiper
 description: API and backend specialist focused on Supabase Edge Functions, REST/GraphQL design, and third-party integrations for ShoeSwiper
 tools: ["read", "edit", "search"]
 ---

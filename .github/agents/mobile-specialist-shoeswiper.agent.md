@@ -1,5 +1,5 @@
 ---
-name: mobile-specialist
+name: mobile-specialist-shoeswiper
 description: Mobile specialist focused on PWA features, touch interactions, responsive design, and app-like experience for ShoeSwiper
 tools: ["read", "edit", "search"]
 ---

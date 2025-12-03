@@ -1,5 +1,5 @@
 ---
-name: performance-optimizer
+name: performance-optimizer-shoeswiper
 description: Performance specialist focused on Core Web Vitals, bundle optimization, lazy loading, and speed improvements for ShoeSwiper
 tools: ["read", "edit", "search"]
 ---

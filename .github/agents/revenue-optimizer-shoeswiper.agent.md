@@ -1,5 +1,5 @@
 ---
-name: revenue-optimizer
+name: revenue-optimizer-shoeswiper
 description: Revenue and monetization specialist focused on affiliate integration, conversion optimization, and growth strategies for ShoeSwiper marketplace
 tools: ["read", "edit", "search"]
 ---

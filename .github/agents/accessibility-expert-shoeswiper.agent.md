@@ -1,5 +1,5 @@
 ---
-name: accessibility-expert
+name: accessibility-expert-shoeswiper
 description: Accessibility specialist focused on WCAG compliance, screen reader support, keyboard navigation, and inclusive design for ShoeSwiper
 tools: ["read", "edit", "search"]
 ---
