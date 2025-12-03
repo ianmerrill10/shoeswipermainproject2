@@ -1,3 +1,22 @@
+/**
+ * NFT minting, buying, and listing functionality hook.
+ * Manages NFT lifecycle including minting from owned sneakers,
+ * listing for sale, and purchasing NFTs from other users.
+ * 
+ * @returns Object containing NFT state and marketplace methods
+ * @example
+ * const { nfts, mintNFT, buyNFT, listForSale } = useNFTMarketplace();
+ * 
+ * // Mint a new NFT from a shoe
+ * const nft = await mintNFT(shoeId, proofImages, 'rare');
+ * 
+ * // List an NFT for sale
+ * await listForSale(nftId, 0.5); // 0.5 ETH
+ * 
+ * // Buy an NFT
+ * await buyNFT(nftId);
+ */
+
 // useNFTMarketplace.ts
 import { useCallback, useState } from "react";
 import { supabase } from "@/lib/supabaseClient";

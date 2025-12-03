@@ -1,6 +1,30 @@
 import { useState, useEffect, useCallback } from 'react';
 import { DEMO_MODE } from '../lib/config';
 
+/**
+ * User onboarding flow state management hook.
+ * Manages multi-step onboarding process including style preferences,
+ * favorite brands, email capture, and push notification opt-in.
+ * 
+ * In DEMO_MODE, state is stored in localStorage.
+ * In production, state is synced with Supabase user_preferences table.
+ * 
+ * @returns Object containing onboarding state and navigation methods
+ * @example
+ * const { completed, currentStep, nextStep, completeOnboarding } = useOnboarding();
+ * 
+ * // Check if onboarding is complete
+ * if (completed) return <MainApp />;
+ * 
+ * // Navigate through steps
+ * nextStep();
+ * previousStep();
+ * 
+ * // Save preferences
+ * setStylePreferences(['streetwear', 'running']);
+ * setFavoriteBrands(['Nike', 'Jordan']);
+ */
+
 const ONBOARDING_KEY = 'shoeswiper_onboarding';
 const PREFERENCES_KEY = 'shoeswiper_preferences';
 

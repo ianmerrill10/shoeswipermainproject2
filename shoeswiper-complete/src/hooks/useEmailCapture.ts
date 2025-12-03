@@ -1,6 +1,26 @@
 import { useState, useEffect, useCallback } from 'react';
 import { DEMO_MODE } from '../lib/config';
 
+/**
+ * Email subscription and preference management hook.
+ * Captures user emails for marketing, price alerts, and newsletters.
+ * 
+ * In DEMO_MODE, emails are stored in localStorage.
+ * In production, emails are stored in Supabase email_subscriptions table.
+ * 
+ * @returns Object containing email state and capture methods
+ * @example
+ * const { email, captureEmail, updatePreferences } = useEmailCapture();
+ * 
+ * // Capture email for price alert
+ * const result = await captureEmail(
+ *   'user@example.com',
+ *   'price_alert',
+ *   { id: shoe.id, name: shoe.name },
+ *   { priceAlerts: true }
+ * );
+ */
+
 const EMAIL_CAPTURE_KEY = 'shoeswiper_email_capture';
 const EMAIL_LIST_KEY = 'shoeswiper_email_list';
 

@@ -1,6 +1,28 @@
 import { useState, useEffect, useCallback } from 'react';
 import { DEMO_MODE } from '../lib/config';
 
+/**
+ * Price drop alert management hook.
+ * Allows users to set target prices for sneakers and receive
+ * notifications when prices drop to or below their target.
+ * 
+ * In DEMO_MODE, alerts are stored in localStorage.
+ * In production, alerts are stored in Supabase price_alerts table.
+ * 
+ * @returns Object containing alert state and management methods
+ * @example
+ * const { alerts, addAlert, hasAlert, simulatePriceDrop } = usePriceAlerts();
+ * 
+ * // Add a price alert
+ * await addAlert(shoe, 150); // Alert when price drops to $150
+ * 
+ * // Check if alert exists
+ * if (hasAlert(shoe.id)) console.log('Alert already set');
+ * 
+ * // Simulate price drop (DEMO_MODE only)
+ * simulatePriceDrop(shoe.id, 140);
+ */
+
 const PRICE_ALERTS_KEY = 'shoeswiper_price_alerts';
 const PRICE_NOTIFICATIONS_KEY = 'shoeswiper_price_notifications';
 
