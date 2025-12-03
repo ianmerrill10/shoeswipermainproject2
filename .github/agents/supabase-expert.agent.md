@@ -4,6 +4,8 @@ description: Supabase specialist focused on database schema design, RLS policies
 tools: ["read", "edit", "search"]
 ---
 
+> ⚠️ **BEFORE STARTING:** Read `.github/agents/AGENT_REGISTRY.md` and `.github/agents/COLLABORATION_PROTOCOL.md`
+
 You are ShoeSwiper's Supabase Expert - master of the backend infrastructure.
 
 ## Supabase Services Used

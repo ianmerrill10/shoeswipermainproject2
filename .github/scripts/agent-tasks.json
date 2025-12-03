@@ -1,0 +1,216 @@
+{
+  "version": "1.0.0",
+  "description": "ShoeSwiper Multi-Agent Orchestration Configuration",
+  "lastUpdated": "2024-01-01",
+  
+  "agents": [
+    {
+      "name": "security-guardian",
+      "priority": 1,
+      "emoji": "🔐",
+      "focusAreas": [
+        "Security vulnerabilities",
+        "RLS policies",
+        "API key protection",
+        "Input validation",
+        "Authentication/Authorization"
+      ],
+      "collaboratesWith": ["supabase-expert", "devops-engineer"],
+      "blocksDeployment": true,
+      "issueLabels": ["security", "priority-critical"]
+    },
+    {
+      "name": "revenue-optimizer",
+      "priority": 2,
+      "emoji": "💰",
+      "focusAreas": [
+        "Affiliate tag verification",
+        "Conversion optimization",
+        "Email capture",
+        "Referral programs",
+        "Premium features"
+      ],
+      "collaboratesWith": ["security-guardian", "code-builder"],
+      "blocksDeployment": true,
+      "issueLabels": ["revenue", "priority-high"]
+    },
+    {
+      "name": "code-builder",
+      "priority": 3,
+      "emoji": "🏗️",
+      "focusAreas": [
+        "New feature implementation",
+        "Component development",
+        "Custom hooks",
+        "API integrations",
+        "Edge Functions"
+      ],
+      "collaboratesWith": ["react-specialist", "supabase-expert", "security-guardian"],
+      "blocksDeployment": false,
+      "issueLabels": ["feature", "enhancement"]
+    },
+    {
+      "name": "react-specialist",
+      "priority": 3,
+      "emoji": "⚛️",
+      "focusAreas": [
+        "TypeScript optimization",
+        "Component patterns",
+        "State management",
+        "Performance tuning",
+        "Custom hooks"
+      ],
+      "collaboratesWith": ["code-builder", "ui-designer"],
+      "blocksDeployment": false,
+      "issueLabels": ["react", "typescript"]
+    },
+    {
+      "name": "supabase-expert",
+      "priority": 3,
+      "emoji": "🗄️",
+      "focusAreas": [
+        "Database schema",
+        "RLS policies",
+        "Edge Functions",
+        "Query optimization",
+        "Migrations"
+      ],
+      "collaboratesWith": ["security-guardian", "code-builder"],
+      "blocksDeployment": false,
+      "issueLabels": ["database", "backend"]
+    },
+    {
+      "name": "ui-designer",
+      "priority": 4,
+      "emoji": "🎨",
+      "focusAreas": [
+        "Tailwind CSS styling",
+        "Framer Motion animations",
+        "Responsive design",
+        "Dark theme",
+        "Accessibility"
+      ],
+      "collaboratesWith": ["mobile-specialist", "react-specialist"],
+      "blocksDeployment": false,
+      "issueLabels": ["ui", "styling"]
+    },
+    {
+      "name": "devops-engineer",
+      "priority": 4,
+      "emoji": "🚀",
+      "focusAreas": [
+        "CI/CD pipelines",
+        "Deployment automation",
+        "Environment management",
+        "Monitoring",
+        "Infrastructure"
+      ],
+      "collaboratesWith": ["security-guardian"],
+      "blocksDeployment": false,
+      "issueLabels": ["devops", "infrastructure"]
+    },
+    {
+      "name": "seo-specialist",
+      "priority": 5,
+      "emoji": "🔍",
+      "focusAreas": [
+        "Meta tags",
+        "Structured data",
+        "Open Graph",
+        "Sitemap",
+        "Core Web Vitals"
+      ],
+      "collaboratesWith": ["mobile-specialist"],
+      "blocksDeployment": false,
+      "issueLabels": ["seo", "marketing"]
+    },
+    {
+      "name": "mobile-specialist",
+      "priority": 5,
+      "emoji": "📱",
+      "focusAreas": [
+        "PWA features",
+        "Touch gestures",
+        "Mobile responsiveness",
+        "Safe areas",
+        "App-like experience"
+      ],
+      "collaboratesWith": ["ui-designer"],
+      "blocksDeployment": false,
+      "issueLabels": ["mobile", "pwa"]
+    }
+  ],
+
+  "collaborationRules": {
+    "securityReviewRequired": [
+      "user authentication",
+      "API keys",
+      "environment variables",
+      "RLS policies",
+      "Edge Functions",
+      "payment flows",
+      "user data handling"
+    ],
+    "revenueReviewRequired": [
+      "affiliate links",
+      "purchase flows",
+      "subscription logic",
+      "referral system",
+      "email capture"
+    ],
+    "databaseReviewRequired": [
+      "new tables",
+      "schema changes",
+      "migrations",
+      "RLS policies"
+    ]
+  },
+
+  "priorityOrder": [
+    "security-guardian",
+    "revenue-optimizer",
+    "code-builder",
+    "react-specialist",
+    "supabase-expert",
+    "ui-designer",
+    "devops-engineer",
+    "seo-specialist",
+    "mobile-specialist"
+  ],
+
+  "launchModes": {
+    "full": {
+      "description": "Run all agents",
+      "agents": ["all"]
+    },
+    "security": {
+      "description": "Security audit only",
+      "agents": ["security-guardian", "supabase-expert", "devops-engineer"]
+    },
+    "revenue": {
+      "description": "Revenue optimization focus",
+      "agents": ["revenue-optimizer", "security-guardian"]
+    },
+    "features": {
+      "description": "Feature development focus",
+      "agents": ["code-builder", "react-specialist", "supabase-expert", "ui-designer"]
+    },
+    "quick": {
+      "description": "Quick check - security and revenue only",
+      "agents": ["security-guardian", "revenue-optimizer"]
+    }
+  },
+
+  "codePatterns": {
+    "affiliateTag": "shoeswiper-20",
+    "adminEmail": "dadsellsgadgets@gmail.com",
+    "forbiddenPatterns": [
+      "any",
+      "VITE_.*SECRET",
+      "console\\.log\\("
+    ],
+    "requiredPatterns": [
+      "import\\.meta\\.env\\.DEV"
+    ]
+  }
+}
