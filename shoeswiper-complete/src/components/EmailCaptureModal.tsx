@@ -1,6 +1,8 @@
 import React, { useState } from 'react';
 import { FaTimes, FaEnvelope, FaBell, FaRocket, FaNewspaper, FaPercent, FaCheck, FaSpinner } from 'react-icons/fa';
 import { useEmailCapture, CapturedEmail } from '../hooks/useEmailCapture';
+import { validateEmail } from '../lib/validation';
+import { checkRateLimit, RATE_LIMITS } from '../lib/security';
 
 interface EmailCaptureModalProps {
   isOpen: boolean;
@@ -21,7 +23,7 @@ const EmailCaptureModal: React.FC<EmailCaptureModalProps> = ({
   title = 'Get Price Drop Alerts',
   subtitle = "We'll email you when prices drop on shoes you're watching",
 }) => {
-  const { captureEmail, isValidEmail, email: savedEmail, isSubscribed } = useEmailCapture();
+  const { captureEmail, email: savedEmail, isSubscribed } = useEmailCapture();
   const [email, setEmail] = useState(savedEmail || '');
   const [preferences, setPreferences] = useState({
     priceAlerts: true,
@@ -37,18 +39,27 @@ const EmailCaptureModal: React.FC<EmailCaptureModalProps> = ({
     e.preventDefault();
     setError(null);
 
+    // Rate limit check
+    const rateCheck = checkRateLimit('email-capture', RATE_LIMITS.emailCapture);
+    if (rateCheck.limited) {
+      setError(`Too many attempts. Please wait ${Math.ceil(rateCheck.resetIn / 1000)} seconds.`);
+      return;
+    }
+
     if (!email.trim()) {
       setError('Please enter your email address');
       return;
     }
 
-    if (!isValidEmail(email)) {
-      setError('Please enter a valid email address');
+    // Validate email with our security validation
+    const emailValidation = validateEmail(email);
+    if (!emailValidation.valid) {
+      setError(emailValidation.error || 'Please enter a valid email address');
       return;
     }
 
     setLoading(true);
-    const result = await captureEmail(email, source, shoeData, preferences);
+    const result = await captureEmail(emailValidation.sanitized, source, shoeData, preferences);
     setLoading(false);
 
     if (result.success) {

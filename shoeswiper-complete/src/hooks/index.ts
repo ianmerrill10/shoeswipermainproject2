@@ -7,4 +7,5 @@ export { useOutfitAnalysis } from './useOutfitAnalysis';
 export { useAdmin } from './useAdmin';
 export { useNFTMarketplace } from './useNFTMarketplace';
 export { useBlog, generateAffiliateUrl } from './useBlog';
+export { useSecurity } from './useSecurity';
 export type { BlogPost, BlogCategory, BlogMetadata, AffiliateProduct } from './useBlog';

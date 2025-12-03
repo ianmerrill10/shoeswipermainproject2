@@ -2,6 +2,8 @@ import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '../lib/supabaseClient';
 import { FaGoogle, FaApple, FaEnvelope, FaLock, FaUser } from 'react-icons/fa';
+import { validateEmail, validateDisplayName } from '../lib/validation';
+import { checkRateLimit, RATE_LIMITS } from '../lib/security';
 
 type AuthMode = 'signin' | 'signup';
 
@@ -19,10 +21,43 @@ const AuthPage: React.FC = () => {
     setLoading(true);
     setError(null);
 
+    // Rate limiting for auth attempts
+    const rateCheck = checkRateLimit(`auth:${email}`, RATE_LIMITS.auth);
+    if (rateCheck.limited) {
+      setError(`Too many attempts. Please try again in ${Math.ceil(rateCheck.resetIn / 60000)} minutes.`);
+      setLoading(false);
+      return;
+    }
+
+    // Validate email
+    const emailValidation = validateEmail(email);
+    if (!emailValidation.valid) {
+      setError(emailValidation.error || 'Invalid email');
+      setLoading(false);
+      return;
+    }
+
+    // Validate username for signup
+    if (mode === 'signup') {
+      const usernameValidation = validateDisplayName(username);
+      if (!usernameValidation.valid) {
+        setError(usernameValidation.error || 'Invalid username');
+        setLoading(false);
+        return;
+      }
+    }
+
+    // Validate password length
+    if (password.length < 6) {
+      setError('Password must be at least 6 characters');
+      setLoading(false);
+      return;
+    }
+
     try {
       if (mode === 'signup') {
         const { data, error } = await supabase.auth.signUp({
-          email,
+          email: emailValidation.sanitized,
           password,
           options: {
             data: { username }
@@ -34,21 +69,29 @@ const AuthPage: React.FC = () => {
         if (data.user) {
           await supabase.from('profiles').insert({
             id: data.user.id,
-            email,
+            email: emailValidation.sanitized,
             username,
           });
         }
       } else {
         const { error } = await supabase.auth.signInWithPassword({
-          email,
+          email: emailValidation.sanitized,
           password,
         });
         if (error) throw error;
       }
       navigate('/');
     } catch (err: unknown) {
+      // Don't reveal specific auth errors (security best practice)
       const message = err instanceof Error ? err.message : "Authentication failed";
-      setError(message);
+      // Sanitize error message to not leak sensitive information
+      if (message.includes('Invalid login credentials')) {
+        setError('Invalid email or password');
+      } else if (message.includes('User already registered')) {
+        setError('An account with this email already exists');
+      } else {
+        setError('Authentication failed. Please try again.');
+      }
     } finally {
       setLoading(false);
     }

@@ -2,6 +2,8 @@ import React, { useState, useEffect } from 'react';
 import { FaSearch, FaFilter, FaTimes } from 'react-icons/fa';
 import { useSneakerSearch, SearchFilters } from '../hooks/useSneakerSearch';
 import { SneakerCard } from '../components/SneakerCard';
+import { sanitizeSearchQuery } from '../lib/validation';
+import { checkRateLimit, RATE_LIMITS } from '../lib/security';
 
 const BRANDS = ['Nike', 'Jordan', 'Adidas', 'New Balance', 'ASICS', 'Puma', 'Converse', 'Vans', 'HOKA', 'Salomon'];
 const STYLES = ['streetwear', 'retro', 'casual', 'hype', 'running', 'athletic', 'classic', 'gorpcore'];
@@ -12,6 +14,7 @@ const SearchPage: React.FC = () => {
   const [query, setQuery] = useState('');
   const [showFilters, setShowFilters] = useState(false);
   const [filters, setFilters] = useState<SearchFilters>({});
+  const [rateLimitError, setRateLimitError] = useState<string | null>(null);
 
   useEffect(() => {
     // Load initial results
@@ -21,7 +24,18 @@ const SearchPage: React.FC = () => {
 
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();
-    searchSneakers(query, filters);
+    setRateLimitError(null);
+
+    // Check rate limit
+    const rateCheck = checkRateLimit('search', RATE_LIMITS.search);
+    if (rateCheck.limited) {
+      setRateLimitError(`Too many searches. Please wait ${Math.ceil(rateCheck.resetIn / 1000)} seconds.`);
+      return;
+    }
+
+    // Sanitize the search query to prevent XSS/injection
+    const sanitizedQuery = sanitizeSearchQuery(query);
+    searchSneakers(sanitizedQuery, filters);
   };
 
   const toggleBrand = (brand: string) => {
@@ -41,7 +55,18 @@ const SearchPage: React.FC = () => {
   };
 
   const applyFilters = () => {
-    searchSneakers(query, filters);
+    setRateLimitError(null);
+    
+    // Check rate limit
+    const rateCheck = checkRateLimit('search', RATE_LIMITS.search);
+    if (rateCheck.limited) {
+      setRateLimitError(`Too many searches. Please wait ${Math.ceil(rateCheck.resetIn / 1000)} seconds.`);
+      return;
+    }
+
+    // Sanitize query
+    const sanitizedQuery = sanitizeSearchQuery(query);
+    searchSneakers(sanitizedQuery, filters);
     setShowFilters(false);
   };
 
@@ -103,6 +128,13 @@ const SearchPage: React.FC = () => {
 
       {/* Results */}
       <div className="p-4">
+        {/* Rate Limit Error */}
+        {rateLimitError && (
+          <div className="mb-4 p-3 bg-red-500/10 border border-red-500/30 rounded-lg text-red-400 text-sm">
+            {rateLimitError}
+          </div>
+        )}
+        
         {isSearching ? (
           <div className="grid grid-cols-2 gap-3">
             {[...Array(6)].map((_, i) => (

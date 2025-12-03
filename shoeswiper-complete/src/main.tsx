@@ -3,8 +3,12 @@ import ReactDOM from 'react-dom/client';
 import { BrowserRouter } from 'react-router-dom';
 import { QueryClientProvider } from '@tanstack/react-query';
 import { queryClient } from './lib/queryClient';
+import { initializeSecurity } from './lib/security';
 import App from './App';
 import './index.css';
+
+// Initialize security features (CSRF, rate limiting, session handling)
+initializeSecurity();
 
 ReactDOM.createRoot(document.getElementById('root')!).render(
   <React.StrictMode>

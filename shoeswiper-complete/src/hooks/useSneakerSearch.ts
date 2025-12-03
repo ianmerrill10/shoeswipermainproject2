@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { Shoe } from '../lib/types';
 import { DEMO_MODE, searchShoes } from '../lib/mockData';
 import { supabase } from '../lib/supabaseClient';
+import { sanitizeSearchQuery } from '../lib/validation';
 
 export interface SearchFilters {
   brands?: string[];
@@ -20,10 +21,13 @@ export const useSneakerSearch = () => {
   const searchSneakers = async (query: string, filters: SearchFilters = {}) => {
     setIsSearching(true);
 
+    // Sanitize the search query before processing
+    const sanitizedQuery = sanitizeSearchQuery(query);
+
     try {
       // DEMO MODE: Use mock data
       if (DEMO_MODE) {
-        let results = searchShoes(query);
+        let results = searchShoes(sanitizedQuery);
 
         // Apply filters
         if (filters.brands && filters.brands.length > 0) {
@@ -47,8 +51,8 @@ export const useSneakerSearch = () => {
       let dbQuery = supabase.from('shoes').select('*').eq('is_active', true);
 
       // 1. Text Search (if query exists)
-      if (query.trim().length > 0) {
-        dbQuery = dbQuery.textSearch('name', query, {
+      if (sanitizedQuery.trim().length > 0) {
+        dbQuery = dbQuery.textSearch('name', sanitizedQuery, {
           type: 'websearch',
           config: 'english'
         });
@@ -95,7 +99,7 @@ export const useSneakerSearch = () => {
           dbQuery = dbQuery.order('view_count', { ascending: false });
           break;
         default:
-          if (!query) dbQuery = dbQuery.order('favorite_count', { ascending: false });
+          if (!sanitizedQuery) dbQuery = dbQuery.order('favorite_count', { ascending: false });
       }
 
       const { data, error } = await dbQuery.limit(50);
@@ -104,7 +108,9 @@ export const useSneakerSearch = () => {
       setResults(data as Shoe[]);
       
     } catch (err) {
-      console.error('Search failed:', err);
+      if (import.meta.env.DEV) {
+        console.error('Search failed:', err);
+      }
     } finally {
       setIsSearching(false);
     }
