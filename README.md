@@ -30,8 +30,8 @@
 ### 1. Clone & Install
 
 ```bash
-git clone https://github.com/yourusername/shoeswiper.git
-cd shoeswiper
+git clone https://github.com/ianmerrill10/shoeswipermainproject2.git
+cd shoeswipermainproject2
 npm install
 ```
 
