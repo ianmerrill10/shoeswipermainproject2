@@ -15,10 +15,17 @@ export default defineConfig({
       exclude: [
         'node_modules/',
         'src/test/',
+        'src/__tests__/',
         '**/*.d.ts',
         '**/*.config.*',
         '**/dist/**',
       ],
+      thresholds: {
+        statements: 60,
+        branches: 60,
+        functions: 60,
+        lines: 60,
+      },
     },
   },
   resolve: {
