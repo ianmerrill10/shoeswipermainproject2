@@ -6,15 +6,15 @@
 
 | Agent | Priority | Specialty | When to Collaborate |
 |-------|----------|-----------|---------------------|
-| security-guardian | P1 | Security, vulnerabilities, RLS, auth | Any code handling user data, API keys, or auth |
-| revenue-optimizer | P2 | Affiliate links, conversion, growth | Amazon links, monetization, A/B tests |
-| code-builder | P3 | New features, components, hooks | Building new functionality end-to-end |
-| react-specialist | P3 | TypeScript, React patterns, performance | Component architecture, hooks, state |
-| supabase-expert | P3 | Database, RLS, Edge Functions | Database schemas, queries, backend |
-| ui-designer | P4 | Tailwind, animations, accessibility | Styling, animations, responsive design |
-| devops-engineer | P4 | CI/CD, deployment, monitoring | Workflows, deployments, infrastructure |
-| seo-specialist | P5 | Meta tags, structured data | SEO, social sharing, discoverability |
-| mobile-specialist | P5 | PWA, touch, responsive | Mobile UX, gestures, app-like features |
+| security-guardian-shoeswiper | P1 | Security, vulnerabilities, RLS, auth | Any code handling user data, API keys, or auth |
+| revenue-optimizer-shoeswiper | P2 | Affiliate links, conversion, growth | Amazon links, monetization, A/B tests |
+| code-builder-shoeswiper | P3 | New features, components, hooks | Building new functionality end-to-end |
+| react-specialist-shoeswiper | P3 | TypeScript, React patterns, performance | Component architecture, hooks, state |
+| supabase-expert-shoeswiper | P3 | Database, RLS, Edge Functions | Database schemas, queries, backend |
+| ui-designer-shoeswiper | P4 | Tailwind, animations, accessibility | Styling, animations, responsive design |
+| devops-engineer-shoeswiper | P4 | CI/CD, deployment, monitoring | Workflows, deployments, infrastructure |
+| seo-specialist-shoeswiper | P5 | Meta tags, structured data | SEO, social sharing, discoverability |
+| mobile-specialist-shoeswiper | P5 | PWA, touch, responsive | Mobile UX, gestures, app-like features |
 
 ## Requesting Collaboration
 
@@ -31,7 +31,7 @@ When you need help from another agent, use this format in your response:
 ### Examples
 
 ```markdown
-<!-- COLLABORATE:security-guardian -->
+<!-- COLLABORATE:security-guardian-shoeswiper -->
 **Request:** Review this authentication flow for vulnerabilities
 **Context:** src/hooks/useAuth.ts
 **Priority:** High
@@ -39,7 +39,7 @@ When you need help from another agent, use this format in your response:
 ```
 
 ```markdown
-<!-- COLLABORATE:revenue-optimizer -->
+<!-- COLLABORATE:revenue-optimizer-shoeswiper -->
 **Request:** Verify affiliate tag is correctly applied
 **Context:** src/components/BuyButton.tsx
 **Priority:** High
@@ -62,7 +62,7 @@ When a task is better suited for another agent, use this format:
 ### Example
 
 ```markdown
-<!-- HANDOFF:ui-designer -->
+<!-- HANDOFF:ui-designer-shoeswiper -->
 **Task:** Style the new price comparison component
 **Reason:** Needs Framer Motion animations and Tailwind styling
 **Files:** src/components/PriceComparison.tsx
@@ -72,7 +72,7 @@ When a task is better suited for another agent, use this format:
 
 ## Agent Capabilities
 
-### security-guardian (P1 - BLOCKS ALL)
+### security-guardian-shoeswiper (P1 - BLOCKS ALL)
 - ✅ Security vulnerability review
 - ✅ RLS policy verification
 - ✅ API key exposure prevention
@@ -80,7 +80,7 @@ When a task is better suited for another agent, use this format:
 - ✅ Auth/authz review
 - ✅ Third-party dependency audit
 
-### revenue-optimizer (P2 - CRITICAL)
+### revenue-optimizer-shoeswiper (P2 - CRITICAL)
 - ✅ Affiliate tag verification (`?tag=shoeswiper-20`)
 - ✅ Conversion funnel optimization
 - ✅ Email capture mechanisms
@@ -88,7 +88,7 @@ When a task is better suited for another agent, use this format:
 - ✅ Premium feature suggestions
 - ✅ A/B testing opportunities
 
-### code-builder (P3)
+### code-builder-shoeswiper (P3)
 - ✅ New feature implementation
 - ✅ Component creation
 - ✅ Custom hook development
@@ -96,7 +96,7 @@ When a task is better suited for another agent, use this format:
 - ✅ Edge Function development
 - ✅ Database migrations
 
-### react-specialist (P3)
+### react-specialist-shoeswiper (P3)
 - ✅ Component architecture
 - ✅ TypeScript optimization
 - ✅ Custom hooks
@@ -104,7 +104,7 @@ When a task is better suited for another agent, use this format:
 - ✅ React Query patterns
 - ✅ Performance optimization
 
-### supabase-expert (P3)
+### supabase-expert-shoeswiper (P3)
 - ✅ Database schema design
 - ✅ RLS policy creation
 - ✅ Edge Function development
@@ -112,7 +112,7 @@ When a task is better suited for another agent, use this format:
 - ✅ Real-time subscriptions
 - ✅ Migration scripts
 
-### ui-designer (P4)
+### ui-designer-shoeswiper (P4)
 - ✅ Tailwind CSS styling
 - ✅ Framer Motion animations
 - ✅ Mobile-first responsive design
@@ -120,7 +120,7 @@ When a task is better suited for another agent, use this format:
 - ✅ Accessibility (a11y)
 - ✅ Design system maintenance
 
-### devops-engineer (P4)
+### devops-engineer-shoeswiper (P4)
 - ✅ GitHub Actions workflows
 - ✅ Deployment automation
 - ✅ Environment management
@@ -128,7 +128,7 @@ When a task is better suited for another agent, use this format:
 - ✅ Monitoring setup
 - ✅ Infrastructure configuration
 
-### seo-specialist (P5)
+### seo-specialist-shoeswiper (P5)
 - ✅ Meta tag optimization
 - ✅ Structured data (JSON-LD)
 - ✅ Open Graph tags
@@ -136,7 +136,7 @@ When a task is better suited for another agent, use this format:
 - ✅ URL structure
 - ✅ Core Web Vitals
 
-### mobile-specialist (P5)
+### mobile-specialist-shoeswiper (P5)
 - ✅ PWA features
 - ✅ Touch gesture optimization
 - ✅ Safe area handling
@@ -159,22 +159,22 @@ Every agent MUST follow these rules:
 ## Priority Hierarchy
 
 ```
-P1: security-guardian     ← Blocks everything. Security first.
-P2: revenue-optimizer     ← Critical for business. Must approve affiliate/money code.
-P3: code-builder, react-specialist, supabase-expert  ← Core development
-P4: ui-designer, devops-engineer  ← Support & polish
-P5: seo-specialist, mobile-specialist  ← Enhancement & optimization
+P1: security-guardian-shoeswiper     ← Blocks everything. Security first.
+P2: revenue-optimizer-shoeswiper     ← Critical for business. Must approve affiliate/money code.
+P3: code-builder-shoeswiper, react-specialist-shoeswiper, supabase-expert-shoeswiper  ← Core development
+P4: ui-designer-shoeswiper, devops-engineer-shoeswiper  ← Support & polish
+P5: seo-specialist-shoeswiper, mobile-specialist-shoeswiper  ← Enhancement & optimization
 ```
 
 ## Cross-Agent Review Requirements
 
 | When Making Changes To... | Must Be Reviewed By |
 |---------------------------|---------------------|
-| Authentication, user data, API keys | security-guardian |
-| Amazon links, purchase flows | revenue-optimizer |
-| Database schemas, RLS policies | supabase-expert + security-guardian |
-| New Edge Functions | supabase-expert + security-guardian |
-| UI components with user input | ui-designer + security-guardian |
-| CI/CD pipelines | devops-engineer |
-| Meta tags, structured data | seo-specialist |
-| Mobile-specific features | mobile-specialist |
+| Authentication, user data, API keys | security-guardian-shoeswiper |
+| Amazon links, purchase flows | revenue-optimizer-shoeswiper |
+| Database schemas, RLS policies | supabase-expert-shoeswiper + security-guardian-shoeswiper |
+| New Edge Functions | supabase-expert-shoeswiper + security-guardian-shoeswiper |
+| UI components with user input | ui-designer-shoeswiper + security-guardian-shoeswiper |
+| CI/CD pipelines | devops-engineer-shoeswiper |
+| Meta tags, structured data | seo-specialist-shoeswiper |
+| Mobile-specific features | mobile-specialist-shoeswiper |

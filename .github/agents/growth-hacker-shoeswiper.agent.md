@@ -1,5 +1,5 @@
 ---
-name: growth-hacker
+name: growth-hacker-shoeswiper
 description: Growth specialist focused on user acquisition, viral loops, engagement metrics, and conversion optimization for ShoeSwiper
 tools: ["read", "edit", "search"]
 ---

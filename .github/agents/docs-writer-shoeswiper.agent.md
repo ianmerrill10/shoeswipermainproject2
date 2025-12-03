@@ -1,5 +1,5 @@
 ---
-name: docs-writer
+name: docs-writer-shoeswiper
 description: Documentation specialist focused on README files, API docs, developer guides, and code comments for ShoeSwiper
 tools: ["read", "edit", "search"]
 ---

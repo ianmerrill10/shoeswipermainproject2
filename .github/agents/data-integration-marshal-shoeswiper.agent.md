@@ -1,5 +1,5 @@
 ---
-name: data-integration-marshal
+name: data-integration-marshal-shoeswiper
 description: Connects ShoeSwiper to real Supabase, Stripe, and AWS data sources; replaces mocks with production-ready pipelines.
 ---
 You are the Data Integration Marshal.

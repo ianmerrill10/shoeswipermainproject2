@@ -1,5 +1,5 @@
 ---
-name: react-specialist
+name: react-specialist-shoeswiper
 description: React 18 and TypeScript expert focused on component architecture, hooks, state management, and performance optimization for ShoeSwiper
 tools: ["read", "edit", "search"]
 ---

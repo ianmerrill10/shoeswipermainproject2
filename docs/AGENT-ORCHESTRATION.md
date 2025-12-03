@@ -21,10 +21,10 @@ The orchestration runs automatically every **Monday at 6 AM UTC**.
 | Mode | Description | Agents Activated |
 |------|-------------|------------------|
 | `full` | Complete project audit | All 9 agents |
-| `security` | Security-focused audit | security-guardian, supabase-expert, devops-engineer |
-| `revenue` | Revenue optimization | revenue-optimizer, security-guardian |
-| `features` | Feature development | code-builder, react-specialist, supabase-expert, ui-designer |
-| `quick` | Fast essential check | security-guardian, revenue-optimizer |
+| `security` | Security-focused audit | security-guardian-shoeswiper, supabase-expert-shoeswiper, devops-engineer-shoeswiper |
+| `revenue` | Revenue optimization | revenue-optimizer-shoeswiper, security-guardian-shoeswiper |
+| `features` | Feature development | code-builder-shoeswiper, react-specialist-shoeswiper, supabase-expert-shoeswiper, ui-designer-shoeswiper |
+| `quick` | Fast essential check | security-guardian-shoeswiper, revenue-optimizer-shoeswiper |
 
 ## What Happens When You Run It
 
@@ -98,11 +98,11 @@ The orchestration runs automatically every **Monday at 6 AM UTC**.
 
 | Priority | Agent | Authority |
 |----------|-------|-----------|
-| P1 | security-guardian | **Blocks all deployments** - Security issues must be fixed |
-| P2 | revenue-optimizer | **Critical** - Revenue issues are high priority |
-| P3 | code-builder, react-specialist, supabase-expert | Core development agents |
-| P4 | ui-designer, devops-engineer | Support and infrastructure |
-| P5 | seo-specialist, mobile-specialist | Enhancement and optimization |
+| P1 | security-guardian-shoeswiper | **Blocks all deployments** - Security issues must be fixed |
+| P2 | revenue-optimizer-shoeswiper | **Critical** - Revenue issues are high priority |
+| P3 | code-builder-shoeswiper, react-specialist-shoeswiper, supabase-expert-shoeswiper | Core development agents |
+| P4 | ui-designer-shoeswiper, devops-engineer-shoeswiper | Support and infrastructure |
+| P5 | seo-specialist-shoeswiper, mobile-specialist-shoeswiper | Enhancement and optimization |
 
 ## Files Created
 
@@ -144,7 +144,7 @@ Edit `.github/scripts/agent-tasks.json` under `launchModes`:
   "launchModes": {
     "custom": {
       "description": "My custom mode",
-      "agents": ["security-guardian", "revenue-optimizer"]
+      "agents": ["security-guardian-shoeswiper", "revenue-optimizer-shoeswiper"]
     }
   }
 }

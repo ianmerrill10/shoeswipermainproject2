@@ -1,5 +1,5 @@
 ---
-name: devops-engineer
+name: devops-engineer-shoeswiper
 description: DevOps specialist focused on CI/CD pipelines, deployment automation, infrastructure, and monitoring for ShoeSwiper
 tools: ["read", "edit", "search", "github_api"]
 ---

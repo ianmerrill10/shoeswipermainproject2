@@ -5,7 +5,7 @@
   
   "agents": [
     {
-      "name": "security-guardian",
+      "name": "security-guardian-shoeswiper",
       "priority": 1,
       "emoji": "🔐",
       "focusAreas": [
@@ -15,12 +15,12 @@
         "Input validation",
         "Authentication/Authorization"
       ],
-      "collaboratesWith": ["supabase-expert", "devops-engineer"],
+      "collaboratesWith": ["supabase-expert-shoeswiper", "devops-engineer-shoeswiper"],
       "blocksDeployment": true,
       "issueLabels": ["security", "priority-critical"]
     },
     {
-      "name": "revenue-optimizer",
+      "name": "revenue-optimizer-shoeswiper",
       "priority": 2,
       "emoji": "💰",
       "focusAreas": [
@@ -30,12 +30,12 @@
         "Referral programs",
         "Premium features"
       ],
-      "collaboratesWith": ["security-guardian", "code-builder"],
+      "collaboratesWith": ["security-guardian-shoeswiper", "code-builder-shoeswiper"],
       "blocksDeployment": true,
       "issueLabels": ["revenue", "priority-high"]
     },
     {
-      "name": "code-builder",
+      "name": "code-builder-shoeswiper",
       "priority": 3,
       "emoji": "🏗️",
       "focusAreas": [
@@ -45,12 +45,12 @@
         "API integrations",
         "Edge Functions"
       ],
-      "collaboratesWith": ["react-specialist", "supabase-expert", "security-guardian"],
+      "collaboratesWith": ["react-specialist-shoeswiper", "supabase-expert-shoeswiper", "security-guardian-shoeswiper"],
       "blocksDeployment": false,
       "issueLabels": ["feature", "enhancement"]
     },
     {
-      "name": "react-specialist",
+      "name": "react-specialist-shoeswiper",
       "priority": 3,
       "emoji": "⚛️",
       "focusAreas": [
@@ -60,12 +60,12 @@
         "Performance tuning",
         "Custom hooks"
       ],
-      "collaboratesWith": ["code-builder", "ui-designer"],
+      "collaboratesWith": ["code-builder-shoeswiper", "ui-designer-shoeswiper"],
       "blocksDeployment": false,
       "issueLabels": ["react", "typescript"]
     },
     {
-      "name": "supabase-expert",
+      "name": "supabase-expert-shoeswiper",
       "priority": 3,
       "emoji": "🗄️",
       "focusAreas": [
@@ -75,12 +75,12 @@
         "Query optimization",
         "Migrations"
       ],
-      "collaboratesWith": ["security-guardian", "code-builder"],
+      "collaboratesWith": ["security-guardian-shoeswiper", "code-builder-shoeswiper"],
       "blocksDeployment": false,
       "issueLabels": ["database", "backend"]
     },
     {
-      "name": "ui-designer",
+      "name": "ui-designer-shoeswiper",
       "priority": 4,
       "emoji": "🎨",
       "focusAreas": [
@@ -90,12 +90,12 @@
         "Dark theme",
         "Accessibility"
       ],
-      "collaboratesWith": ["mobile-specialist", "react-specialist"],
+      "collaboratesWith": ["mobile-specialist-shoeswiper", "react-specialist-shoeswiper"],
       "blocksDeployment": false,
       "issueLabels": ["ui", "styling"]
     },
     {
-      "name": "devops-engineer",
+      "name": "devops-engineer-shoeswiper",
       "priority": 4,
       "emoji": "🚀",
       "focusAreas": [
@@ -105,12 +105,12 @@
         "Monitoring",
         "Infrastructure"
       ],
-      "collaboratesWith": ["security-guardian"],
+      "collaboratesWith": ["security-guardian-shoeswiper"],
       "blocksDeployment": false,
       "issueLabels": ["devops", "infrastructure"]
     },
     {
-      "name": "seo-specialist",
+      "name": "seo-specialist-shoeswiper",
       "priority": 5,
       "emoji": "🔍",
       "focusAreas": [
@@ -120,12 +120,12 @@
         "Sitemap",
         "Core Web Vitals"
       ],
-      "collaboratesWith": ["mobile-specialist"],
+      "collaboratesWith": ["mobile-specialist-shoeswiper"],
       "blocksDeployment": false,
       "issueLabels": ["seo", "marketing"]
     },
     {
-      "name": "mobile-specialist",
+      "name": "mobile-specialist-shoeswiper",
       "priority": 5,
       "emoji": "📱",
       "focusAreas": [
@@ -135,7 +135,7 @@
         "Safe areas",
         "App-like experience"
       ],
-      "collaboratesWith": ["ui-designer"],
+      "collaboratesWith": ["ui-designer-shoeswiper"],
       "blocksDeployment": false,
       "issueLabels": ["mobile", "pwa"]
     }
@@ -167,15 +167,15 @@
   },
 
   "priorityOrder": [
-    "security-guardian",
-    "revenue-optimizer",
-    "code-builder",
-    "react-specialist",
-    "supabase-expert",
-    "ui-designer",
-    "devops-engineer",
-    "seo-specialist",
-    "mobile-specialist"
+    "security-guardian-shoeswiper",
+    "revenue-optimizer-shoeswiper",
+    "code-builder-shoeswiper",
+    "react-specialist-shoeswiper",
+    "supabase-expert-shoeswiper",
+    "ui-designer-shoeswiper",
+    "devops-engineer-shoeswiper",
+    "seo-specialist-shoeswiper",
+    "mobile-specialist-shoeswiper"
   ],
 
   "launchModes": {
@@ -185,19 +185,19 @@
     },
     "security": {
       "description": "Security audit only",
-      "agents": ["security-guardian", "supabase-expert", "devops-engineer"]
+      "agents": ["security-guardian-shoeswiper", "supabase-expert-shoeswiper", "devops-engineer-shoeswiper"]
     },
     "revenue": {
       "description": "Revenue optimization focus",
-      "agents": ["revenue-optimizer", "security-guardian"]
+      "agents": ["revenue-optimizer-shoeswiper", "security-guardian-shoeswiper"]
     },
     "features": {
       "description": "Feature development focus",
-      "agents": ["code-builder", "react-specialist", "supabase-expert", "ui-designer"]
+      "agents": ["code-builder-shoeswiper", "react-specialist-shoeswiper", "supabase-expert-shoeswiper", "ui-designer-shoeswiper"]
     },
     "quick": {
       "description": "Quick check - security and revenue only",
-      "agents": ["security-guardian", "revenue-optimizer"]
+      "agents": ["security-guardian-shoeswiper", "revenue-optimizer-shoeswiper"]
     }
   },
 

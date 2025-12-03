@@ -52,35 +52,35 @@ Before starting ANY task, every agent MUST:
 
 | When Doing This... | MUST Collaborate With |
 |--------------------|----------------------|
-| Handling user passwords or tokens | `security-guardian` |
-| Creating API endpoints | `security-guardian` |
-| Writing RLS policies | `security-guardian`, `supabase-expert` |
-| Adding environment variables | `security-guardian`, `devops-engineer` |
-| Creating Amazon/affiliate links | `revenue-optimizer` |
-| Implementing purchase flows | `revenue-optimizer`, `security-guardian` |
-| Email capture or subscription | `revenue-optimizer` |
-| A/B testing setup | `revenue-optimizer` |
-| New database tables | `supabase-expert` |
-| Edge Function creation | `supabase-expert`, `security-guardian` |
-| Complex state management | `react-specialist` |
-| Performance optimization | `react-specialist` |
-| New UI components | `ui-designer` |
-| Animation implementation | `ui-designer` |
-| Form design | `ui-designer`, `security-guardian` |
-| CI/CD changes | `devops-engineer` |
-| Deployment configuration | `devops-engineer` |
-| New pages or routes | `seo-specialist` |
-| Social sharing features | `seo-specialist` |
-| Touch gestures | `mobile-specialist` |
-| PWA features | `mobile-specialist` |
-| Responsive layouts | `mobile-specialist`, `ui-designer` |
+| Handling user passwords or tokens | `security-guardian-shoeswiper` |
+| Creating API endpoints | `security-guardian-shoeswiper` |
+| Writing RLS policies | `security-guardian-shoeswiper`, `supabase-expert-shoeswiper` |
+| Adding environment variables | `security-guardian-shoeswiper`, `devops-engineer-shoeswiper` |
+| Creating Amazon/affiliate links | `revenue-optimizer-shoeswiper` |
+| Implementing purchase flows | `revenue-optimizer-shoeswiper`, `security-guardian-shoeswiper` |
+| Email capture or subscription | `revenue-optimizer-shoeswiper` |
+| A/B testing setup | `revenue-optimizer-shoeswiper` |
+| New database tables | `supabase-expert-shoeswiper` |
+| Edge Function creation | `supabase-expert-shoeswiper`, `security-guardian-shoeswiper` |
+| Complex state management | `react-specialist-shoeswiper` |
+| Performance optimization | `react-specialist-shoeswiper` |
+| New UI components | `ui-designer-shoeswiper` |
+| Animation implementation | `ui-designer-shoeswiper` |
+| Form design | `ui-designer-shoeswiper`, `security-guardian-shoeswiper` |
+| CI/CD changes | `devops-engineer-shoeswiper` |
+| Deployment configuration | `devops-engineer-shoeswiper` |
+| New pages or routes | `seo-specialist-shoeswiper` |
+| Social sharing features | `seo-specialist-shoeswiper` |
+| Touch gestures | `mobile-specialist-shoeswiper` |
+| PWA features | `mobile-specialist-shoeswiper` |
+| Responsive layouts | `mobile-specialist-shoeswiper`, `ui-designer-shoeswiper` |
 
 ## Priority Rules
 
-### P1: security-guardian BLOCKS EVERYTHING
+### P1: security-guardian-shoeswiper BLOCKS EVERYTHING
 
 ```
-ANY security concern raised by security-guardian MUST be addressed
+ANY security concern raised by security-guardian-shoeswiper MUST be addressed
 before code can be merged. No exceptions.
 
 - Exposed API keys → BLOCK
@@ -89,10 +89,10 @@ before code can be merged. No exceptions.
 - Hardcoded secrets → BLOCK
 ```
 
-### P2: revenue-optimizer is CRITICAL
+### P2: revenue-optimizer-shoeswiper is CRITICAL
 
 ```
-All code affecting revenue MUST be approved by revenue-optimizer:
+All code affecting revenue MUST be approved by revenue-optimizer-shoeswiper:
 
 - Missing affiliate tag → BLOCK (unless approved exception)
 - Broken purchase flow → BLOCK
@@ -114,48 +114,48 @@ Lower priority agents collaborate but don't block:
 ### New Feature Development
 
 ```
-1. code-builder → Creates initial implementation
-2. react-specialist → Reviews component patterns
-3. supabase-expert → Reviews database/backend code
-4. security-guardian → Security audit (REQUIRED)
-5. revenue-optimizer → Checks monetization impact (if applicable)
-6. ui-designer → Reviews styling (if UI changes)
-7. devops-engineer → Reviews any workflow changes
+1. code-builder-shoeswiper → Creates initial implementation
+2. react-specialist-shoeswiper → Reviews component patterns
+3. supabase-expert-shoeswiper → Reviews database/backend code
+4. security-guardian-shoeswiper → Security audit (REQUIRED)
+5. revenue-optimizer-shoeswiper → Checks monetization impact (if applicable)
+6. ui-designer-shoeswiper → Reviews styling (if UI changes)
+7. devops-engineer-shoeswiper → Reviews any workflow changes
 ```
 
 ### Security-Critical Changes
 
 ```
 1. ANY agent → Identifies security-relevant change
-2. security-guardian → Full security audit (REQUIRED)
-3. supabase-expert → Database security review (if DB changes)
-4. devops-engineer → Environment/secrets review (if infra changes)
+2. security-guardian-shoeswiper → Full security audit (REQUIRED)
+3. supabase-expert-shoeswiper → Database security review (if DB changes)
+4. devops-engineer-shoeswiper → Environment/secrets review (if infra changes)
 ```
 
 ### Revenue-Critical Changes
 
 ```
 1. ANY agent → Identifies revenue-relevant change
-2. revenue-optimizer → Business impact review (REQUIRED)
-3. security-guardian → Security review of payment/user data
-4. supabase-expert → Transaction data integrity review
+2. revenue-optimizer-shoeswiper → Business impact review (REQUIRED)
+3. security-guardian-shoeswiper → Security review of payment/user data
+4. supabase-expert-shoeswiper → Transaction data integrity review
 ```
 
 ### UI/UX Changes
 
 ```
-1. ui-designer → Creates styling/animation
-2. mobile-specialist → Mobile experience review
-3. seo-specialist → Meta tags/accessibility review (for new pages)
-4. react-specialist → Component optimization review
+1. ui-designer-shoeswiper → Creates styling/animation
+2. mobile-specialist-shoeswiper → Mobile experience review
+3. seo-specialist-shoeswiper → Meta tags/accessibility review (for new pages)
+4. react-specialist-shoeswiper → Component optimization review
 ```
 
 ## Conflict Resolution
 
 When agents disagree:
 
-1. **Security always wins** - security-guardian has final say on security matters
-2. **Revenue is second** - revenue-optimizer decides on monetization
+1. **Security always wins** - security-guardian-shoeswiper has final say on security matters
+2. **Revenue is second** - revenue-optimizer-shoeswiper decides on monetization
 3. **Escalate to human** - For unresolved conflicts, add `<!-- NEEDS-HUMAN-REVIEW -->` tag
 
 ## Emergency Protocols
@@ -194,9 +194,9 @@ When agents disagree:
 
 ### DON'T
 
-- ❌ Make security changes without security-guardian review
-- ❌ Modify affiliate logic without revenue-optimizer approval
-- ❌ Create new database tables without supabase-expert review
+- ❌ Make security changes without security-guardian-shoeswiper review
+- ❌ Modify affiliate logic without revenue-optimizer-shoeswiper approval
+- ❌ Create new database tables without supabase-expert-shoeswiper review
 - ❌ Skip collaboration when triggers are met
 - ❌ Ignore blocking issues from P1/P2 agents
 

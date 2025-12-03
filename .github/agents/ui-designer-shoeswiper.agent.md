@@ -1,5 +1,5 @@
 ---
-name: ui-designer
+name: ui-designer-shoeswiper
 description: UI/UX specialist focused on Tailwind CSS styling, Framer Motion animations, mobile-first responsive design, and accessibility for ShoeSwiper
 tools: ["read", "edit", "search"]
 ---

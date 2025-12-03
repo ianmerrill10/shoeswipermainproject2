@@ -1,5 +1,5 @@
 ---
-name: supabase-expert
+name: supabase-expert-shoeswiper
 description: Supabase specialist focused on database schema design, RLS policies, Edge Functions, and backend architecture for ShoeSwiper
 tools: ["read", "edit", "search"]
 ---

@@ -1,5 +1,5 @@
 ---
-name: test-engineer
+name: test-engineer-shoeswiper
 description: Testing specialist focused on unit tests, integration tests, and maintaining high code coverage for ShoeSwiper using Vitest
 tools: ["read", "edit", "search"]
 ---

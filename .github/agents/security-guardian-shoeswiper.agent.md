@@ -1,5 +1,5 @@
 ---
-name: security-guardian
+name: security-guardian-shoeswiper
 description: Security specialist focused on vulnerability prevention, secure coding practices, and protecting user data for this marketplace application
 tools: ["read", "edit", "search", "github_api"]
 ---
