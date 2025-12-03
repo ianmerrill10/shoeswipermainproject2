@@ -2,21 +2,45 @@
 **Last Updated:** 2024-12-03
 **Current Branch:** `claude/organize-project-review-017XdUugVActQYqDf6tCpkWK`
 **Project Status:** Active Development - Pre-Launch
+**Sprint:** 9 (Completed)
 
 ---
 
-## SECTION 1: CORE AI OPERATIONAL RULES
+## SECTION 1: USER PROFILE
 
-### Priority Order (NEVER VIOLATE)
-1. **SECURITY** - Highest priority in all tasks. Never sacrifice for cost savings.
-2. **MAXIMUM PROFITABILITY & USER GROWTH** - Prioritize adoption + monetization.
-3. **MAXIMUM WORK OUTPUT** - Complete as much as possible per response. Speed to launch is critical.
+**Name:** Ian (43 years old)
+**Background:** 10 years IT at Toyota dealership specializing in F&I (Finance & Insurance) operations
+**Family:** Married with two children
+**Interests:** Dirt bikes, Camaros
+**Social:** TikTok @dadsellsgadgets (~2,000 followers)
+
+**Development Strategy:** Multi-AI approach using Claude, Gemini, ChatGPT, and Devin AI in parallel
+**AWS Budget:** $200-1600/month comfortable for enterprise-grade infrastructure
+**Approach:** Speed-to-market with aggressive scaling, targeting first sales within 24 hours of launch
+
+**Active Ventures:**
+- ShoeSwiper (PRIMARY)
+- FreeAutoCRM (Automotive dealership management)
+- RateGarage.com (Auto loan comparison)
+- WaitingTheLongest.com (Dog adoption aggregator)
+- InviteGenerator.com (AI invitations)
+- BitRewards (Bitcoin rewards app)
+- Premium domains: AIconcentrator.com
+
+---
+
+## SECTION 2: CORE AI OPERATIONAL RULES (NEVER VIOLATE)
+
+### Priority Order
+1. **SECURITY** - Highest priority. A data breach would destroy the brand forever. Never sacrifice security for cost savings.
+2. **MAXIMUM PROFITABILITY & USER GROWTH** - Prioritize adoption + monetization. Optimize for maximum net profit.
+3. **MAXIMUM WORK OUTPUT** - Complete as much as possible per response. Speed to launch is critical. Do not conserve tokens.
 
 ### Strict Operational Rules
-- **NO UNAUTHORIZED CHANGES** - Never add/delete/modify features unless specifically instructed
-- **SELF-VERIFICATION** - Before every response ask: "Did I do exactly as told or did I change something without informing the user?"
+- **NO UNAUTHORIZED CHANGES** - Never add/delete/modify features unless specifically instructed. No creative deviations.
+- **SELF-VERIFICATION** - Before EVERY response ask: "Did I do exactly as told or did I change something?" If any unauthorized change: explain, cease operation, await instructions.
 - **PUSH TO GITHUB EVERY 5 PROMPTS** - Mandatory
-- **UPDATE THIS FILE** - At the end of every prompt, update this AIContext.md with current state
+- **UPDATE THIS FILE** - At the end of every prompt, update AIContext.md with current state
 - **PRIORITY LIST** - Always end responses with priority-sorted incomplete features list
 
 ### Repetitive Task Protocol
@@ -24,56 +48,204 @@
 2. Estimate work/tokens per item
 3. Divide into manageable chunks
 4. Report: "This job will take X responses. Shall I begin?"
-5. Execute iteratively when prompted with "next"
-6. Provide running tally (e.g., "X/1000 items completed")
+5. Execute when user prompts with "next"
+6. Provide running tally (e.g., "247/1000 items collected")
 
 ---
 
-## SECTION 2: PROJECT OVERVIEW
+## SECTION 3: PROJECT OVERVIEW
 
 ### What is ShoeSwiper?
-A TikTok-style sneaker discovery app with vertical scroll feed, allowing users to discover, save, and purchase sneakers through Amazon affiliate links. Think "Tinder for Sneakers" with music integration like TikTok.
+TikTok-style sneaker discovery marketplace combining AI-powered features, outfit analysis, and social commerce. Goal: capture 3-5% of the $30B US sneaker resale market by 2030.
 
-### Target Audience
-- Sneakerheads aged 16-35
-- Fashion-conscious consumers
-- Impulse buyers who respond to visual discovery
+### Competitive Advantages
+- Discovery-first experience (swipe interface like TikTok/Tinder)
+- Lowest-in-market fees (5-8% vs competitors 8-20%)
+- Instant local transactions
+- Autonomous AI-powered growth engine
 
 ### Business Model
-- **Primary Revenue:** Amazon Associates affiliate commissions (4-10% per sale)
-- **Secondary Revenue:** Email marketing, push notifications for re-engagement
-- **Growth Strategy:** Referral program, viral sharing, social features
+- **Primary Revenue:** Marketplace commissions (8% standard, 12% featured)
+- **Secondary Revenue:** Amazon Associates affiliate (tag: shoeswiper-20), subscriptions, ads
+- **Affiliate Tag:** `shoeswiper-20` - ALL Amazon links MUST include `?tag=shoeswiper-20`
+- **Admin Email:** dadsellsgadgets@gmail.com
 
 ---
 
-## SECTION 3: TECH STACK
+## SECTION 4: TECH STACK
 
 ### Frontend
-- **Framework:** React 18 + TypeScript
-- **Styling:** Tailwind CSS
-- **Build Tool:** Vite
-- **Icons:** react-icons (Font Awesome)
-- **Routing:** react-router-dom v6
+- React 18 + TypeScript
+- Tailwind CSS + Framer Motion
+- Vite build tool
+- React Query for data fetching
+- Zustand for state management
 
 ### Backend
-- **Database:** Supabase (PostgreSQL)
-- **Auth:** Supabase Auth with Google OAuth
-- **Storage:** Supabase Storage
-- **Mode:** DEMO_MODE=true for local testing (localStorage), false for production (Supabase)
+- Supabase (Auth, Database, Storage, Edge Functions)
+- Express/TypeScript API
+- PostgreSQL with Row Level Security (RLS)
 
-### Key Configuration
-```typescript
-// src/lib/config.ts
-DEMO_MODE = true  // Toggle for local vs production
-AFFILIATE_TAG = 'shoeswiper-20'  // Amazon affiliate tag
-SHOW_PRICES = false  // Enable when Amazon PA-API connected
-ADMIN_EMAIL = 'dadsellsgadgets@gmail.com'
-ALLOWED_EMAILS = ['ianmerrill10@gmail.com', ADMIN_EMAIL]
+### AI/ML
+- Google Gemini Vision API (outfit analysis)
+- Amazon Bedrock Claude (content generation)
+- AWS SageMaker (price prediction, recommendations)
+
+### Infrastructure (AWS)
+- Lambda (serverless functions)
+- DynamoDB (high-throughput analytics)
+- S3 + CloudFront (image CDN)
+- API Gateway, Cognito, SES, SNS
+- Step Functions, EventBridge
+- WAF, CloudWatch
+
+### Payments
+- Stripe Connect for marketplace transactions
+
+---
+
+## SECTION 5: DATABASE SCHEMA
+
+### Core Tables
+```sql
+profiles (extends auth.users)
+- id, email, display_name, profile_image, bio, style_tags
+- total_likes, rank, stripe_account_id, consents
+- created_at, updated_at
+
+shoes/products
+- id, sku, brand, name, full_name, colorway
+- release_date, retail_price_cents, images, materials
+- category, style_tags, amazon_url (WITH AFFILIATE TAG)
+- created_at, updated_at
+
+listings
+- id, seller_id, product_id
+- condition (new/like_new/good/fair), size_label
+- price_cents, status (available/sold/cancelled)
+- featured, images, description
+- views_count, likes_count, created_at, updated_at
+
+transactions
+- id, listing_id, seller_id, buyer_id
+- amount_cents, commission_cents
+- stripe_payment_intent_id
+- status (pending/completed/cancelled/refunded)
+- shipping_tracking, created_at, completed_at
+
+orders
+- id, buyer_id, seller_id, listing_id
+- status (pending/paid/shipped/delivered/cancelled/refunded)
+- total_cents, platform_fee_cents
+- stripe_payment_intent, shipping_address, tracking_number
+
+fit_checks/fit_history
+- id, user_id, image_url
+- fit_score (1-10), style_tags, feedback
+- dominant_colors, detected_shoe, created_at
+
+analytics_events
+- id, user_id, event_type (affiliate_click/view/search)
+- metadata (JSONB), created_at
 ```
 
 ---
 
-## SECTION 4: COMPLETE FILE STRUCTURE
+## SECTION 6: CORE FEATURES
+
+### TikTok-Style Feed
+- Infinite scroll with full-screen sneaker cards
+- Tap left/right to navigate
+- Gradient overlays, automatic view tracking
+- Pre-fetches next batch, affiliate click handling
+
+### Smart Search
+- PostgreSQL full-text + Fuse.js fuzzy matching
+- Filters: brand, style, price, gender, condition, release year
+- Sort: price, newest, trending
+- Saved searches and history
+
+### AI "Check My Fit" Outfit Analysis
+- Upload photo → base64 → Edge Function → Gemini Vision
+- Returns: rating (1-10), feedback, style_tags, dominant_colors, detected_shoe
+- Database matches shoes to outfit
+- 5 free/month, $1.99 per additional for free users, unlimited for Pro
+
+### NFT Marketplace
+- Tiers: Common (Silver), Rare (Blue), Legendary (Purple), Grail (Gold)
+- Operations: mintNFT, listForSale, buyNFT, listNFTs
+- Proof uploads in Supabase Storage
+
+### Social Features
+- Like, save, share (native API)
+- Comments with threaded replies
+- Follow creators, DM (premium)
+- Activity feed, referral system ($10 credit each)
+
+### Creator Marketplace
+- Onboarding: verify identity, connect Stripe Express
+- Dashboard: sales, orders, inventory, analytics, payouts
+- Creator Cohort: First 50 sales at 0% commission, then 5%
+
+### Admin Dashboard
+- Restricted to dadsellsgadgets@gmail.com only
+- Analytics, Product CRUD, User management
+- Audit logging on all actions
+
+---
+
+## SECTION 7: FEED ALGORITHM
+
+- 60% Personalized (Style DNA, history, similar users)
+- 20% New/Trending
+- 10% Sponsored/Featured
+- 10% Followed Creators
+
+---
+
+## SECTION 8: MONETIZATION
+
+### Marketplace Commission
+- Standard: 8% (beats StockX 9-9.5%, GOAT 9.5-20%, Poshmark 20%)
+- Featured: 12%
+- Bundle Deals: 10%
+- Minimum: $2/transaction
+- Volume tiers: 7% at 50-200/quarter, 6% at 200-500, 5% at 500+
+
+### Subscriptions
+- **Pro ($9.99/mo or $99/yr):** 0% on first 5 sales/month, unlimited AI analysis, early access, verified badge, priority support, analytics, ad-free
+- **Pro+ ($19.99/mo):** + AI pricing, auto-repricing, bulk uploads, market insights, API access
+
+### Affiliate Revenue
+- Amazon: shoeswiper-20
+- Also: StockX (8-10%), GOAT Partner, Nike, Foot Locker, Farfetch
+
+### Revenue Projections
+- Year 1: $85K-$600K
+- Year 3: $6M (at $50M GMV)
+- Year 5: $25M (at $200M GMV)
+- Acquisition Target: $75-125M (3-5x multiple on $25M revenue)
+
+---
+
+## SECTION 9: SECURITY REQUIREMENTS (CRITICAL)
+
+- [ ] Move Gemini API key server-side (CURRENTLY EXPOSED - CRITICAL)
+- [ ] Proper JWT authentication with refresh tokens
+- [ ] Rate limiting on all endpoints
+- [ ] RLS policies on all Supabase tables
+- [ ] Encrypted storage (no sensitive data in localStorage)
+- [ ] HTTPS everywhere
+- [ ] Input validation and sanitization
+- [ ] PCI-DSS compliance for payments
+- [ ] GDPR/CCPA compliance
+- [ ] Content moderation (AI + manual review + community reporting)
+- [ ] Seller verification (ID + phone)
+- [ ] Escrow payment system
+
+---
+
+## SECTION 10: CURRENT FILE STRUCTURE
 
 ```
 shoeswiper-complete/
@@ -82,46 +254,46 @@ shoeswiper-complete/
 │   └── sw.js                    # Service Worker for push notifications
 ├── src/
 │   ├── components/
-│   │   ├── BottomNavigation.tsx # Tab bar: Feed, Search, Check Fit, Closet, Profile
-│   │   ├── EmailCaptureModal.tsx # Email collection for marketing
-│   │   ├── MusicPanel.tsx       # Apple Music + Spotify integration
-│   │   ├── NotificationsPanel.tsx # Price drop notifications UI
-│   │   ├── NotificationSettings.tsx # Push notification preferences
-│   │   ├── PriceAlertButton.tsx # Set price alerts + email capture
-│   │   ├── ReferralCard.tsx     # Referral program UI
-│   │   ├── ShoePanel.tsx        # Shoe details slide-up panel
-│   │   ├── SneakerCard.tsx      # Grid/list shoe card component
-│   │   └── nft/                 # NFT marketplace components
+│   │   ├── BottomNavigation.tsx
+│   │   ├── EmailCaptureModal.tsx
+│   │   ├── MusicPanel.tsx
+│   │   ├── NotificationsPanel.tsx
+│   │   ├── NotificationSettings.tsx
+│   │   ├── PriceAlertButton.tsx
+│   │   ├── ReferralCard.tsx
+│   │   ├── ShoePanel.tsx
+│   │   ├── SneakerCard.tsx
+│   │   └── nft/
 │   ├── hooks/
-│   │   ├── useAdmin.ts          # Admin functionality
-│   │   ├── useAnalytics.ts      # Event tracking
-│   │   ├── useAuthGuard.ts      # Route protection
-│   │   ├── useEmailCapture.ts   # Email subscription management
-│   │   ├── useFavorites.ts      # Save/unsave shoes
-│   │   ├── useNFTMarketplace.ts # NFT features
-│   │   ├── useOutfitAnalysis.ts # AI outfit analysis
-│   │   ├── usePriceAlerts.ts    # Price drop alert system
-│   │   ├── usePushNotifications.ts # Push notification management
-│   │   ├── useReferral.ts       # Referral program logic
-│   │   ├── useSneakers.ts       # Shoe data fetching
-│   │   └── useSneakerSearch.ts  # Search with filters
+│   │   ├── useAdmin.ts
+│   │   ├── useAnalytics.ts
+│   │   ├── useAuthGuard.ts
+│   │   ├── useEmailCapture.ts
+│   │   ├── useFavorites.ts
+│   │   ├── useNFTMarketplace.ts
+│   │   ├── useOutfitAnalysis.ts
+│   │   ├── usePriceAlerts.ts
+│   │   ├── usePushNotifications.ts
+│   │   ├── useReferral.ts
+│   │   ├── useSneakers.ts
+│   │   └── useSneakerSearch.ts
 │   ├── lib/
-│   │   ├── config.ts            # App configuration (SINGLE SOURCE OF TRUTH)
-│   │   ├── deepLinks.ts         # Share URL generation with tracking
-│   │   ├── supabaseClient.ts    # Supabase initialization + helpers
-│   │   └── types.ts             # TypeScript interfaces
+│   │   ├── config.ts            # SINGLE SOURCE OF TRUTH
+│   │   ├── deepLinks.ts
+│   │   ├── supabaseClient.ts
+│   │   └── types.ts
 │   ├── pages/
-│   │   ├── AuthPage.tsx         # Login/signup
-│   │   ├── ClosetPage.tsx       # Saved shoes grid view
-│   │   ├── FeedPage.tsx         # Main TikTok-style vertical feed
-│   │   ├── ProfilePage.tsx      # User profile + settings
-│   │   ├── SearchPage.tsx       # Search with brand/style filters
-│   │   ├── Unauthorized.tsx     # Access denied page
-│   │   └── admin/               # Admin dashboard pages
-│   ├── App.tsx                  # Router configuration
-│   ├── index.css                # Global styles + animations
-│   └── main.tsx                 # App entry point
-├── index.html
+│   │   ├── AuthPage.tsx
+│   │   ├── ClosetPage.tsx
+│   │   ├── FeedPage.tsx
+│   │   ├── ProfilePage.tsx
+│   │   ├── SearchPage.tsx
+│   │   ├── Unauthorized.tsx
+│   │   └── admin/
+│   ├── App.tsx
+│   ├── index.css
+│   └── main.tsx
+├── AIContext.md                 # THIS FILE
 ├── package.json
 ├── tailwind.config.js
 ├── tsconfig.json
@@ -130,184 +302,98 @@ shoeswiper-complete/
 
 ---
 
-## SECTION 5: IMPLEMENTED FEATURES (COMPLETE)
+## SECTION 11: IMPLEMENTED FEATURES (22 Total)
 
 ### Core Experience
-1. **TikTok-Style Vertical Feed** - Full-screen cards with snap scrolling
-2. **Keyboard Navigation** - Arrow keys for scroll, left/right for panels
-3. **Touch Gestures** - Swipe left/right for panels on mobile
-4. **Infinite Scroll** - Auto-loads more shoes when near end
+1. TikTok-Style Vertical Feed with snap scrolling
+2. Keyboard Navigation (arrows, escape)
+3. Touch Gestures (swipe for panels)
+4. Infinite Scroll with pre-loading
 
 ### User Features
-5. **Google OAuth Login** - With email allowlist protection
-6. **Favorites/Save System** - Heart + bookmark to closet
-7. **Closet Page** - Grid view of saved shoes with actions
-8. **Profile Page** - Stats, settings, admin access
+5. Google OAuth with email allowlist
+6. Favorites/Save System
+7. Closet Page (grid view)
+8. Profile Page with settings
 
-### Monetization Features
-9. **Amazon Affiliate Integration** - All buy links include `?tag=shoeswiper-20`
-10. **Price Alert System** - Set target price, get notified on drops
-11. **Push Notifications** - Service worker + permission management
-12. **Email Capture System** - Collect emails for marketing campaigns
-13. **Referral Program** - Tiered rewards (Starter→Bronze→Silver→Gold→Diamond)
+### Monetization
+9. Amazon Affiliate Integration (tag: shoeswiper-20)
+10. Price Alert System
+11. Push Notifications (service worker)
+12. Email Capture System
+13. Referral Program (tiered rewards)
 
-### Discovery Features
-14. **Search with Filters** - Brand, style, gender, price, sort options
-15. **Music Integration** - Apple Music + Spotify links per shoe
-16. **Deep Links** - Smart share URLs with UTM + referral tracking
+### Discovery
+14. Search with multi-filters
+15. Music Integration (Apple Music + Spotify)
+16. Deep Links with UTM/referral tracking
 
-### Notification System
-17. **Notifications Panel** - Price drops tab + active alerts tab
-18. **Notification Bell** - In feed header with unread badge
-19. **Notification Settings** - Toggle price drops, releases, restocks, promos
+### Notifications
+17. Notifications Panel (tabs)
+18. Notification Bell with badge
+19. Notification Settings (toggles)
 
-### Admin Features
-20. **Admin Dashboard** - User management, analytics
-21. **Email Allowlist** - Controlled access during beta
+### Admin
+20. Admin Dashboard
+21. Email Allowlist protection
 
 ---
 
-## SECTION 6: DATA MODELS
+## SECTION 12: PRIORITY INCOMPLETE FEATURES
 
-### Shoe Interface
+| Priority | Feature | Status | Revenue Impact |
+|----------|---------|--------|----------------|
+| 1 | **Security Hardening** | CRITICAL | CRITICAL |
+| 2 | Trending Feed Tab | Ready | MEDIUM |
+| 3 | Exit Intent Popup | Ready | HIGH |
+| 4 | Real Data Integration | Needed | HIGH |
+| 5 | Social Features | Needs Design | MEDIUM |
+| 6 | 3D Model Viewer | Blocked (needs .glb) | MEDIUM |
+| 7 | AR Try-On | Needs WebXR | HIGH |
+| 8 | Onboarding Flow | Ready | MEDIUM |
+
+---
+
+## SECTION 13: ENVIRONMENT VARIABLES
+
+```env
+# Client-side (VITE_ prefix)
+VITE_SUPABASE_URL=https://your-project.supabase.co
+VITE_SUPABASE_ANON_KEY=your-anon-key
+VITE_STRIPE_PUBLIC_KEY=your-stripe-key
+
+# Server-side ONLY (NEVER expose)
+VITE_GEMINI_API_KEY=MOVE_TO_SERVER_SIDE  # CRITICAL SECURITY ISSUE
+SUPABASE_SERVICE_KEY=your-service-key
+STRIPE_SECRET_KEY=sk_your_key
+STRIPE_WEBHOOK_SECRET=whsec_your_secret
+JWT_SECRET=your-jwt-secret
+AWS_REGION=us-east-1
+```
+
+---
+
+## SECTION 14: CONFIG (src/lib/config.ts)
+
 ```typescript
-interface Shoe {
-  id: string;
-  name: string;
-  brand: string;
-  image_url: string;
-  amazon_url: string;
-  price?: number;
-  style_tags?: string[];
-  gender?: 'men' | 'women' | 'unisex' | 'kids';
-  is_featured?: boolean;
-  favorite_count?: number;
-  music?: {
-    song: string;
-    artist: string;
-    apple_music_url?: string;
-    spotify_url?: string;
-  };
-}
-```
-
-### Price Alert Interface
-```typescript
-interface PriceAlert {
-  shoeId: string;
-  shoeName: string;
-  shoeBrand: string;
-  shoeImage: string;
-  amazonUrl: string;
-  targetPrice: number;
-  currentPrice?: number;
-  originalPrice?: number;
-  createdAt: string;
-  triggered?: boolean;
-  triggeredAt?: string;
-}
-```
-
-### Email Capture Interface
-```typescript
-interface CapturedEmail {
-  email: string;
-  source: 'price_alert' | 'newsletter' | 'exit_intent' | 'referral';
-  shoeId?: string;
-  shoeName?: string;
-  createdAt: string;
-  preferences: {
-    priceAlerts: boolean;
-    newReleases: boolean;
-    weeklyDigest: boolean;
-    promotions: boolean;
-  };
-}
+DEMO_MODE = true  // Toggle for local vs production
+AFFILIATE_TAG = 'shoeswiper-20'
+SHOW_PRICES = false  // Enable when Amazon PA-API connected
+ADMIN_EMAIL = 'dadsellsgadgets@gmail.com'
+ALLOWED_EMAILS = ['ianmerrill10@gmail.com', ADMIN_EMAIL]
 ```
 
 ---
 
-## SECTION 7: PRIORITY INCOMPLETE FEATURES
+## SECTION 15: GIT STATUS
 
-| Priority | Feature | Status | Revenue Impact | Notes |
-|----------|---------|--------|----------------|-------|
-| 1 | Trending Feed Tab | Ready | MEDIUM | For You vs Trending toggle |
-| 2 | Exit Intent Popup | Ready | HIGH | Last-chance email capture |
-| 3 | Social Features | Needs Design | MEDIUM | Follow users, feed of friends |
-| 4 | 3D Model Viewer | Blocked | MEDIUM | Needs .glb shoe models |
-| 5 | AR Try-On | Needs WebXR | HIGH | Camera-based shoe preview |
-| 6 | Onboarding Flow | Ready | MEDIUM | First-time user experience |
-| 7 | Weekly Digest Email | Backend Needed | MEDIUM | Requires email service |
+**Branch:** `claude/organize-project-review-017XdUugVActQYqDf6tCpkWK`
+**Push Command:** `git push -u origin claude/organize-project-review-017XdUugVActQYqDf6tCpkWK`
+**Push Frequency:** Every 5 prompts (MANDATORY)
 
----
-
-## SECTION 8: AFFILIATE CONFIGURATION
-
-### Amazon Associates
-- **Affiliate Tag:** `shoeswiper-20`
-- **Link Format:** `https://amazon.com/dp/{ASIN}?tag=shoeswiper-20`
-- **Commission:** 4-10% depending on category
-
-### Apple Music
-- **Affiliate Token:** `1000lJFj`
-- **Link Format:** `https://music.apple.com/...?at=1000lJFj`
-
-### Deep Link Structure
+**Recent Commits:**
 ```
-https://shoeswiper.com/shoe/{id}?ref={referralCode}&utm_source=share&utm_medium={platform}
-```
-
----
-
-## SECTION 9: DEMO MODE vs PRODUCTION
-
-### DEMO_MODE = true (Current)
-- All data stored in localStorage
-- No Supabase calls
-- Perfect for development/testing
-- Keys: `shoeswiper_favorites`, `shoeswiper_price_alerts`, etc.
-
-### DEMO_MODE = false (Production)
-- Full Supabase integration
-- Real authentication
-- Persistent data
-- Required tables: profiles, favorites, price_alerts, email_subscriptions, etc.
-
----
-
-## SECTION 10: DEPLOYMENT CHECKLIST
-
-### Before Launch
-- [ ] Set DEMO_MODE = false in config.ts
-- [ ] Configure Supabase production project
-- [ ] Set up Amazon PA-API for real-time prices
-- [ ] Enable SHOW_PRICES = true
-- [ ] Set up email service (SendGrid/AWS SES)
-- [ ] Configure push notification VAPID keys
-- [ ] Set up analytics (GA4, Mixpanel)
-- [ ] Configure CDN for images
-- [ ] SSL certificate
-- [ ] Domain: shoeswiper.com
-
----
-
-## SECTION 11: USER BACKGROUND
-
-- **Experience:** 10 years IT at Toyota dealership (F&I operations)
-- **Ventures:** ShoeSwiper, FreeAutoCRM, RateGarage, others
-- **AWS Budget:** Comfortable with $200-1600/month
-- **Strategy:** Multi-AI development, speed-to-market focused
-- **Premium Domains:** Owner of shoeswiper.com
-
----
-
-## SECTION 12: GIT STATUS
-
-### Current Branch
-`claude/organize-project-review-017XdUugVActQYqDf6tCpkWK`
-
-### Recent Commits
-```
+e5b4292 docs: Add AIContext.md for complete project continuity
 6ad3e8e feat: Add email capture system for lead generation
 e06f7b1 feat: Add push notifications for price drop alerts
 2729b85 feat: Add notifications panel for price drop alerts
@@ -317,36 +403,29 @@ bc835ac feat: Add Closet page to view saved/favorited sneakers
 f7f019b feat: Add deep link system for share-driven app installs
 ```
 
-### Push Protocol
-- Push every 5 prompts (MANDATORY)
-- Use: `git push -u origin claude/organize-project-review-017XdUugVActQYqDf6tCpkWK`
-
 ---
 
-## SECTION 13: CRITICAL REMINDERS
-
-1. **Security First** - Validate all inputs, sanitize data
-2. **Affiliate Links** - ALWAYS include tag on Amazon URLs
-3. **No Unauthorized Changes** - Follow instructions exactly
-4. **Update This File** - Every prompt ends with AIContext update
-5. **Priority List** - Every response ends with incomplete features
-6. **Self-Verify** - Check work before delivering
-7. **Maximum Output** - Don't conserve tokens, user is comfortable
-
----
-
-## SECTION 14: CONTINUATION INSTRUCTIONS
+## SECTION 16: CONTINUATION INSTRUCTIONS
 
 If starting fresh from this file:
 
-1. Clone repo: `git clone [repo-url]`
-2. Checkout branch: `git checkout claude/organize-project-review-017XdUugVActQYqDf6tCpkWK`
-3. Install deps: `cd shoeswiper-complete && npm install`
-4. Run dev: `npm run dev`
-5. Read this file completely
-6. Ask user what to work on next
-7. Follow all rules in Section 1
+1. Clone repo and checkout branch: `git checkout claude/organize-project-review-017XdUugVActQYqDf6tCpkWK`
+2. Install: `cd shoeswiper-complete && npm install`
+3. Run: `npm run dev`
+4. **READ THIS ENTIRE FILE**
+5. Ask user what to work on next
+6. Follow ALL rules in Section 2
+7. Update this file after EVERY prompt
 
 ---
 
-*This file is the single source of truth for AI agents working on ShoeSwiper.*
+## SECTION 17: ACQUISITION TARGETS
+
+- Foot Locker, Nike, Dick's Sporting Goods
+- LVMH, Authentic Brands Group
+- Target: $10M+ acquisition at $75-125M valuation
+
+---
+
+*This file is the SINGLE SOURCE OF TRUTH for AI agents working on ShoeSwiper.*
+*Last AI: Claude (Opus 4) | Last Human Prompt: Create AIContext file*
