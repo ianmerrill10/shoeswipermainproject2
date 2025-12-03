@@ -238,11 +238,15 @@ const ShoePanel: React.FC<ShoePanelProps> = ({ shoe, isOpen, onClose }) => {
         <div className="p-4 space-y-3 pb-8">
           <button
             onClick={handleBuyClick}
-            className="w-full bg-white text-black font-black py-4 rounded-xl flex items-center justify-center gap-3 text-base active:scale-95 transition-transform"
+            className="w-full bg-gradient-to-r from-orange-500 to-orange-600 text-white font-black py-4 rounded-xl flex items-center justify-center gap-3 text-base active:scale-95 hover:scale-[1.02] transition-transform"
           >
             <FaAmazon className="text-2xl" />
             BUY ON AMAZON
           </button>
+          <div className="flex items-center justify-center gap-1 mt-2">
+            <FaCheck className="text-xs text-blue-400" />
+            <span className="text-xs text-blue-400 font-medium">Prime eligible</span>
+          </div>
 
           {/* Price Alert */}
           <div className="flex justify-center">

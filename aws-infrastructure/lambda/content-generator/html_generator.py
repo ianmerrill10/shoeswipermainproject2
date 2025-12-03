@@ -258,7 +258,7 @@ def generate_affiliate_product_html(product: Dict[str, Any]) -> str:
                 <h4 class="product-name">{name}</h4>
                 {rating_html}
                 <div class="product-price">{price_html}</div>
-                <span class="buy-button">View on Amazon</span>
+                <span class="buy-button">🛒 Buy Now</span>
             </div>
         </a>
     </div>
@@ -635,13 +635,19 @@ def generate_styles() -> str:
         
         .buy-button {
             display: block;
-            background: #ff9900;
-            color: var(--secondary-color);
+            background: linear-gradient(to right, #f97316, #ea580c);
+            color: white;
             text-align: center;
-            padding: 0.5rem;
-            border-radius: 6px;
-            font-weight: 600;
-            font-size: 0.9rem;
+            padding: 0.75rem;
+            border-radius: 8px;
+            font-weight: 700;
+            font-size: 1rem;
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+        
+        .affiliate-product-card:hover .buy-button {
+            transform: scale(1.02);
+            box-shadow: 0 4px 12px rgba(249, 115, 22, 0.4);
         }
         
         .post-tags {
