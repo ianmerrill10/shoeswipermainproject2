@@ -3,6 +3,21 @@ import { DEMO_MODE } from '../lib/config';
 
 const FAVORITES_STORAGE_KEY = 'shoeswiper_favorites';
 
+/**
+ * User favorites/closet management hook.
+ * Manages adding, removing, and checking favorite sneakers.
+ * In DEMO_MODE, favorites are stored in localStorage.
+ * 
+ * @returns Object containing favorites state and methods
+ * @example
+ * const { favorites, addFavorite, removeFavorite, isFavorite } = useFavorites();
+ * 
+ * // Toggle favorite status
+ * await toggleFavorite(shoe.id);
+ * 
+ * // Check if shoe is favorited
+ * const isFav = isFavorite(shoe.id);
+ */
 export const useFavorites = () => {
   const [favorites, setFavorites] = useState<Set<string>>(new Set());
   const [loading, setLoading] = useState(true);
@@ -46,6 +61,11 @@ export const useFavorites = () => {
     }
   };
 
+  /**
+   * Adds a shoe to the user's favorites.
+   * @param shoeId - The ID of the shoe to add
+   * @returns Promise resolving to true if successful
+   */
   const addFavorite = useCallback(async (shoeId: string): Promise<boolean> => {
     try {
       if (DEMO_MODE) {
@@ -90,6 +110,11 @@ export const useFavorites = () => {
     }
   }, [favorites]);
 
+  /**
+   * Removes a shoe from the user's favorites.
+   * @param shoeId - The ID of the shoe to remove
+   * @returns Promise resolving to true if successful
+   */
   const removeFavorite = useCallback(async (shoeId: string): Promise<boolean> => {
     try {
       if (DEMO_MODE) {
@@ -131,6 +156,11 @@ export const useFavorites = () => {
     }
   }, [favorites]);
 
+  /**
+   * Toggles the favorite status of a shoe.
+   * @param shoeId - The ID of the shoe to toggle
+   * @returns Promise resolving to true if successful
+   */
   const toggleFavorite = useCallback(async (shoeId: string): Promise<boolean> => {
     if (favorites.has(shoeId)) {
       return removeFavorite(shoeId);
@@ -139,14 +169,27 @@ export const useFavorites = () => {
     }
   }, [favorites, addFavorite, removeFavorite]);
 
+  /**
+   * Checks if a shoe is in the user's favorites.
+   * @param shoeId - The ID of the shoe to check
+   * @returns True if the shoe is favorited
+   */
   const isFavorite = useCallback((shoeId: string): boolean => {
     return favorites.has(shoeId);
   }, [favorites]);
 
+  /**
+   * Gets the total count of favorited shoes.
+   * @returns Number of favorites
+   */
   const getFavoriteCount = useCallback((): number => {
     return favorites.size;
   }, [favorites]);
 
+  /**
+   * Gets all favorite shoe IDs as an array.
+   * @returns Array of shoe IDs
+   */
   const getFavoriteIds = useCallback((): string[] => {
     return [...favorites];
   }, [favorites]);
