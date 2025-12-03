@@ -1,3 +1,4 @@
+import { useState, useEffect } from 'react';
 import { Routes, Route, Navigate } from 'react-router-dom';
 import { useAuthGuard } from './hooks/useAuthGuard';
 
@@ -20,11 +21,42 @@ import { UserManager } from './pages/admin/UserManager';
 
 // Components
 import BottomNavigation from './components/BottomNavigation';
+import OnboardingFlow from './components/OnboardingFlow';
+
+const ONBOARDING_KEY = 'shoeswiper_onboarding';
 
 function App() {
   const { user, loading, isAllowed } = useAuthGuard();
+  const [showOnboarding, setShowOnboarding] = useState(false);
+  const [onboardingChecked, setOnboardingChecked] = useState(false);
 
-  if (loading) {
+  // Check if onboarding should be shown
+  useEffect(() => {
+    const checkOnboarding = () => {
+      try {
+        const stored = localStorage.getItem(ONBOARDING_KEY);
+        if (stored) {
+          const data = JSON.parse(stored);
+          setShowOnboarding(!data.completed);
+        } else {
+          // First visit - show onboarding
+          setShowOnboarding(true);
+        }
+      } catch {
+        // On error, show onboarding
+        setShowOnboarding(true);
+      }
+      setOnboardingChecked(true);
+    };
+
+    checkOnboarding();
+  }, []);
+
+  const handleOnboardingComplete = () => {
+    setShowOnboarding(false);
+  };
+
+  if (loading || !onboardingChecked) {
     return (
       <div className="min-h-screen bg-zinc-950 flex items-center justify-center">
         <div className="text-center">
@@ -55,6 +87,11 @@ function App() {
   }
 
   // User is authenticated and allowed - show full app
+  // If onboarding is being shown, render it as a full overlay
+  if (showOnboarding) {
+    return <OnboardingFlow onComplete={handleOnboardingComplete} />;
+  }
+
   return (
     <div className="min-h-screen bg-zinc-950">
       <Routes>
