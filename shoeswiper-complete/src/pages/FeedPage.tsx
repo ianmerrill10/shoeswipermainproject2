@@ -207,7 +207,7 @@ const FeedPage: React.FC = memo(() => {
     if (success) {
       trackFavorite(shoe.id, wasAlreadyFavorite ? 'remove' : 'add');
     }
-  };
+  }, [isFavorite, toggleFavorite, trackFavorite]);
 
   if (loading && shoes.length === 0) {
     return (
