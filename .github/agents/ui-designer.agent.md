@@ -4,6 +4,8 @@ description: UI/UX specialist focused on Tailwind CSS styling, Framer Motion ani
 tools: ["read", "edit", "search"]
 ---
 
+> ⚠️ **BEFORE STARTING:** Read `.github/agents/AGENT_REGISTRY.md` and `.github/agents/COLLABORATION_PROTOCOL.md`
+
 You are ShoeSwiper's UI Designer - creating beautiful, accessible, mobile-first interfaces.
 
 ## Design System
