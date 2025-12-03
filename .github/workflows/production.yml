@@ -1,0 +1,215 @@
+name: Production Deployment
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  deployments: write
+  issues: write
+
+env:
+  VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
+  VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
+
+jobs:
+  ci:
+    name: CI Checks
+    uses: ./.github/workflows/ci.yml
+    permissions:
+      contents: read
+
+  deploy-production:
+    name: Deploy Production
+    runs-on: ubuntu-latest
+    needs: ci
+    environment:
+      name: production
+      url: ${{ steps.deploy.outputs.production-url }}
+    outputs:
+      production-url: ${{ steps.deploy.outputs.production-url }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20.x'
+          cache: 'npm'
+          cache-dependency-path: shoeswiper-complete/package-lock.json
+
+      - name: Install Vercel CLI
+        run: npm install -g vercel@latest
+
+      - name: Pull Vercel Environment Information
+        run: vercel pull --yes --environment=production --token=${{ secrets.VERCEL_TOKEN }}
+
+      - name: Build Project Artifacts
+        run: vercel build --prod --token=${{ secrets.VERCEL_TOKEN }}
+
+      - name: Deploy to Vercel Production
+        id: deploy
+        run: |
+          PRODUCTION_URL=$(vercel deploy --prebuilt --prod --token=${{ secrets.VERCEL_TOKEN }})
+          echo "production-url=$PRODUCTION_URL" >> $GITHUB_OUTPUT
+          echo "Deployed to: $PRODUCTION_URL"
+
+  health-check:
+    name: Health Check
+    runs-on: ubuntu-latest
+    needs: deploy-production
+    steps:
+      - name: Wait for deployment to stabilize
+        run: sleep 15
+
+      - name: Run health checks
+        run: |
+          DEPLOYMENT_URL="${{ needs.deploy-production.outputs.production-url }}"
+          echo "🏥 ShoeSwiper Health Check"
+          echo "=========================="
+          echo "📍 Target: $DEPLOYMENT_URL"
+          echo "🕐 Time: $(date -u +"%Y-%m-%dT%H:%M:%SZ")"
+          echo ""
+          
+          # Check main page returns HTTP 200
+          echo "📄 Checking main page..."
+          HTTP_STATUS=$(curl -s -o /dev/null -w "%{http_code}" --max-time 30 "$DEPLOYMENT_URL")
+          if [ "$HTTP_STATUS" = "200" ]; then
+            echo "  ✅ Main page returns HTTP 200"
+          else
+            echo "  ❌ Main page returned HTTP $HTTP_STATUS"
+            exit 1
+          fi
+          
+          # Check HTML content
+          echo ""
+          echo "📝 Checking HTML content..."
+          HTML_CONTENT=$(curl -s --max-time 30 "$DEPLOYMENT_URL")
+          
+          if echo "$HTML_CONTENT" | grep -qi "<!DOCTYPE html>"; then
+            echo "  ✅ DOCTYPE found"
+          else
+            echo "  ❌ DOCTYPE not found"
+            exit 1
+          fi
+          
+          if echo "$HTML_CONTENT" | grep -q 'id="root"'; then
+            echo "  ✅ Root div found"
+          else
+            echo "  ❌ Root div not found"
+            exit 1
+          fi
+          
+          if echo "$HTML_CONTENT" | grep -q 'type="module"'; then
+            echo "  ✅ Module script tag found"
+          else
+            echo "  ❌ Module script tag not found"
+            exit 1
+          fi
+          
+          # Check static assets
+          echo ""
+          echo "🎨 Checking static assets..."
+          
+          # Extract and check JS assets
+          JS_ASSETS=$(echo "$HTML_CONTENT" | grep -oP 'src="/assets/[^"]+\.js"' | head -3 || true)
+          if [ -n "$JS_ASSETS" ]; then
+            for asset in $(echo "$JS_ASSETS" | grep -oP '/assets/[^"]+'); do
+              ASSET_URL="${DEPLOYMENT_URL}${asset}"
+              ASSET_STATUS=$(curl -s -o /dev/null -w "%{http_code}" --max-time 15 "$ASSET_URL")
+              if [ "$ASSET_STATUS" = "200" ]; then
+                echo "  ✅ JS: $asset"
+              else
+                echo "  ❌ JS: $asset (HTTP $ASSET_STATUS)"
+                exit 1
+              fi
+            done
+          else
+            echo "  ℹ️  No static JS assets found in expected location"
+          fi
+          
+          # Extract and check CSS assets
+          CSS_ASSETS=$(echo "$HTML_CONTENT" | grep -oP 'href="/assets/[^"]+\.css"' | head -3 || true)
+          if [ -n "$CSS_ASSETS" ]; then
+            for asset in $(echo "$CSS_ASSETS" | grep -oP '/assets/[^"]+'); do
+              ASSET_URL="${DEPLOYMENT_URL}${asset}"
+              ASSET_STATUS=$(curl -s -o /dev/null -w "%{http_code}" --max-time 15 "$ASSET_URL")
+              if [ "$ASSET_STATUS" = "200" ]; then
+                echo "  ✅ CSS: $asset"
+              else
+                echo "  ❌ CSS: $asset (HTTP $ASSET_STATUS)"
+                exit 1
+              fi
+            done
+          else
+            echo "  ℹ️  No static CSS assets found in expected location"
+          fi
+          
+          echo ""
+          echo "🎉 All health checks passed!"
+
+  notify-on-failure:
+    name: Notify on Failure
+    runs-on: ubuntu-latest
+    needs: [deploy-production, health-check]
+    if: failure()
+    steps:
+      - name: Create failure notification
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const run_url = `${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}`;
+            
+            // Create an issue for the failure
+            await github.rest.issues.create({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              title: `🚨 Production Deployment Failed - ${new Date().toISOString().split('T')[0]}`,
+              body: `## Production Deployment Failed
+              
+              A production deployment has failed and requires immediate attention.
+              
+              ### Details
+              - **Commit:** \`${{ github.sha }}\`
+              - **Branch:** \`${{ github.ref_name }}\`
+              - **Triggered by:** @${{ github.actor }}
+              - **Workflow Run:** [View Logs](${run_url})
+              
+              ### Next Steps
+              1. Review the workflow logs for error details
+              2. Fix the issue and push a new commit
+              3. Consider rolling back if the issue is critical
+              
+              ---
+              _This issue was automatically created by the CI/CD pipeline._`,
+              labels: ['bug', 'deployment', 'urgent']
+            });
+
+  deploy-edge-functions:
+    name: Deploy Edge Functions
+    runs-on: ubuntu-latest
+    needs: deploy-production
+    if: github.event_name == 'push'
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Supabase CLI
+        uses: supabase/setup-cli@v1
+        with:
+          version: latest
+
+      - name: Link Supabase Project
+        run: supabase link --project-ref ${{ secrets.SUPABASE_PROJECT_REF }}
+        env:
+          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+
+      - name: Deploy Edge Functions
+        run: supabase functions deploy analyze-outfit --project-ref ${{ secrets.SUPABASE_PROJECT_REF }}
+        working-directory: shoeswiper-complete
+        env:
+          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
