@@ -4,6 +4,19 @@
 
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { corsHeaders } from "../_shared/cors.ts";
+import {
+  checkRateLimit,
+  getUserIdFromToken,
+  getClientIp,
+  rateLimitHeaders,
+} from "../_shared/rateLimit.ts";
+
+// Rate limit configuration
+const RATE_LIMIT_CONFIG = {
+  maxRequests: 5,           // 5 requests
+  windowMs: 60 * 1000,      // per minute
+  keyPrefix: 'analyze-outfit'
+};
 
 serve(async (req) => {
   // Handle CORS preflight
@@ -11,8 +24,40 @@ serve(async (req) => {
     return new Response("ok", { headers: corsHeaders });
   }
 
+  // Rate limiting: prefer user ID from JWT, fall back to IP
+  const authHeader = req.headers.get('authorization');
+  const userId = getUserIdFromToken(authHeader);
+  const identifier = userId || getClientIp(req);
+
+  const rateLimitResult = checkRateLimit(identifier, RATE_LIMIT_CONFIG);
+
+  if (!rateLimitResult.allowed) {
+    return new Response(JSON.stringify({
+      error: "Rate limit exceeded. Please wait before trying again.",
+      fallback: true,
+      retryAfterSeconds: Math.ceil((rateLimitResult.retryAfterMs || 0) / 1000)
+    }), {
+      status: 429,
+      headers: {
+        ...corsHeaders,
+        ...rateLimitHeaders(rateLimitResult),
+        "Content-Type": "application/json"
+      }
+    });
+  }
+
   try {
     const { image } = await req.json(); // base64 image
+
+    if (!image) {
+      return new Response(JSON.stringify({
+        error: "No image provided",
+        fallback: true
+      }), {
+        status: 400,
+        headers: { ...corsHeaders, "Content-Type": "application/json" }
+      });
+    }
 
     // Call Gemini Vision API
     const GEMINI_API_KEY = Deno.env.get("GEMINI_API_KEY");
@@ -38,7 +83,7 @@ serve(async (req) => {
                   "dominant_colors": ["<color1>", "<color2>", ...],
                   "detected_shoe": "<description of shoes if visible, or null>"
                 }
-                
+
                 Style tags should include things like: streetwear, casual, athletic, formal, vintage, minimalist, bold, preppy, grunge, etc.
                 Color tags should be the dominant colors in the outfit.
                 Be encouraging but honest in feedback. Rate based on coordination, style cohesion, and overall aesthetic.`
@@ -55,14 +100,18 @@ serve(async (req) => {
       }
     );
 
-    // Handle rate limits
+    // Handle Gemini API rate limits
     if (response.status === 429) {
       return new Response(JSON.stringify({
-        error: "Rate limit exceeded. Please try again in a moment.",
+        error: "AI service is busy. Please try again in a moment.",
         fallback: true
       }), {
         status: 429,
-        headers: { ...corsHeaders, "Content-Type": "application/json" }
+        headers: {
+          ...corsHeaders,
+          ...rateLimitHeaders(rateLimitResult),
+          "Content-Type": "application/json"
+        }
       });
     }
 
@@ -82,7 +131,11 @@ serve(async (req) => {
     const analysis = JSON.parse(jsonStr);
 
     return new Response(JSON.stringify(analysis), {
-      headers: { ...corsHeaders, "Content-Type": "application/json" }
+      headers: {
+        ...corsHeaders,
+        ...rateLimitHeaders(rateLimitResult),
+        "Content-Type": "application/json"
+      }
     });
   } catch (error) {
     console.error("Error analyzing outfit:", error);
@@ -91,7 +144,11 @@ serve(async (req) => {
       fallback: true
     }), {
       status: 500,
-      headers: { ...corsHeaders, "Content-Type": "application/json" }
+      headers: {
+        ...corsHeaders,
+        ...rateLimitHeaders(rateLimitResult),
+        "Content-Type": "application/json"
+      }
     });
   }
 });
