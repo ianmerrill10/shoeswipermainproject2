@@ -239,3 +239,129 @@ export interface AnalyticsData {
   clicks: AffiliateClick[];
   chartData?: { date: string; clicks: number }[];
 }
+
+// ============================================
+// PAGINATION TYPES
+// ============================================
+
+export interface PaginationCursor {
+  createdAt?: string;
+  id?: string;
+  viewCount?: number;
+  favoriteCount?: number;
+}
+
+export interface PaginatedShoesResult {
+  shoes: Shoe[];
+  hasMore: boolean;
+  nextCursor?: PaginationCursor;
+}
+
+export interface PaginationOptions {
+  limit?: number;
+  cursor?: PaginationCursor;
+  brand?: string;
+  gender?: 'men' | 'women' | 'unisex' | 'kids';
+  categorySlug?: string;
+  minPrice?: number;
+  maxPrice?: number;
+  styleTags?: string[];
+  colorTags?: string[];
+}
+
+// ============================================
+// DATABASE FUNCTION TYPES
+// ============================================
+
+export interface ToggleFavoriteResult {
+  action: 'added' | 'removed';
+  isFavorited: boolean;
+  newFavoriteCount: number;
+}
+
+export interface AddToClosetResult {
+  success: boolean;
+  message: string;
+  closetCount: number;
+}
+
+export interface UserDashboardData {
+  favoritesCount: number;
+  closetCount: number;
+  recentFavorites: Array<{
+    id: string;
+    name: string;
+    brand: string;
+    image_url: string;
+    price: number;
+    created_at: string;
+  }>;
+  recentCloset: Array<{
+    id: string;
+    name: string;
+    brand: string;
+    image_url: string;
+    price: number;
+    added_at: string;
+  }>;
+  priceAlertsCount: number;
+}
+
+export interface AnalyticsSummary {
+  totalViews: number;
+  totalClicks: number;
+  totalFavorites: number;
+  totalUsers: number;
+  topViewedShoes: Array<{
+    id: string;
+    name: string;
+    brand: string;
+    image_url: string;
+    view_count: number;
+  }>;
+  topClickedShoes: Array<{
+    id: string;
+    name: string;
+    brand: string;
+    image_url: string;
+    click_count: number;
+  }>;
+  dailyStats: Array<{
+    date: string;
+    clicks: number;
+  }>;
+}
+
+export interface SearchRankedResult {
+  id: string;
+  name: string;
+  brand: string;
+  price: number;
+  image_url: string;
+  amazon_url: string;
+  style_tags: string[];
+  color_tags: string[];
+  gender: string;
+  favorite_count: number;
+  view_count: number;
+  rank: number;
+  total_count: number;
+}
+
+export interface SimilarShoe {
+  id: string;
+  name: string;
+  brand: string;
+  price: number;
+  image_url: string;
+  amazon_url: string;
+  style_tags: string[];
+  color_tags: string[];
+  similarity_score: number;
+}
+
+export interface CreatePriceAlertResult {
+  success: boolean;
+  message: string;
+  alertId: string | null;
+}
