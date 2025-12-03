@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { FaTimes, FaEnvelope, FaBell, FaGift, FaCheck, FaSpinner } from 'react-icons/fa';
 import { useEmailCapture } from '../hooks/useEmailCapture';
@@ -21,6 +21,13 @@ const ExitIntentPopup: React.FC<ExitIntentPopupProps> = ({
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
+
+  // Auto-close if user is already subscribed
+  useEffect(() => {
+    if (isOpen && isSubscribed && savedEmail) {
+      onClose();
+    }
+  }, [isOpen, isSubscribed, savedEmail, onClose]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -56,13 +63,8 @@ const ExitIntentPopup: React.FC<ExitIntentPopupProps> = ({
     }
   };
 
-  if (!isOpen) return null;
-
-  // Already subscribed - just close
-  if (isSubscribed && savedEmail) {
-    onClose();
-    return null;
-  }
+  // Don't render if not open or user is already subscribed (useEffect handles the close)
+  if (!isOpen || (isSubscribed && savedEmail)) return null;
 
   return (
     <AnimatePresence>

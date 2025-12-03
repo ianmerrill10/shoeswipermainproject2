@@ -106,7 +106,8 @@ export const useExitIntent = (config: ExitIntentConfig = {}) => {
 
     const handleMouseLeave = (e: MouseEvent) => {
       // Only trigger if leaving toward top of viewport (closing tab intent)
-      if (e.clientY < 10 && enabledRef.current) {
+      // Use 50px threshold to reduce false positives from toolbar interactions
+      if (e.clientY < 50 && enabledRef.current) {
         triggerPopup();
       }
     };

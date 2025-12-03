@@ -52,7 +52,8 @@ const FeedPage: React.FC = () => {
     setTrendingPage(prev => prev + 1);
   }, [getTrendingFeed, trendingPage]);
 
-  // Initial load
+  // Initial load - intentionally empty dependency array for one-time load
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(() => {
     loadForYouShoes();
     loadTrendingShoes();
