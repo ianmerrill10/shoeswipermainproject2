@@ -1,10 +1,23 @@
-// ShoeSwiper Service Worker for Push Notifications
+// ShoeSwiper Service Worker for Push Notifications and Caching
 const CACHE_NAME = 'shoeswiper-v1';
 const AFFILIATE_TAG = 'shoeswiper-20';
+
+// Static assets to precache
+const PRECACHE_ASSETS = [
+  '/',
+  '/index.html',
+  '/favicon.svg'
+];
 
 // Install event - cache essential assets
 self.addEventListener('install', (event) => {
   console.log('[SW] Installing service worker...');
+  event.waitUntil(
+    caches.open(CACHE_NAME).then((cache) => {
+      console.log('[SW] Precaching critical assets');
+      return cache.addAll(PRECACHE_ASSETS);
+    })
+  );
   self.skipWaiting();
 });
 
@@ -21,6 +34,110 @@ self.addEventListener('activate', (event) => {
     })
   );
   self.clients.claim();
+});
+
+// Static asset extensions for Cache First strategy
+const STATIC_EXTENSIONS = ['.js', '.css', '.png', '.jpg', '.jpeg', '.gif', '.svg', '.ico', '.woff', '.woff2', '.ttf', '.eot'];
+
+// Check if request is for a static asset
+function isStaticAsset(url) {
+  return STATIC_EXTENSIONS.some(ext => url.pathname.endsWith(ext));
+}
+
+// Check if request is for an API call
+function isApiRequest(url) {
+  return url.hostname.includes('supabase') || 
+         url.pathname.startsWith('/api') ||
+         url.hostname.includes('amazonaws.com');
+}
+
+// Check if request is a navigation request
+function isNavigationRequest(request) {
+  return request.mode === 'navigate';
+}
+
+// Cache First strategy - for static assets
+async function cacheFirst(request) {
+  const cachedResponse = await caches.match(request);
+  if (cachedResponse) {
+    return cachedResponse;
+  }
+  
+  try {
+    const networkResponse = await fetch(request);
+    if (networkResponse.ok) {
+      const cache = await caches.open(CACHE_NAME);
+      cache.put(request, networkResponse.clone());
+    }
+    return networkResponse;
+  } catch (error) {
+    console.error('[SW] Cache First failed:', error);
+    throw error;
+  }
+}
+
+// Network First strategy - for API requests
+async function networkFirst(request) {
+  try {
+    const networkResponse = await fetch(request);
+    if (networkResponse.ok) {
+      const cache = await caches.open(CACHE_NAME);
+      cache.put(request, networkResponse.clone());
+    }
+    return networkResponse;
+  } catch (error) {
+    console.log('[SW] Network failed, trying cache:', error);
+    const cachedResponse = await caches.match(request);
+    if (cachedResponse) {
+      return cachedResponse;
+    }
+    throw error;
+  }
+}
+
+// Stale While Revalidate strategy - for HTML pages
+async function staleWhileRevalidate(request) {
+  const cache = await caches.open(CACHE_NAME);
+  const cachedResponse = await caches.match(request);
+  
+  const fetchPromise = fetch(request).then((networkResponse) => {
+    if (networkResponse.ok) {
+      cache.put(request, networkResponse.clone());
+    }
+    return networkResponse;
+  }).catch((error) => {
+    console.log('[SW] Stale While Revalidate network failed:', error);
+    return cachedResponse;
+  });
+  
+  return cachedResponse || fetchPromise;
+}
+
+// Fetch event - handle requests with appropriate caching strategy
+self.addEventListener('fetch', (event) => {
+  const url = new URL(event.request.url);
+  
+  // Skip non-GET requests
+  if (event.request.method !== 'GET') {
+    return;
+  }
+  
+  // Skip chrome-extension and other non-http requests
+  if (!url.protocol.startsWith('http')) {
+    return;
+  }
+  
+  // Apply appropriate caching strategy
+  if (isStaticAsset(url)) {
+    // Cache First for static assets
+    event.respondWith(cacheFirst(event.request));
+  } else if (isApiRequest(url)) {
+    // Network First for API requests
+    event.respondWith(networkFirst(event.request));
+  } else if (isNavigationRequest(event.request)) {
+    // Stale While Revalidate for navigation requests
+    event.respondWith(staleWhileRevalidate(event.request));
+  }
 });
 
 // Push event - handle incoming push notifications
