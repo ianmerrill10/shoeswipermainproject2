@@ -40,6 +40,20 @@ const FeedPage: React.FC = () => {
     setPage(prev => prev + 1);
   }, [page, getInfiniteFeed]);
 
+  const handleOpenShoePanel = useCallback(() => {
+    if (shoes[currentIndex]) {
+      trackPanelOpen('shoe', shoes[currentIndex].id);
+      openShoePanel(shoes[currentIndex].id);
+    }
+  }, [shoes, currentIndex, trackPanelOpen, openShoePanel]);
+
+  const handleOpenMusicPanel = useCallback(() => {
+    if (shoes[currentIndex]) {
+      trackPanelOpen('music', shoes[currentIndex].id);
+      openMusicPanel();
+    }
+  }, [shoes, currentIndex, trackPanelOpen, openMusicPanel]);
+
   useEffect(() => {
     loadShoes();
   }, [loadShoes]);
@@ -157,20 +171,6 @@ const FeedPage: React.FC = () => {
     trackShoeClick(shoe.id);
     window.open(getAffiliateUrl(shoe.amazon_url), '_blank');
   };
-
-  const handleOpenShoePanel = useCallback(() => {
-    if (shoes[currentIndex]) {
-      trackPanelOpen('shoe', shoes[currentIndex].id);
-      openShoePanel(shoes[currentIndex].id);
-    }
-  }, [shoes, currentIndex, trackPanelOpen, openShoePanel]);
-
-  const handleOpenMusicPanel = useCallback(() => {
-    if (shoes[currentIndex]) {
-      trackPanelOpen('music', shoes[currentIndex].id);
-      openMusicPanel();
-    }
-  }, [shoes, currentIndex, trackPanelOpen, openMusicPanel]);
 
   const handleShare = async (shoe: Shoe) => {
     // Generate smart share data with deep links and affiliate tracking
