@@ -9,7 +9,16 @@ export type AnalyticsEvent =
   | 'panel_open'
   | 'share'
   | 'favorite'
-  | 'swipe';
+  | 'swipe'
+  // Viral tracking events
+  | 'wishlist_share'
+  | 'style_card_create'
+  | 'style_card_share'
+  | 'referral_link_generate'
+  | 'discount_popup_view'
+  | 'discount_popup_submit'
+  | 'discount_popup_dismiss'
+  | 'viral_signup';
 
 export type MusicPlatform = 'spotify' | 'apple_music' | 'amazon_music';
 export type PanelType = 'shoe' | 'music';
@@ -21,6 +30,12 @@ interface AnalyticsData {
   song?: string;
   artist?: string;
   direction?: 'left' | 'right' | 'up' | 'down';
+  shoe_ids?: string[];
+  method?: string;
+  channel?: string;
+  email?: string;
+  referral_code?: string;
+  source?: string;
   [key: string]: unknown;
 }
 
@@ -34,6 +49,15 @@ const demoAnalytics: {
     panel_opens: Record<PanelType, number>;
     shares: number;
     favorites: number;
+    // Viral loop metrics
+    wishlist_shares: number;
+    style_card_creates: number;
+    style_card_shares: number;
+    referral_link_generates: number;
+    discount_popup_views: number;
+    discount_popup_submits: number;
+    discount_popup_dismisses: number;
+    viral_signups: number;
   };
 } = {
   events: [],
@@ -44,6 +68,14 @@ const demoAnalytics: {
     panel_opens: { shoe: 0, music: 0 },
     shares: 0,
     favorites: 0,
+    wishlist_shares: 0,
+    style_card_creates: 0,
+    style_card_shares: 0,
+    referral_link_generates: 0,
+    discount_popup_views: 0,
+    discount_popup_submits: 0,
+    discount_popup_dismisses: 0,
+    viral_signups: 0,
   },
 };
 
@@ -87,6 +119,31 @@ export const useAnalytics = () => {
           break;
         case 'favorite':
           demoAnalytics.summary.favorites++;
+          break;
+        // Viral loop events
+        case 'wishlist_share':
+          demoAnalytics.summary.wishlist_shares++;
+          break;
+        case 'style_card_create':
+          demoAnalytics.summary.style_card_creates++;
+          break;
+        case 'style_card_share':
+          demoAnalytics.summary.style_card_shares++;
+          break;
+        case 'referral_link_generate':
+          demoAnalytics.summary.referral_link_generates++;
+          break;
+        case 'discount_popup_view':
+          demoAnalytics.summary.discount_popup_views++;
+          break;
+        case 'discount_popup_submit':
+          demoAnalytics.summary.discount_popup_submits++;
+          break;
+        case 'discount_popup_dismiss':
+          demoAnalytics.summary.discount_popup_dismisses++;
+          break;
+        case 'viral_signup':
+          demoAnalytics.summary.viral_signups++;
           break;
       }
 
@@ -180,10 +237,61 @@ export const useAnalytics = () => {
   }, [trackEvent]);
 
   /**
+   * Track viral events
+   */
+  const trackWishlistShare = useCallback((shoeIds: string[], method: 'native' | 'clipboard') => {
+    trackEvent('wishlist_share', { shoe_ids: shoeIds, method });
+  }, [trackEvent]);
+
+  const trackStyleCardCreate = useCallback((shoeIds: string[]) => {
+    trackEvent('style_card_create', { shoe_ids: shoeIds });
+  }, [trackEvent]);
+
+  const trackStyleCardShare = useCallback((shoeIds: string[], method: 'native' | 'clipboard' | 'download') => {
+    trackEvent('style_card_share', { shoe_ids: shoeIds, method });
+  }, [trackEvent]);
+
+  const trackReferralLinkGenerate = useCallback((channel: string, referralCode: string) => {
+    trackEvent('referral_link_generate', { channel, referral_code: referralCode });
+  }, [trackEvent]);
+
+  const trackDiscountPopupView = useCallback(() => {
+    trackEvent('discount_popup_view', {});
+  }, [trackEvent]);
+
+  const trackDiscountPopupSubmit = useCallback((email: string) => {
+    trackEvent('discount_popup_submit', { email });
+  }, [trackEvent]);
+
+  const trackDiscountPopupDismiss = useCallback(() => {
+    trackEvent('discount_popup_dismiss', {});
+  }, [trackEvent]);
+
+  const trackViralSignup = useCallback((source: string, referralCode?: string) => {
+    trackEvent('viral_signup', { source, referral_code: referralCode });
+  }, [trackEvent]);
+
+  /**
    * Get analytics summary (for admin dashboard)
    */
   const getAnalyticsSummary = useCallback(async () => {
     if (DEMO_MODE) {
+      // Calculate viral loop metrics
+      const viralMetrics = {
+        wishlistShares: demoAnalytics.summary.wishlist_shares,
+        styleCardCreates: demoAnalytics.summary.style_card_creates,
+        styleCardShares: demoAnalytics.summary.style_card_shares,
+        referralLinkGenerates: demoAnalytics.summary.referral_link_generates,
+        discountPopupViews: demoAnalytics.summary.discount_popup_views,
+        discountPopupSubmits: demoAnalytics.summary.discount_popup_submits,
+        discountPopupDismisses: demoAnalytics.summary.discount_popup_dismisses,
+        viralSignups: demoAnalytics.summary.viral_signups,
+      };
+
+      const discountConversionRate = viralMetrics.discountPopupViews > 0
+        ? ((viralMetrics.discountPopupSubmits / viralMetrics.discountPopupViews) * 100).toFixed(1)
+        : '0.0';
+
       return {
         totalEvents: demoAnalytics.events.length,
         shoeViews: Object.values(demoAnalytics.summary.shoe_views).reduce((a, b) => a + b, 0),
@@ -192,6 +300,8 @@ export const useAnalytics = () => {
         panelOpens: demoAnalytics.summary.panel_opens,
         shares: demoAnalytics.summary.shares,
         favorites: demoAnalytics.summary.favorites,
+        viralMetrics,
+        discountConversionRate,
         recentEvents: demoAnalytics.events.slice(-50).reverse(),
         topShoes: Object.entries(demoAnalytics.summary.shoe_clicks)
           .sort(([, a], [, b]) => b - a)
