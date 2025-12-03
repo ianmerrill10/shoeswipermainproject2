@@ -39,7 +39,13 @@ jobs:
       - name: Run Analysis
         id: analysis
         run: |
-          cd shoeswiper-complete/src
+          # Check if source directory exists
+          if [ -d "shoeswiper-complete/src" ]; then
+            cd shoeswiper-complete/src
+          else
+            echo "Source directory not found, using repository root"
+            cd .
+          fi
           
           # Count TODOs
           TODO_COUNT=$(grep -r "TODO" --include="*.ts" --include="*.tsx" . 2>/dev/null | wc -l || echo "0")
@@ -117,7 +123,7 @@ jobs:
               title: '🔐 [Agent] Security Guardian Audit',
               body: body,
               labels: ['security', 'agent-task', 'priority-critical'],
-              assignees: ['copilot']
+              
             });
 
   create-revenue-issue:
@@ -168,7 +174,7 @@ jobs:
               title: '💰 [Agent] Revenue Optimizer Review',
               body: body,
               labels: ['revenue', 'agent-task', 'priority-high'],
-              assignees: ['copilot']
+              
             });
 
   create-code-builder-issue:
@@ -217,7 +223,7 @@ jobs:
               title: '🏗️ [Agent] Code Builder Tasks',
               body: body,
               labels: ['feature', 'agent-task', 'enhancement'],
-              assignees: ['copilot']
+              
             });
 
   create-react-specialist-issue:
@@ -267,7 +273,7 @@ jobs:
               title: '⚛️ [Agent] React Specialist Review',
               body: body,
               labels: ['react', 'typescript', 'agent-task'],
-              assignees: ['copilot']
+              
             });
 
   create-supabase-expert-issue:
@@ -315,7 +321,7 @@ jobs:
               title: '🗄️ [Agent] Supabase Expert Review',
               body: body,
               labels: ['database', 'backend', 'agent-task'],
-              assignees: ['copilot']
+              
             });
 
   create-ui-designer-issue:
@@ -361,7 +367,7 @@ jobs:
               title: '🎨 [Agent] UI Designer Review',
               body: body,
               labels: ['ui', 'styling', 'agent-task'],
-              assignees: ['copilot']
+              
             });
 
   create-devops-engineer-issue:
@@ -408,7 +414,7 @@ jobs:
               title: '🚀 [Agent] DevOps Engineer Review',
               body: body,
               labels: ['devops', 'infrastructure', 'agent-task'],
-              assignees: ['copilot']
+              
             });
 
   create-seo-specialist-issue:
@@ -455,7 +461,7 @@ jobs:
               title: '🔍 [Agent] SEO Specialist Review',
               body: body,
               labels: ['seo', 'marketing', 'agent-task'],
-              assignees: ['copilot']
+              
             });
 
   create-mobile-specialist-issue:
@@ -502,7 +508,7 @@ jobs:
               title: '📱 [Agent] Mobile Specialist Review',
               body: body,
               labels: ['mobile', 'pwa', 'agent-task'],
-              assignees: ['copilot']
+              
             });
 
   summary:

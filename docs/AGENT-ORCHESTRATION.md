@@ -144,7 +144,7 @@ Edit `.github/scripts/agent-tasks.json` under `launchModes`:
   "launchModes": {
     "custom": {
       "description": "My custom mode",
-      "agents": ["agent1", "agent2"]
+      "agents": ["security-guardian", "revenue-optimizer"]
     }
   }
 }
