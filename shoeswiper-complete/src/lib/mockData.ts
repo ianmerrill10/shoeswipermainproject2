@@ -235,4 +235,4 @@ export const searchShoes = (query: string): Shoe[] => {
   );
 };
 
-console.log(`[MockData] Loaded ${MOCK_SHOES.length} products (${mensShoes.length} men's, ${womensShoes.length} women's, ${unisexShoes.length} unisex)`);
+if (import.meta.env.DEV) console.log(`[MockData] Loaded ${MOCK_SHOES.length} products (${mensShoes.length} men's, ${womensShoes.length} women's, ${unisexShoes.length} unisex)`);

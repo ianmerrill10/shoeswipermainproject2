@@ -69,12 +69,12 @@ export const usePushNotifications = () => {
         scope: '/',
       });
 
-      console.log('[Push] Service worker registered:', registration.scope);
+      if (import.meta.env.DEV) console.log('[Push] Service worker registered:', registration.scope);
       setSwRegistration(registration);
 
       // Wait for the service worker to be ready
       await navigator.serviceWorker.ready;
-      console.log('[Push] Service worker ready');
+      if (import.meta.env.DEV) console.log('[Push] Service worker ready');
 
       return registration;
     } catch (err) {
@@ -86,7 +86,7 @@ export const usePushNotifications = () => {
   // Request notification permission
   const requestPermission = useCallback(async (): Promise<boolean> => {
     if (!isSupported) {
-      console.log('[Push] Push notifications not supported');
+      if (import.meta.env.DEV) console.log('[Push] Push notifications not supported');
       return false;
     }
 
@@ -95,7 +95,7 @@ export const usePushNotifications = () => {
       setPermission(result);
 
       if (result === 'granted') {
-        console.log('[Push] Permission granted');
+        if (import.meta.env.DEV) console.log('[Push] Permission granted');
 
         // Register service worker if not already registered
         let registration = swRegistration;
@@ -167,7 +167,7 @@ export const usePushNotifications = () => {
         const subscription = await swRegistration.pushManager.getSubscription();
         if (subscription) {
           await subscription.unsubscribe();
-          console.log('[Push] Unsubscribed from push notifications');
+          if (import.meta.env.DEV) console.log('[Push] Unsubscribed from push notifications');
         }
       } catch (err) {
         console.error('[Push] Error unsubscribing:', err);
@@ -223,7 +223,7 @@ export const usePushNotifications = () => {
     data?: Record<string, unknown>
   ) => {
     if (permission !== 'granted') {
-      console.log('[Push] No permission for notifications');
+      if (import.meta.env.DEV) console.log('[Push] No permission for notifications');
       return false;
     }
 

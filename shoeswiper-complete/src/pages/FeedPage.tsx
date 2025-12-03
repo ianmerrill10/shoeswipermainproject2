@@ -176,7 +176,7 @@ const FeedPage: React.FC = () => {
         });
         trackShare(shoe.id, 'native');
       } catch (err) {
-        console.log('Share cancelled');
+        if (import.meta.env.DEV) console.log('Share cancelled');
       }
     } else {
       // Copy rich share text to clipboard

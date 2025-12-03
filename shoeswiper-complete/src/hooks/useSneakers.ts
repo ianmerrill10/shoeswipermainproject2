@@ -1,48 +1,50 @@
-import { useState, useCallback } from 'react';
+import { useCallback } from 'react';
+import { useQuery } from '@tanstack/react-query';
 import { Shoe } from '../lib/types';
 import { DEMO_MODE, getShuffledShoes, getFeaturedShoes, MOCK_SHOES } from '../lib/mockData';
 import { supabase } from '../lib/supabaseClient';
 
 export const useSneakers = () => {
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  /**
+   * Fetch function for infinite feed
+   */
+  const fetchInfiniteFeed = async (page: number = 0, limit: number = 5): Promise<Shoe[]> => {
+    // DEMO MODE: Use mock data
+    if (DEMO_MODE) {
+      const shuffled = getShuffledShoes();
+      const from = page * limit;
+      const to = from + limit;
+      return shuffled.slice(from, to);
+    }
+
+    // PRODUCTION MODE: Use Supabase
+    const from = page * limit;
+    const to = from + limit - 1;
+
+    const { data, error } = await supabase
+      .from('shoes')
+      .select('*')
+      .eq('is_active', true)
+      .order('view_count', { ascending: false })
+      .range(from, to);
+
+    if (error) throw error;
+    return data as Shoe[];
+  };
 
   /**
-   * Get Infinite Feed (Randomized or Algorithmically Sorted)
-   * TikTok style usually implies a mix of popularity and randomness.
+   * useQuery for sneakers - provides caching and automatic refetching
+   */
+  const { data: sneakersData, isLoading: loading, error: queryError } = useQuery({
+    queryKey: ['sneakers'],
+    queryFn: () => fetchInfiniteFeed(0, 50), // Load initial batch
+  });
+
+  /**
+   * Get Infinite Feed (backward compatible wrapper)
    */
   const getInfiniteFeed = useCallback(async (page: number = 0, limit: number = 5): Promise<Shoe[]> => {
-    setLoading(true);
-    try {
-      // DEMO MODE: Use mock data
-      if (DEMO_MODE) {
-        const shuffled = getShuffledShoes();
-        const from = page * limit;
-        const to = from + limit;
-        setLoading(false);
-        return shuffled.slice(from, to);
-      }
-
-      // PRODUCTION MODE: Use Supabase
-      const from = page * limit;
-      const to = from + limit - 1;
-
-      const { data, error } = await supabase
-        .from('shoes')
-        .select('*')
-        .eq('is_active', true)
-        .order('view_count', { ascending: false })
-        .range(from, to);
-
-      if (error) throw error;
-      return data as Shoe[];
-    } catch (err: unknown) {
-      const errorMessage = err instanceof Error ? err.message : 'Failed to load sneakers';
-      setError(errorMessage);
-      return [];
-    } finally {
-      setLoading(false);
-    }
+    return fetchInfiniteFeed(page, limit);
   }, []);
 
   /**
@@ -90,7 +92,7 @@ export const useSneakers = () => {
   const trackView = useCallback(async (id: string) => {
     // DEMO MODE: Just log
     if (DEMO_MODE) {
-      console.log(`[Demo] View tracked: ${id}`);
+      if (import.meta.env.DEV) console.log(`[Demo] View tracked: ${id}`);
       return;
     }
 
@@ -106,7 +108,7 @@ export const useSneakers = () => {
   const trackClick = useCallback(async (id: string) => {
     // DEMO MODE: Just log
     if (DEMO_MODE) {
-      console.log(`[Demo] Click tracked: ${id}`);
+      if (import.meta.env.DEV) console.log(`[Demo] Click tracked: ${id}`);
       return;
     }
 
@@ -126,6 +128,7 @@ export const useSneakers = () => {
     trackView,
     trackClick,
     loading,
-    error
+    error: queryError?.message || null,
+    sneakersData, // Cached data from React Query
   };
 };

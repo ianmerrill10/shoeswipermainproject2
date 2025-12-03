@@ -138,7 +138,7 @@ export const useEmailCapture = () => {
           preferences: capturedEmail.preferences,
         });
 
-        console.log(`[Demo] Email captured: ${email} for ${source}`);
+        if (import.meta.env.DEV) console.log(`[Demo] Email captured: ${email} for ${source}`);
         return { success: true };
       } else {
         const { supabase } = await import('../lib/supabaseClient');

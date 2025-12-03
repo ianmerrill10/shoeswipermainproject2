@@ -114,7 +114,7 @@ export const useReferral = () => {
         };
         setReferralStats(newStats);
         localStorage.setItem(REFERRAL_STATS_KEY, JSON.stringify(newStats));
-        console.log('[Demo] Referral share tracked');
+        if (import.meta.env.DEV) console.log('[Demo] Referral share tracked');
       } else {
         const { supabase } = await import('../lib/supabaseClient');
         const { data: { user } } = await supabase.auth.getUser();
@@ -136,7 +136,7 @@ export const useReferral = () => {
   const trackClick = useCallback(async (referrerCode: string) => {
     try {
       if (DEMO_MODE) {
-        console.log(`[Demo] Referral click tracked for code: ${referrerCode}`);
+        if (import.meta.env.DEV) console.log(`[Demo] Referral click tracked for code: ${referrerCode}`);
         // In demo mode, we can simulate tracking
         const storedStats = localStorage.getItem(REFERRAL_STATS_KEY);
         if (storedStats) {
@@ -159,7 +159,7 @@ export const useReferral = () => {
   const processReferralSignup = useCallback(async (referrerCode: string, newUserId: string) => {
     try {
       if (DEMO_MODE) {
-        console.log(`[Demo] Referral signup: ${newUserId} referred by ${referrerCode}`);
+        if (import.meta.env.DEV) console.log(`[Demo] Referral signup: ${newUserId} referred by ${referrerCode}`);
 
         // Store who referred this user
         localStorage.setItem(REFERRAL_STORAGE_KEY, JSON.stringify({
@@ -223,7 +223,7 @@ export const useReferral = () => {
         });
         return { success: true, method: 'native' };
       } catch (err) {
-        console.log('Share cancelled');
+        if (import.meta.env.DEV) console.log('Share cancelled');
         return { success: false, method: 'cancelled' };
       }
     } else {

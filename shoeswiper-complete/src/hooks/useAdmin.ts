@@ -36,7 +36,7 @@ export const useAdmin = () => {
   const logAction = async (action: string, table: string, id: string | undefined, details: Record<string, unknown>) => {
     // DEMO MODE: Just log to console
     if (DEMO_MODE) {
-      console.log(`[Demo] Audit: ${action} on ${table}`, details);
+      if (import.meta.env.DEV) console.log(`[Demo] Audit: ${action} on ${table}`, details);
       return;
     }
 
@@ -68,7 +68,7 @@ export const useAdmin = () => {
   const saveProduct = async (product: Partial<Shoe>) => {
     // DEMO MODE: Just log
     if (DEMO_MODE) {
-      console.log('[Demo] Save product:', product);
+      if (import.meta.env.DEV) console.log('[Demo] Save product:', product);
       return [product];
     }
 
@@ -99,7 +99,7 @@ export const useAdmin = () => {
   const deleteProduct = async (id: string) => {
     // DEMO MODE: Just log
     if (DEMO_MODE) {
-      console.log('[Demo] Delete product:', id);
+      if (import.meta.env.DEV) console.log('[Demo] Delete product:', id);
       return;
     }
 
