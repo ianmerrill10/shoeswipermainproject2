@@ -99,6 +99,32 @@ The test file was out of sync with the implementation.
    - Validates file type, size (5MB max), and magic bytes
    - Displays validation errors to users
 
+#### 8. Content Moderation System
+**Status:** ✅ IMPLEMENTED
+
+**New File:** `src/lib/contentModeration.ts`
+
+**Features:**
+- **Profanity Detection**: Expanded word list with regex patterns for variations (f***ing, sh*t, etc.)
+- **Slur Detection**: Automatic blocking of racial/hate slurs
+- **Spam Detection**: Repeated chars, excessive caps, spam phrases, emoji spam
+- **PII Detection**: Phone numbers, emails, SSN, credit card patterns (auto-redacted)
+- **Contact Info Detection**: Social media handles, payment apps, "DM me" phrases
+- **Scam Detection**: Wire transfer requests, pressure tactics, suspicious guarantees
+
+**Exported Functions:**
+- `moderateContent(text, config)` - Full moderation with configurable rules
+- `containsProfanity(text)` - Quick profanity check
+- `containsContactInfo(text)` - Quick contact info check
+- `censorProfanity(text)` - Replace profanity with asterisks
+- `validateBio(text)` - Bio-specific validation (500 chars, no contact)
+- `validateNFTDescription(text)` - NFT description validation (1000 chars)
+- `validateListingDescription(text)` - Marketplace listing validation (2000 chars, strict)
+
+**Tests:** 41 new tests in `src/lib/__tests__/contentModeration.test.ts`
+
+**Result:** 267 tests passing (9 test files)
+
 ---
 
 ### ✅ Completed Tasks (Session 1 - Database & Testing)
@@ -234,7 +260,7 @@ The test file was out of sync with the implementation.
 2. ~~**Implement JWT authentication with refresh tokens**~~ ✅ VERIFIED - Supabase Auth handles this automatically (auto-refresh, token rotation, `onAuthStateChange`)
 3. ~~**Add rate limiting on all endpoints**~~ ✅ IMPLEMENTED - Added rate limiter to analyze-outfit Edge Function (5 req/min per user/IP)
 4. ~~**Add input validation and sanitization**~~ ✅ IMPLEMENTED - Integrated validation library into search, email capture, and image upload
-5. Implement content moderation system
+5. ~~**Implement content moderation system**~~ ✅ IMPLEMENTED - Created comprehensive moderation with profanity, spam, PII, and scam detection
 6. Implement seller verification system
 7. Implement escrow payment system
 
