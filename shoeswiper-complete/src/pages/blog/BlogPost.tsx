@@ -24,14 +24,16 @@ export default function BlogPost() {
 
   const blogConfig = BLOG_CONFIGS[category as BlogType] || BLOG_CONFIGS.sneaker;
 
-  // Update document title
+  // Update document title and record view once when post loads
   useEffect(() => {
     if (post) {
       document.title = `${post.title} | ${blogConfig.name} | ShoeSwiper`;
-      
-      // Record view
+
+      // Record view - intentionally not including recordView in deps
+      // to prevent re-recording on every mutation state change
       recordView.mutate({ blogType, postId: post.id });
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [post, blogConfig.name, blogType]);
 
   // Format date

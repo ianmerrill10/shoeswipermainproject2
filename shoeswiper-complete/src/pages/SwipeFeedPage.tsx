@@ -151,7 +151,7 @@ const SwipeFeedPage: React.FC = () => {
 
   const handleSwipeLeft = useCallback((shoe: Shoe) => {
     // Skip/dislike the shoe
-    if (import.meta.env.DEV) console.log('Swiped left on', shoe.name);
+    if (import.meta.env.DEV) console.warn('Swiped left on', shoe.name);
     
     // Move to next shoe after animation
     setExitingShoeId(shoe.id);
