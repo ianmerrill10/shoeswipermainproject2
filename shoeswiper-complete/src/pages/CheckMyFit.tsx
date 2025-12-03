@@ -4,15 +4,27 @@ import { FaCamera, FaUpload, FaMagic } from 'react-icons/fa';
 import { useOutfitAnalysis } from '../hooks/useOutfitAnalysis';
 import { ShareResults } from '../components/check-fit/ShareResults';
 import { ManualStyleSelector } from '../components/check-fit/ManualStyleSelector';
+import { validateImageUpload } from '../lib/validation';
 
 export const CheckMyFit: React.FC = () => {
   const [imagePreview, setImagePreview] = useState<string | null>(null);
+  const [validationError, setValidationError] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const { analyzeImage, manualAnalyze, isAnalyzing, analysis, recommendations, error } = useOutfitAnalysis();
 
-  const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    setValidationError(null);
+
     if (e.target.files && e.target.files[0]) {
       const file = e.target.files[0];
+
+      // Validate image before processing
+      const validationResult = await validateImageUpload(file);
+      if (!validationResult.valid) {
+        setValidationError(validationResult.error || 'Invalid image file');
+        return;
+      }
+
       setImagePreview(URL.createObjectURL(file));
       analyzeImage(file);
     }
@@ -20,6 +32,7 @@ export const CheckMyFit: React.FC = () => {
 
   const reset = () => {
     setImagePreview(null);
+    setValidationError(null);
     if (fileInputRef.current) fileInputRef.current.value = '';
   };
 
@@ -137,7 +150,17 @@ export const CheckMyFit: React.FC = () => {
           </motion.div>
         )}
         
-        {error && (
+        {/* Validation Error */}
+        {validationError && (
+          <div className="mt-4">
+            <div className="bg-red-500/10 border border-red-500 text-red-500 p-3 rounded-xl text-center text-sm">
+              {validationError}
+            </div>
+          </div>
+        )}
+
+        {/* AI Analysis Error */}
+        {error && !validationError && (
           <div className="mt-4 space-y-4">
             <div className="bg-red-500/10 border border-red-500 text-red-500 p-3 rounded-xl text-center text-sm">
               {error}

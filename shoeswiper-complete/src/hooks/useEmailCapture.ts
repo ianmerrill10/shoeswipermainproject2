@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { DEMO_MODE } from '../lib/config';
+import { validateEmail } from '../lib/validation';
 
 const EMAIL_CAPTURE_KEY = 'shoeswiper_email_capture';
 const EMAIL_LIST_KEY = 'shoeswiper_email_list';
@@ -90,10 +91,10 @@ export const useEmailCapture = () => {
     }
   };
 
-  // Validate email format
+  // Validate email format using comprehensive validation library
   const isValidEmail = (email: string): boolean => {
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    return emailRegex.test(email);
+    const result = validateEmail(email);
+    return result.valid;
   };
 
   // Capture email for a specific purpose
@@ -103,13 +104,15 @@ export const useEmailCapture = () => {
     shoeData?: { id: string; name: string },
     preferences?: Partial<CapturedEmail['preferences']>
   ): Promise<{ success: boolean; error?: string }> => {
-    if (!isValidEmail(email)) {
-      return { success: false, error: 'Please enter a valid email address' };
+    // Use comprehensive email validation
+    const emailValidation = validateEmail(email);
+    if (!emailValidation.valid) {
+      return { success: false, error: emailValidation.error || 'Please enter a valid email address' };
     }
 
     try {
       const capturedEmail: CapturedEmail = {
-        email: email.toLowerCase().trim(),
+        email: emailValidation.sanitized, // Use sanitized email
         source,
         shoeId: shoeData?.id,
         shoeName: shoeData?.name,
