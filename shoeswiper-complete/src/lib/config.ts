@@ -22,6 +22,17 @@ export const AMAZON_API_CONFIG = {
   // VITE_AMAZON_ACCESS_KEY, VITE_AMAZON_SECRET_KEY
 };
 
+// Push Notification / VAPID Configuration
+// Generate VAPID keys using: npx web-push generate-vapid-keys
+export const PUSH_NOTIFICATION_CONFIG = {
+  enabled: false, // Set to true when VAPID keys are configured
+  // VAPID public key - safe to expose in client code
+  // Set via environment variable: VITE_VAPID_PUBLIC_KEY
+  vapidPublicKey: import.meta.env.VITE_VAPID_PUBLIC_KEY || '',
+  // VAPID private key should ONLY be used server-side (Edge Functions)
+  // Never expose in client code - use VAPID_PRIVATE_KEY env var
+};
+
 // Admin email for access control
 export const ADMIN_EMAIL = 'dadsellsgadgets@gmail.com';
 

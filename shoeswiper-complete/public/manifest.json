@@ -1,0 +1,77 @@
+{
+  "name": "ShoeSwiper",
+  "short_name": "ShoeSwiper",
+  "description": "TikTok-style sneaker discovery marketplace with AI outfit matching",
+  "start_url": "/",
+  "display": "standalone",
+  "orientation": "portrait",
+  "theme_color": "#18181b",
+  "background_color": "#18181b",
+  "categories": ["shopping", "lifestyle", "social"],
+  "icons": [
+    {
+      "src": "/favicon.svg",
+      "type": "image/svg+xml",
+      "sizes": "any",
+      "purpose": "any"
+    },
+    {
+      "src": "/icons/icon-192x192.png",
+      "type": "image/png",
+      "sizes": "192x192",
+      "purpose": "any"
+    },
+    {
+      "src": "/icons/icon-512x512.png",
+      "type": "image/png",
+      "sizes": "512x512",
+      "purpose": "any"
+    },
+    {
+      "src": "/icons/icon-192x192-maskable.png",
+      "type": "image/png",
+      "sizes": "192x192",
+      "purpose": "maskable"
+    },
+    {
+      "src": "/icons/icon-512x512-maskable.png",
+      "type": "image/png",
+      "sizes": "512x512",
+      "purpose": "maskable"
+    }
+  ],
+  "screenshots": [
+    {
+      "src": "/screenshots/home-screen.png",
+      "type": "image/png",
+      "sizes": "1080x1920",
+      "form_factor": "narrow",
+      "label": "Discover sneakers with swipe gestures"
+    },
+    {
+      "src": "/screenshots/check-fit.png",
+      "type": "image/png",
+      "sizes": "1080x1920",
+      "form_factor": "narrow",
+      "label": "AI-powered outfit matching"
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "Check Fit",
+      "short_name": "Check Fit",
+      "description": "Analyze your outfit with AI",
+      "url": "/check-fit",
+      "icons": [{ "src": "/icons/check-fit-96x96.png", "sizes": "96x96" }]
+    },
+    {
+      "name": "My Closet",
+      "short_name": "Closet",
+      "description": "View your saved sneakers",
+      "url": "/closet",
+      "icons": [{ "src": "/icons/closet-96x96.png", "sizes": "96x96" }]
+    }
+  ],
+  "related_applications": [],
+  "prefer_related_applications": false
+}
