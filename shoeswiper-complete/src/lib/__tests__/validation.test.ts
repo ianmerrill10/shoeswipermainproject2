@@ -281,6 +281,18 @@ describe('validatePrice', () => {
       expect(result.valid).toBe(true);
       expect(result.cents).toBe(10000000);
     });
+
+    it('should correctly handle thousands separator', () => {
+      const result = validatePrice('1,000.00');
+      expect(result.valid).toBe(true);
+      expect(result.cents).toBe(100000); // 1000 dollars = 100000 cents
+    });
+
+    it('should handle price with multiple thousands separators', () => {
+      const result = validatePrice('$10,000.50');
+      expect(result.valid).toBe(true);
+      expect(result.cents).toBe(1000050);
+    });
   });
 
   describe('invalid prices', () => {

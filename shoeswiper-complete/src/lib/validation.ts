@@ -166,13 +166,14 @@ export function validatePrice(input: string | number): PriceValidationResult {
       return { valid: false, cents: 0, error: 'Price is required' };
     }
 
-    // Extract numeric value from string (handles currency symbols, commas, etc.)
-    const match = trimmed.replace(/,/g, '').match(PRICE_REGEX);
+    // Remove thousands separators (commas) and extract numeric value
+    const withoutCommas = trimmed.replace(/,/g, '');
+    const match = withoutCommas.match(PRICE_REGEX);
     if (!match) {
       return { valid: false, cents: 0, error: 'Invalid price format' };
     }
 
-    const numericValue = parseFloat(match[1].replace(',', '.'));
+    const numericValue = parseFloat(match[1]);
     if (!Number.isFinite(numericValue)) {
       return { valid: false, cents: 0, error: 'Invalid price value' };
     }
@@ -257,7 +258,13 @@ const MAX_FILE_SIZE_BYTES = 5 * 1024 * 1024; // 5MB
 const IMAGE_MAGIC_BYTES: Record<string, number[][]> = {
   'image/jpeg': [[0xff, 0xd8, 0xff]],
   'image/png': [[0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]],
-  'image/webp': [[0x52, 0x49, 0x46, 0x46]], // RIFF followed by WEBP at offset 8
+  'image/webp': [[0x52, 0x49, 0x46, 0x46]], // RIFF header, followed by WEBP at offset 8
+};
+
+// WebP signature bytes at offset 8: 'WEBP' in ASCII
+const WEBP_SIGNATURE = {
+  offset: 8,
+  bytes: [0x57, 0x45, 0x42, 0x50], // 'W', 'E', 'B', 'P'
 };
 
 /**
@@ -323,13 +330,20 @@ export async function validateImageUpload(file: File): Promise<FileValidationRes
     // For WebP, also check for WEBP signature at offset 8
     if (file.type === 'image/webp') {
       const webpBytes = new Uint8Array(buffer);
-      if (
-        webpBytes.length < 12 ||
-        webpBytes[8] !== 0x57 ||
-        webpBytes[9] !== 0x45 ||
-        webpBytes[10] !== 0x42 ||
-        webpBytes[11] !== 0x50
-      ) {
+      const requiredLength = WEBP_SIGNATURE.offset + WEBP_SIGNATURE.bytes.length;
+      
+      if (webpBytes.length < requiredLength) {
+        return {
+          valid: false,
+          error: 'Invalid WebP file format',
+        };
+      }
+
+      const isValidWebP = WEBP_SIGNATURE.bytes.every(
+        (byte, index) => webpBytes[WEBP_SIGNATURE.offset + index] === byte
+      );
+
+      if (!isValidWebP) {
         return {
           valid: false,
           error: 'Invalid WebP file format',
