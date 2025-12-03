@@ -130,9 +130,13 @@ export const useOnboarding = () => {
     
     // Also save to separate preferences key for feed algorithm
     if (DEMO_MODE) {
-      const prefs = localStorage.getItem(PREFERENCES_KEY);
-      const existingPrefs = prefs ? JSON.parse(prefs) as OnboardingPreferences : { stylePreferences: [], favoriteBrands: [] };
-      localStorage.setItem(PREFERENCES_KEY, JSON.stringify({ ...existingPrefs, stylePreferences: styles }));
+      try {
+        const prefs = localStorage.getItem(PREFERENCES_KEY);
+        const existingPrefs = prefs ? JSON.parse(prefs) as OnboardingPreferences : { stylePreferences: [], favoriteBrands: [] };
+        localStorage.setItem(PREFERENCES_KEY, JSON.stringify({ ...existingPrefs, stylePreferences: styles }));
+      } catch {
+        localStorage.setItem(PREFERENCES_KEY, JSON.stringify({ stylePreferences: styles, favoriteBrands: [] }));
+      }
     }
   }, [state, saveState]);
 
@@ -143,9 +147,13 @@ export const useOnboarding = () => {
     
     // Also save to separate preferences key for feed algorithm
     if (DEMO_MODE) {
-      const prefs = localStorage.getItem(PREFERENCES_KEY);
-      const existingPrefs = prefs ? JSON.parse(prefs) as OnboardingPreferences : { stylePreferences: [], favoriteBrands: [] };
-      localStorage.setItem(PREFERENCES_KEY, JSON.stringify({ ...existingPrefs, favoriteBrands: brands }));
+      try {
+        const prefs = localStorage.getItem(PREFERENCES_KEY);
+        const existingPrefs = prefs ? JSON.parse(prefs) as OnboardingPreferences : { stylePreferences: [], favoriteBrands: [] };
+        localStorage.setItem(PREFERENCES_KEY, JSON.stringify({ ...existingPrefs, favoriteBrands: brands }));
+      } catch {
+        localStorage.setItem(PREFERENCES_KEY, JSON.stringify({ stylePreferences: [], favoriteBrands: brands }));
+      }
     }
   }, [state, saveState]);
 
@@ -184,8 +192,12 @@ export const useOnboarding = () => {
   // Get saved preferences (for use in feed algorithm)
   const getPreferences = useCallback((): OnboardingPreferences => {
     if (DEMO_MODE) {
-      const stored = localStorage.getItem(PREFERENCES_KEY);
-      return stored ? JSON.parse(stored) as OnboardingPreferences : { stylePreferences: [], favoriteBrands: [] };
+      try {
+        const stored = localStorage.getItem(PREFERENCES_KEY);
+        return stored ? JSON.parse(stored) as OnboardingPreferences : { stylePreferences: [], favoriteBrands: [] };
+      } catch {
+        return { stylePreferences: [], favoriteBrands: [] };
+      }
     }
     return {
       stylePreferences: state.stylePreferences,

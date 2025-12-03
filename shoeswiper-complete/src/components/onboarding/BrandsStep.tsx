@@ -9,6 +9,10 @@ interface BrandsStepProps {
   onBack: () => void;
 }
 
+// Selection constraints
+const MIN_BRAND_SELECTIONS = 3;
+const MAX_BRAND_SELECTIONS = 5;
+
 const BRAND_OPTIONS = [
   { id: 'nike', label: 'Nike', logo: '✓' },
   { id: 'adidas', label: 'Adidas', logo: '△' },
@@ -35,12 +39,12 @@ const BrandsStep: React.FC<BrandsStepProps> = ({
   const toggleBrand = (brandId: string) => {
     const newBrands = brands.includes(brandId)
       ? brands.filter(b => b !== brandId)
-      : brands.length < 5 ? [...brands, brandId] : brands;
+      : brands.length < MAX_BRAND_SELECTIONS ? [...brands, brandId] : brands;
     setBrands(newBrands);
     onBrandsChange(newBrands);
   };
 
-  const canContinue = brands.length >= 3;
+  const canContinue = brands.length >= MIN_BRAND_SELECTIONS;
 
   return (
     <motion.div

@@ -9,6 +9,10 @@ interface StyleQuizStepProps {
   onBack: () => void;
 }
 
+// Selection constraints
+const MIN_STYLE_SELECTIONS = 2;
+const MAX_STYLE_SELECTIONS = 3;
+
 const STYLE_OPTIONS = [
   { id: 'streetwear', label: 'Streetwear', emoji: '🔥', color: 'from-orange-500 to-red-500' },
   { id: 'classic', label: 'Classic/Retro', emoji: '🕰️', color: 'from-amber-500 to-orange-500' },
@@ -31,12 +35,12 @@ const StyleQuizStep: React.FC<StyleQuizStepProps> = ({
   const toggleStyle = (styleId: string) => {
     const newStyles = styles.includes(styleId)
       ? styles.filter(s => s !== styleId)
-      : styles.length < 3 ? [...styles, styleId] : styles;
+      : styles.length < MAX_STYLE_SELECTIONS ? [...styles, styleId] : styles;
     setStyles(newStyles);
     onStylesChange(newStyles);
   };
 
-  const canContinue = styles.length >= 2;
+  const canContinue = styles.length >= MIN_STYLE_SELECTIONS;
 
   return (
     <motion.div
