@@ -1,5 +1,4 @@
 import React, { useState } from 'react';
-import { motion } from 'framer-motion';
 import { FaHeart, FaRegHeart, FaAmazon, FaTag } from 'react-icons/fa';
 import { Shoe } from '../lib/types';
 import { useSneakers } from '../hooks/useSneakers';
@@ -11,7 +10,7 @@ interface Props {
 }
 
 export const SneakerCard: React.FC<Props> = ({ shoe, variant = 'grid' }) => {
-  const { trackClick, trackView } = useSneakers();
+  const { trackClick } = useSneakers();
   const [isLiked, setIsLiked] = useState(false);
 
   const getAffiliateLink = (url: string) => {

@@ -57,7 +57,7 @@ const ProfilePage: React.FC = () => {
       .eq('user_id', user.id);
 
     if (favData) {
-      setFavorites(favData.map((f: any) => f.shoe).filter(Boolean));
+      setFavorites(favData.map((f: { shoe: unknown }) => f.shoe).filter(Boolean) as typeof favorites);
     }
 
     // Get closet
@@ -67,7 +67,7 @@ const ProfilePage: React.FC = () => {
       .eq('user_id', user.id);
 
     if (closetData) {
-      setCloset(closetData.map((c: any) => c.shoe).filter(Boolean));
+      setCloset(closetData.map((c: { shoe: unknown }) => c.shoe).filter(Boolean) as typeof closet);
     }
 
     setLoading(false);

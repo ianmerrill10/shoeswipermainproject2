@@ -46,8 +46,9 @@ const AuthPage: React.FC = () => {
         if (error) throw error;
       }
       navigate('/');
-    } catch (err: any) {
-      setError(err.message);
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : "Authentication failed";
+      setError(message);
     } finally {
       setLoading(false);
     }
@@ -63,8 +64,9 @@ const AuthPage: React.FC = () => {
         },
       });
       if (error) throw error;
-    } catch (err: any) {
-      setError(err.message);
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : "OAuth sign-in failed";
+      setError(message);
       setLoading(false);
     }
   };

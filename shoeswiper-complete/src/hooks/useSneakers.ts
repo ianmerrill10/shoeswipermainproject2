@@ -36,8 +36,9 @@ export const useSneakers = () => {
 
       if (error) throw error;
       return data as Shoe[];
-    } catch (err: any) {
-      setError(err.message);
+    } catch (err: unknown) {
+      const errorMessage = err instanceof Error ? err.message : 'Failed to load sneakers';
+      setError(errorMessage);
       return [];
     } finally {
       setLoading(false);
@@ -94,7 +95,7 @@ export const useSneakers = () => {
     }
 
     // PRODUCTION MODE: Use Supabase
-    supabase.rpc('increment_shoe_view', { shoe_id: id }).then(({ error }: any) => {
+    supabase.rpc('increment_shoe_view', { shoe_id: id }).then(({ error }) => {
       if (error) console.error('Error tracking view:', error);
     });
   }, []);

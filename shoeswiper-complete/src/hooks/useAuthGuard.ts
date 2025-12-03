@@ -31,15 +31,18 @@ export const useAuthGuard = () => {
       const { supabase } = await import('../lib/supabaseClient');
 
       // Get initial session
-      supabase.auth.getSession().then(({ data: { session } }: any) => {
+      supabase.auth.getSession().then(({ data: { session } }) => {
         const currentUser = session?.user ?? null;
         setUser(currentUser);
         setIsAllowed(isEmailAllowed(currentUser?.email));
         setLoading(false);
+      }).catch((error: unknown) => {
+        console.error('[AuthGuard] Error getting session:', error);
+        setLoading(false);
       });
 
       // Listen for auth changes
-      const { data: { subscription } } = supabase.auth.onAuthStateChange((_event: any, session: any) => {
+      const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
         const currentUser = session?.user ?? null;
         setUser(currentUser);
         setIsAllowed(isEmailAllowed(currentUser?.email));

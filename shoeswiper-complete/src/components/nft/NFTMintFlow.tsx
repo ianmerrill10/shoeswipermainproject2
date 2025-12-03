@@ -1,10 +1,10 @@
 import React, { useEffect, useState } from "react";
 import { supabase } from "../../lib/supabaseClient";
 import { useNFTMarketplace } from "../../hooks/useNFTMarketplace";
-import type { NFT, Rarity, Shoe } from "../../lib/types";
+import type { NFT, Rarity, NFTSneaker } from "../../lib/types";
 
-// Alias for compatibility
-type Sneaker = Shoe;
+// Use NFTSneaker for the closet items (minimal sneaker data)
+type Sneaker = NFTSneaker;
 
 interface NFTMintFlowProps {
   onMinted?: (nft: NFT) => void;
@@ -88,8 +88,12 @@ const NFTMintFlow: React.FC<NFTMintFlowProps> = ({ onMinted }) => {
           return;
         }
 
+        // Supabase returns nested relations as arrays, extract first item
         const sneakers =
-          closetRows?.map((row: { sneaker: Sneaker }) => row.sneaker) ?? [];
+          closetRows?.map((row: { sneaker: Sneaker[] | Sneaker }) => {
+            const sneaker = Array.isArray(row.sneaker) ? row.sneaker[0] : row.sneaker;
+            return sneaker;
+          }).filter((s): s is Sneaker => s != null) ?? [];
         setCloset(sneakers);
       } finally {
         setLoadingCloset(false);
@@ -124,8 +128,9 @@ const NFTMintFlow: React.FC<NFTMintFlowProps> = ({ onMinted }) => {
       setSelectedSneaker(null);
       setProofFiles([]);
       setRarity("common");
-    } catch (err: any) {
-      setError(err.message ?? "Failed to mint NFT");
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : "Failed to mint NFT";
+      setError(message);
     } finally {
       setIsMinting(false);
     }

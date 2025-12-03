@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { FaTimes, FaBell, FaTag, FaExternalLinkAlt, FaTrash, FaCheck } from 'react-icons/fa';
-import { usePriceAlerts, PriceNotification, PriceAlert } from '../hooks/usePriceAlerts';
+import { usePriceAlerts, PriceNotification } from '../hooks/usePriceAlerts';
 import { getAffiliateUrl } from '../lib/supabaseClient';
 
 interface NotificationsPanelProps {

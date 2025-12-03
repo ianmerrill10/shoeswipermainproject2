@@ -252,9 +252,16 @@ export const useEmailCapture = () => {
           .eq('is_subscribed', true)
           .order('created_at', { ascending: false });
 
-        return (data || []).map((e: any) => ({
+        return (data || []).map((e: {
+          email: string;
+          source: string;
+          shoe_id?: string;
+          shoe_name?: string;
+          created_at: string;
+          preferences: CapturedEmail['preferences'];
+        }) => ({
           email: e.email,
-          source: e.source,
+          source: e.source as CapturedEmail['source'],
           shoeId: e.shoe_id,
           shoeName: e.shoe_name,
           createdAt: e.created_at,

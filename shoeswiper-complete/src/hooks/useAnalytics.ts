@@ -21,7 +21,7 @@ interface AnalyticsData {
   song?: string;
   artist?: string;
   direction?: 'left' | 'right' | 'up' | 'down';
-  [key: string]: any;
+  [key: string]: unknown;
 }
 
 // In-memory analytics store for DEMO_MODE
@@ -214,7 +214,7 @@ export const useAnalytics = () => {
     ]);
 
     // Aggregate music clicks by platform
-    const musicClicksByPlatform = (musicClicks || []).reduce((acc: Record<string, number>, click: any) => {
+    const musicClicksByPlatform = (musicClicks || []).reduce((acc: Record<string, number>, click: { platform: string }) => {
       acc[click.platform] = (acc[click.platform] || 0) + 1;
       return acc;
     }, { spotify: 0, apple_music: 0, amazon_music: 0 });

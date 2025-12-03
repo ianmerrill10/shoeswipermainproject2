@@ -2,9 +2,14 @@ import React, { useEffect, useState } from 'react';
 import { FaUserSlash, FaUserCheck, FaSearch } from 'react-icons/fa';
 import { DEMO_MODE } from '../../lib/mockData';
 import { supabase } from '../../lib/supabaseClient';
+import type { Profile } from '../../lib/types';
+
+interface UserWithBanStatus extends Profile {
+  is_banned?: boolean;
+}
 
 export const UserManager: React.FC = () => {
-  const [users, setUsers] = useState<any[]>([]);
+  const [users, setUsers] = useState<UserWithBanStatus[]>([]);
   const [search, setSearch] = useState('');
 
   useEffect(() => {
@@ -91,7 +96,7 @@ export const UserManager: React.FC = () => {
                 </td>
                 <td className="p-4 text-right">
                   <button 
-                    onClick={() => toggleBan(user.id, user.is_banned)}
+                    onClick={() => toggleBan(user.id, user.is_banned ?? false)}
                     className={`p-2 rounded hover:bg-zinc-700 transition ${user.is_banned ? 'text-green-500' : 'text-red-500'}`}
                     title={user.is_banned ? "Unban User" : "Ban User"}
                   >

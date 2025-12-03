@@ -50,9 +50,6 @@ export const ShareResults: React.FC<Props> = ({ analysis, recommendations }) => 
             {/* Shoe Image */}
             <div className="w-32 h-full bg-zinc-800 relative">
               <img src={shoe.image_url} alt={shoe.name} className="w-full h-full object-cover" />
-              {shoe.media?.has_3d_model && (
-                <div className="absolute top-1 left-1 bg-black/60 px-1.5 py-0.5 rounded text-[10px] text-white backdrop-blur-md">3D</div>
-              )}
             </div>
 
             {/* Info & Action */}

@@ -220,7 +220,7 @@ export const usePushNotifications = () => {
   const showLocalNotification = useCallback(async (
     title: string,
     body: string,
-    data?: Record<string, any>
+    data?: Record<string, unknown>
   ) => {
     if (permission !== 'granted') {
       console.log('[Push] No permission for notifications');

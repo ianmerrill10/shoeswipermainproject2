@@ -1,43 +1,42 @@
 // useNFTMarketplace.ts
 import { useCallback, useState } from "react";
 import { supabase } from "@/lib/supabaseClient";
+import type { 
+  Rarity, 
+  NFTFilter, 
+  NFT, 
+  NFTSneaker, 
+  NFTOwnerProfile,
+  SupabaseNFTRow 
+} from "@/lib/types";
 
-export type Rarity = "common" | "rare" | "legendary" | "grail";
-
-export type NFTFilter = "all" | "for_sale" | "auction" | "recent";
-
-export interface Sneaker {
-  id: string;
-  name: string;
-  brand: string;
-  image_url: string;
-  amazon_url?: string | null;
-}
-
-export interface Profile {
-  id: string;
-  username: string | null;
-  avatar_url: string | null;
-}
-
-export interface NFT {
-  id: string;
-  sneaker_id: string;
-  owner_id: string;
-  token_id: string;
-  rarity: Rarity;
-  minted_at: string | null;
-  for_sale: boolean;
-  price_eth: string | null;
-  auction_end: string | null;
-  sneaker?: Sneaker | null;
-  owner?: Profile | null;
-}
+// Re-export types for backward compatibility with components that import from this hook
+export type { Rarity, NFTFilter, NFT, NFTSneaker as Sneaker, NFTOwnerProfile as Profile };
 
 interface ListNFTsParams {
   filter?: NFTFilter;
   ownerId?: string;
 }
+
+// Helper to transform Supabase nested array response to proper NFT type
+const transformNFTRow = (row: SupabaseNFTRow): NFT => {
+  const sneaker = Array.isArray(row.sneaker) ? row.sneaker[0] : row.sneaker;
+  const owner = Array.isArray(row.owner) ? row.owner[0] : row.owner;
+  
+  return {
+    id: row.id,
+    sneaker_id: row.sneaker_id,
+    owner_id: row.owner_id,
+    token_id: row.token_id,
+    rarity: row.rarity,
+    minted_at: row.minted_at,
+    for_sale: row.for_sale,
+    price_eth: row.price_eth,
+    auction_end: row.auction_end,
+    sneaker: sneaker ?? null,
+    owner: owner ?? null,
+  };
+};
 
 const uuidv4 = (): string => {
   if (typeof crypto !== "undefined" && "randomUUID" in crypto) {
@@ -112,12 +111,14 @@ export const useNFTMarketplace = () => {
           throw queryError;
         }
 
-        setNfts((data ?? []) as NFT[]);
+        const transformed = (data ?? []).map((row) => transformNFTRow(row as SupabaseNFTRow));
+        setNfts(transformed);
         setIsLoading(false);
-        return (data ?? []) as NFT[];
-      } catch (err: any) {
+        return transformed;
+      } catch (err: unknown) {
         setIsLoading(false);
-        setError(err.message ?? "Failed to load NFTs");
+        const message = err instanceof Error ? err.message : "Failed to load NFTs";
+        setError(message);
         throw err;
       }
     },
@@ -234,13 +235,14 @@ export const useNFTMarketplace = () => {
           console.info("Stored proof URLs:", proofUrls);
         }
 
-        const minted = inserted as NFT;
+        const minted = transformNFTRow(inserted as SupabaseNFTRow);
         setNfts((prev) => [minted, ...prev]);
         setIsLoading(false);
         return minted;
-      } catch (err: any) {
+      } catch (err: unknown) {
         setIsLoading(false);
-        setError(err.message ?? "Failed to mint NFT");
+        const message = err instanceof Error ? err.message : "Failed to mint NFT";
+        setError(message);
         throw err;
       }
     },
@@ -321,15 +323,16 @@ export const useNFTMarketplace = () => {
 
       if (updateError) throw updateError;
 
-      const updatedNFT = updated as NFT;
+      const updatedNFT = transformNFTRow(updated as SupabaseNFTRow);
       setNfts((prev) =>
         prev.map((existing) => (existing.id === nftId ? updatedNFT : existing))
       );
       setIsLoading(false);
       return updatedNFT;
-    } catch (err: any) {
+    } catch (err: unknown) {
       setIsLoading(false);
-      setError(err.message ?? "Failed to buy NFT");
+      const message = err instanceof Error ? err.message : "Failed to buy NFT";
+      setError(message);
       throw err;
     }
   }, []);
@@ -377,15 +380,16 @@ export const useNFTMarketplace = () => {
 
       if (updateError) throw updateError;
 
-      const updatedNFT = updated as NFT;
+      const updatedNFT = transformNFTRow(updated as SupabaseNFTRow);
       setNfts((prev) =>
         prev.map((existing) => (existing.id === nftId ? updatedNFT : existing))
       );
       setIsLoading(false);
       return updatedNFT;
-    } catch (err: any) {
+    } catch (err: unknown) {
       setIsLoading(false);
-      setError(err.message ?? "Failed to list NFT for sale");
+      const message = err instanceof Error ? err.message : "Failed to list NFT for sale";
+      setError(message);
       throw err;
     }
   }, []);

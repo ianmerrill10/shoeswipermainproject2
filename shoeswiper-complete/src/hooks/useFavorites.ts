@@ -1,6 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
 import { DEMO_MODE } from '../lib/config';
-import { Shoe, UserSneaker } from '../lib/types';
 
 const FAVORITES_STORAGE_KEY = 'shoeswiper_favorites';
 

@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from "react";
-import { supabase, AFFILIATE_TAG } from "../../lib/supabaseClient";
-import type { NFT, Profile, NFTOwnershipHistory } from "../../lib/types";
+import { supabase } from "../../lib/supabaseClient";
+import type { NFT, Profile } from "../../lib/types";
 
 interface OwnershipHistoryItem {
   id: string;

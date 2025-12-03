@@ -1,6 +1,6 @@
 import React, { useState, useRef } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
-import { FaCamera, FaUpload, FaMagic, FaTimes, FaBolt } from 'react-icons/fa';
+import { motion } from 'framer-motion';
+import { FaCamera, FaUpload, FaMagic } from 'react-icons/fa';
 import { useOutfitAnalysis } from '../hooks/useOutfitAnalysis';
 import { ShareResults } from '../components/check-fit/ShareResults';
 import { ManualStyleSelector } from '../components/check-fit/ManualStyleSelector';

@@ -33,7 +33,7 @@ export const useAdmin = () => {
     }
   };
 
-  const logAction = async (action: string, table: string, id: string | undefined, details: any) => {
+  const logAction = async (action: string, table: string, id: string | undefined, details: Record<string, unknown>) => {
     // DEMO MODE: Just log to console
     if (DEMO_MODE) {
       console.log(`[Demo] Audit: ${action} on ${table}`, details);

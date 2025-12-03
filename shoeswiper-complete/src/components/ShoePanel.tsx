@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { FaTimes, FaAmazon, FaBookmark, FaShare, FaChevronLeft, FaChevronRight, FaCheck, FaBell } from 'react-icons/fa';
+import { FaTimes, FaAmazon, FaBookmark, FaShare, FaChevronLeft, FaChevronRight, FaCheck } from 'react-icons/fa';
 import { Shoe } from '../lib/types';
 import { getAffiliateUrl, shouldShowPrice, formatPrice } from '../lib/supabaseClient';
 import { createAffiliateShareData } from '../lib/deepLinks';

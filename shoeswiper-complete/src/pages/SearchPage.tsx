@@ -221,7 +221,7 @@ const SearchPage: React.FC = () => {
                 <h3 className="text-sm font-bold text-zinc-400 uppercase mb-3">Sort By</h3>
                 <select
                   value={filters.sortBy || ''}
-                  onChange={(e) => setFilters({ ...filters, sortBy: e.target.value as any || undefined })}
+                  onChange={(e) => setFilters({ ...filters, sortBy: (e.target.value || undefined) as SearchFilters['sortBy'] })}
                   className="w-full bg-zinc-800 border border-zinc-700 rounded-lg px-3 py-2 text-white"
                 >
                   <option value="">Relevance</option>

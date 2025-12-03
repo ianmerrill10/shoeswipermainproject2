@@ -34,6 +34,36 @@ export interface PriceNotification {
   read: boolean;
 }
 
+interface PriceAlertDbRow {
+  shoe_id: string;
+  shoe_name: string;
+  shoe_brand: string;
+  shoe_image: string;
+  amazon_url: string;
+  target_price: number;
+  current_price?: number;
+  original_price?: number;
+  created_at: string;
+  last_checked?: string;
+  triggered?: boolean;
+  triggered_at?: string;
+}
+
+interface PriceNotificationDbRow {
+  id: string;
+  shoe_id: string;
+  shoe_name: string;
+  shoe_brand: string;
+  shoe_image: string;
+  amazon_url: string;
+  old_price: number;
+  new_price: number;
+  saved_amount: number;
+  percent_off: number;
+  created_at: string;
+  read: boolean;
+}
+
 export const usePriceAlerts = () => {
   const [alerts, setAlerts] = useState<PriceAlert[]>([]);
   const [notifications, setNotifications] = useState<PriceNotification[]>([]);
@@ -65,7 +95,7 @@ export const usePriceAlerts = () => {
             .order('created_at', { ascending: false });
 
           if (data) {
-            setAlerts(data.map((alert: any) => ({
+            setAlerts(data.map((alert: PriceAlertDbRow) => ({
               shoeId: alert.shoe_id,
               shoeName: alert.shoe_name,
               shoeBrand: alert.shoe_brand,
@@ -109,7 +139,7 @@ export const usePriceAlerts = () => {
             .limit(20);
 
           if (data) {
-            setNotifications(data.map((n: any) => ({
+            setNotifications(data.map((n: PriceNotificationDbRow) => ({
               id: n.id,
               shoeId: n.shoe_id,
               shoeName: n.shoe_name,
@@ -139,7 +169,7 @@ export const usePriceAlerts = () => {
       brand: string;
       image_url: string;
       amazon_url: string;
-      price?: number;
+      price?: number | null;
     },
     targetPrice: number
   ): Promise<boolean> => {
@@ -151,8 +181,8 @@ export const usePriceAlerts = () => {
         shoeImage: shoe.image_url,
         amazonUrl: shoe.amazon_url,
         targetPrice,
-        originalPrice: shoe.price,
-        currentPrice: shoe.price,
+        originalPrice: shoe.price ?? undefined,
+        currentPrice: shoe.price ?? undefined,
         createdAt: new Date().toISOString(),
         triggered: false,
       };

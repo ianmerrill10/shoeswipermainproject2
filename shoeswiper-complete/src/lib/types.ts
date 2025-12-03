@@ -107,8 +107,8 @@ export interface PriceHistory {
 export interface Profile {
   id: string;
   email?: string;
-  username?: string;
-  avatar_url?: string;
+  username?: string | null;
+  avatar_url?: string | null;
   bio?: string;
   is_banned?: boolean;
   created_at: string;
@@ -129,6 +129,22 @@ export interface UserSneaker {
 
 export type Rarity = 'common' | 'rare' | 'legendary' | 'grail';
 
+// Minimal sneaker type for NFT display (subset of Shoe)
+export interface NFTSneaker {
+  id: string;
+  name: string;
+  brand: string;
+  image_url: string;
+  amazon_url?: string | null;
+}
+
+// Minimal profile type for NFT ownership display
+export interface NFTOwnerProfile {
+  id: string;
+  username: string | null;
+  avatar_url: string | null;
+}
+
 export interface NFT {
   id: string;
   sneaker_id: string;
@@ -139,8 +155,8 @@ export interface NFT {
   for_sale: boolean;
   price_eth: string | null;
   auction_end: string | null;
-  sneaker?: Shoe | null;
-  owner?: Profile | null;
+  sneaker?: NFTSneaker | null;
+  owner?: NFTOwnerProfile | null;
 }
 
 export interface NFTOwnershipHistory {
@@ -150,6 +166,21 @@ export interface NFTOwnershipHistory {
   to_user: string;
   price_eth: string | null;
   transferred_at: string;
+}
+
+// Supabase returns nested relations as arrays, this handles the raw response
+export interface SupabaseNFTRow {
+  id: string;
+  sneaker_id: string;
+  owner_id: string;
+  token_id: string;
+  rarity: Rarity;
+  minted_at: string | null;
+  for_sale: boolean;
+  price_eth: string | null;
+  auction_end: string | null;
+  sneaker: NFTSneaker[] | NFTSneaker | null;
+  owner: NFTOwnerProfile[] | NFTOwnerProfile | null;
 }
 
 // ============================================
@@ -191,7 +222,7 @@ export interface AuditLog {
   action: string;
   target_table: string;
   target_id?: string;
-  details?: any;
+  details?: Record<string, unknown>;
   created_at: string;
 }
 
