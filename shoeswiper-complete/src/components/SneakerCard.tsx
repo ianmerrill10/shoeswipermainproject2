@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useCallback, memo } from 'react';
 import { FaHeart, FaRegHeart, FaAmazon, FaTag } from 'react-icons/fa';
 import { Shoe } from '../lib/types';
 import { useSneakers } from '../hooks/useSneakers';
@@ -9,27 +9,27 @@ interface Props {
   variant?: 'feed' | 'grid';
 }
 
-export const SneakerCard: React.FC<Props> = ({ shoe, variant = 'grid' }) => {
+const SneakerCard: React.FC<Props> = memo(({ shoe, variant = 'grid' }) => {
   const { trackClick } = useSneakers();
   const [isLiked, setIsLiked] = useState(false);
 
-  const getAffiliateLink = (url: string) => {
+  const getAffiliateLink = useCallback((url: string) => {
     if (url.includes(`tag=${AFFILIATE_TAG}`)) return url;
     const separator = url.includes('?') ? '&' : '?';
     return `${url}${separator}tag=${AFFILIATE_TAG}`;
-  };
+  }, []);
 
   const showPrice = shouldShowPrice(shoe.price);
 
-  const handleBuyClick = () => {
+  const handleBuyClick = useCallback(() => {
     trackClick(shoe.id);
     window.open(getAffiliateLink(shoe.amazon_url), '_blank');
-  };
+  }, [trackClick, shoe.id, shoe.amazon_url, getAffiliateLink]);
 
-  const toggleLike = (e: React.MouseEvent) => {
+  const toggleLike = useCallback((e: React.MouseEvent) => {
     e.stopPropagation();
-    setIsLiked(!isLiked);
-  };
+    setIsLiked(prev => !prev);
+  }, []);
 
   const isOnSale = showPrice && shoe.sale_price && shoe.sale_price < (shoe.price || 0);
   const discount = isOnSale && shoe.price
@@ -145,4 +145,8 @@ export const SneakerCard: React.FC<Props> = ({ shoe, variant = 'grid' }) => {
       </div>
     </div>
   );
-};
+});
+
+SneakerCard.displayName = 'SneakerCard';
+
+export { SneakerCard };

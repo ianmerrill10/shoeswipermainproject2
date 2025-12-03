@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useCallback, useMemo, memo } from 'react';
 import { FaTimes, FaAmazon, FaBookmark, FaShare, FaChevronLeft, FaChevronRight, FaCheck } from 'react-icons/fa';
 import { Shoe } from '../lib/types';
 import { getAffiliateUrl, shouldShowPrice, formatPrice } from '../lib/supabaseClient';
@@ -13,7 +13,7 @@ interface ShoePanelProps {
   onClose: () => void;
 }
 
-const ShoePanel: React.FC<ShoePanelProps> = ({ shoe, isOpen, onClose }) => {
+const ShoePanel: React.FC<ShoePanelProps> = memo(({ shoe, isOpen, onClose }) => {
   const [selectedSize, setSelectedSize] = useState<string | null>(null);
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
   const [showShareToast, setShowShareToast] = useState(false);
@@ -21,22 +21,24 @@ const ShoePanel: React.FC<ShoePanelProps> = ({ shoe, isOpen, onClose }) => {
   const { trackFavorite, trackShare } = useAnalytics();
 
   // Generate view angles (in production these would be real image URLs)
-  const viewAngles = [
+  const viewAngles = useMemo(() => [
     { label: 'Side', url: shoe.image_url },
     { label: 'Front', url: shoe.image_url },
     { label: 'Back', url: shoe.image_url },
     { label: 'Top', url: shoe.image_url },
     { label: 'Sole', url: shoe.image_url },
-  ];
+  ], [shoe.image_url]);
 
   // Default sizes if none provided
-  const sizes = shoe.sizes_available || ['7', '7.5', '8', '8.5', '9', '9.5', '10', '10.5', '11', '11.5', '12', '13'];
+  const sizes = useMemo(() => 
+    shoe.sizes_available || ['7', '7.5', '8', '8.5', '9', '9.5', '10', '10.5', '11', '11.5', '12', '13'],
+  [shoe.sizes_available]);
 
-  const handleBuyClick = () => {
+  const handleBuyClick = useCallback(() => {
     window.open(getAffiliateUrl(shoe.amazon_url), '_blank');
-  };
+  }, [shoe.amazon_url]);
 
-  const handleShare = async () => {
+  const handleShare = useCallback(async () => {
     // Generate smart share data with deep links and affiliate tracking
     const shareData = createAffiliateShareData(shoe, 'share_native');
 
@@ -59,25 +61,33 @@ const ShoePanel: React.FC<ShoePanelProps> = ({ shoe, isOpen, onClose }) => {
       setShowShareToast(true);
       setTimeout(() => setShowShareToast(false), 2500);
     }
-  };
+  }, [shoe, trackShare]);
 
-  const handleAddToCloset = async () => {
+  const handleAddToCloset = useCallback(async () => {
     const wasAlreadyFavorite = isFavorite(shoe.id);
     const success = await toggleFavorite(shoe.id);
     if (success) {
       trackFavorite(shoe.id, wasAlreadyFavorite ? 'remove' : 'add');
     }
-  };
+  }, [shoe.id, isFavorite, toggleFavorite, trackFavorite]);
 
   const isInCloset = isFavorite(shoe.id);
 
-  const prevImage = () => {
+  const prevImage = useCallback(() => {
     setCurrentImageIndex((prev) => (prev === 0 ? viewAngles.length - 1 : prev - 1));
-  };
+  }, [viewAngles.length]);
 
-  const nextImage = () => {
+  const nextImage = useCallback(() => {
     setCurrentImageIndex((prev) => (prev === viewAngles.length - 1 ? 0 : prev + 1));
-  };
+  }, [viewAngles.length]);
+
+  const handleSelectSize = useCallback((size: string) => {
+    setSelectedSize(size);
+  }, []);
+
+  const handleSelectImage = useCallback((index: number) => {
+    setCurrentImageIndex(index);
+  }, []);
 
   return (
     <>
@@ -141,7 +151,7 @@ const ShoePanel: React.FC<ShoePanelProps> = ({ shoe, isOpen, onClose }) => {
             {viewAngles.map((angle, index) => (
               <button
                 key={angle.label}
-                onClick={() => setCurrentImageIndex(index)}
+                onClick={() => handleSelectImage(index)}
                 className={`flex-shrink-0 w-16 h-16 rounded-lg overflow-hidden border-2 transition-colors ${
                   currentImageIndex === index
                     ? 'border-orange-500'
@@ -176,7 +186,7 @@ const ShoePanel: React.FC<ShoePanelProps> = ({ shoe, isOpen, onClose }) => {
             {sizes.map((size) => (
               <button
                 key={size}
-                onClick={() => setSelectedSize(size)}
+                onClick={() => handleSelectSize(size)}
                 className={`py-3 rounded-lg font-bold text-sm transition-colors ${
                   selectedSize === size
                     ? 'bg-orange-500 text-white'
@@ -285,6 +295,8 @@ const ShoePanel: React.FC<ShoePanelProps> = ({ shoe, isOpen, onClose }) => {
       </div>
     </>
   );
-};
+});
+
+ShoePanel.displayName = 'ShoePanel';
 
 export default ShoePanel;

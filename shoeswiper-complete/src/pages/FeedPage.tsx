@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useRef, useCallback } from 'react';
+import React, { useEffect, useState, useRef, useCallback, memo } from 'react';
 import { FaHeart, FaShare, FaBookmark, FaAmazon, FaMusic, FaCheck, FaBell } from 'react-icons/fa';
 import { useSneakers } from '../hooks/useSneakers';
 import { useAnalytics } from '../hooks/useAnalytics';
@@ -11,8 +11,11 @@ import { Shoe } from '../lib/types';
 import ShoePanel from '../components/ShoePanel';
 import MusicPanel from '../components/MusicPanel';
 import NotificationsPanel from '../components/NotificationsPanel';
+import Toast from '../components/Toast';
+import { FullPageLoader, EmptyState } from '../components/LoadingStates';
+import { useToast } from '../hooks/useToast';
 
-const FeedPage: React.FC = () => {
+const FeedPage: React.FC = memo(() => {
   const { getInfiniteFeed, trackView, trackClick, loading } = useSneakers();
   const { trackPanelOpen, trackShare, trackFavorite, trackShoeClick } = useAnalytics();
   const { toggleFavorite, isFavorite } = useFavorites();
@@ -31,8 +34,8 @@ const FeedPage: React.FC = () => {
   const [shoes, setShoes] = useState<Shoe[]>([]);
   const [currentIndex, setCurrentIndex] = useState(0);
   const [page, setPage] = useState(0);
-  const [showShareToast, setShowShareToast] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
+  const { toast, showToast } = useToast();
 
   const loadShoes = useCallback(async () => {
     const data = await getInfiniteFeed(page, 10);
@@ -40,9 +43,25 @@ const FeedPage: React.FC = () => {
     setPage(prev => prev + 1);
   }, [page, getInfiniteFeed]);
 
+  // Define handlers BEFORE useEffect that uses them
+  const handleOpenShoePanel = useCallback(() => {
+    if (shoes[currentIndex]) {
+      trackPanelOpen('shoe', shoes[currentIndex].id);
+      openShoePanel(shoes[currentIndex].id);
+    }
+  }, [shoes, currentIndex, trackPanelOpen, openShoePanel]);
+
+  const handleOpenMusicPanel = useCallback(() => {
+    if (shoes[currentIndex]) {
+      trackPanelOpen('music', shoes[currentIndex].id);
+      openMusicPanel();
+    }
+  }, [shoes, currentIndex, trackPanelOpen, openMusicPanel]);
+
   useEffect(() => {
     loadShoes();
-  }, [loadShoes]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   useEffect(() => {
     if (shoes[currentIndex]) {
@@ -152,27 +171,13 @@ const FeedPage: React.FC = () => {
     return () => observer.disconnect();
   }, [shoes]);
 
-  const handleBuyClick = (shoe: Shoe) => {
+  const handleBuyClick = useCallback((shoe: Shoe) => {
     trackClick(shoe.id);
     trackShoeClick(shoe.id);
     window.open(getAffiliateUrl(shoe.amazon_url), '_blank');
-  };
+  }, [trackClick, trackShoeClick]);
 
-  const handleOpenShoePanel = useCallback(() => {
-    if (shoes[currentIndex]) {
-      trackPanelOpen('shoe', shoes[currentIndex].id);
-      openShoePanel(shoes[currentIndex].id);
-    }
-  }, [shoes, currentIndex, trackPanelOpen, openShoePanel]);
-
-  const handleOpenMusicPanel = useCallback(() => {
-    if (shoes[currentIndex]) {
-      trackPanelOpen('music', shoes[currentIndex].id);
-      openMusicPanel();
-    }
-  }, [shoes, currentIndex, trackPanelOpen, openMusicPanel]);
-
-  const handleShare = async (shoe: Shoe) => {
+  const handleShare = useCallback(async (shoe: Shoe) => {
     // Generate smart share data with deep links and affiliate tracking
     const shareData = createAffiliateShareData(shoe, 'share_native');
 
@@ -191,13 +196,12 @@ const FeedPage: React.FC = () => {
       // Copy rich share text to clipboard
       navigator.clipboard.writeText(shareData.text);
       trackShare(shoe.id, 'clipboard');
-      // Show toast instead of alert
-      setShowShareToast(true);
-      setTimeout(() => setShowShareToast(false), 2500);
+      // Show toast
+      showToast('Link copied with affiliate tracking!', { type: 'success' });
     }
-  };
+  }, [trackShare, showToast]);
 
-  const handleFavorite = async (shoe: Shoe) => {
+  const handleFavorite = useCallback(async (shoe: Shoe) => {
     const wasAlreadyFavorite = isFavorite(shoe.id);
     const success = await toggleFavorite(shoe.id);
     if (success) {

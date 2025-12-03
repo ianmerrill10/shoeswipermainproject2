@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useCallback, memo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { FaHeart, FaAmazon, FaShare, FaTrash, FaArrowLeft, FaBoxOpen } from 'react-icons/fa';
 import { useFavorites } from '../hooks/useFavorites';
@@ -7,15 +7,18 @@ import { useAnalytics } from '../hooks/useAnalytics';
 import { getAffiliateUrl } from '../lib/supabaseClient';
 import { createAffiliateShareData } from '../lib/deepLinks';
 import { Shoe } from '../lib/types';
+import Toast from '../components/Toast';
+import { useToast } from '../hooks/useToast';
+import { LoadingSpinner, EmptyState } from '../components/LoadingStates';
 
-const ClosetPage: React.FC = () => {
+const ClosetPage: React.FC = memo(() => {
   const navigate = useNavigate();
   const { getFavoriteIds, removeFavorite, loading: favoritesLoading } = useFavorites();
   const { getSneakerById, trackClick } = useSneakers();
   const { trackShoeClick, trackShare, trackFavorite } = useAnalytics();
   const [shoes, setShoes] = useState<Shoe[]>([]);
   const [loading, setLoading] = useState(true);
-  const [showToast, setShowToast] = useState<string | null>(null);
+  const { toast, showToast } = useToast();
 
   // Load favorited shoes
   useEffect(() => {
@@ -41,13 +44,13 @@ const ClosetPage: React.FC = () => {
     }
   }, [favoritesLoading, getFavoriteIds, getSneakerById]);
 
-  const handleBuyClick = (shoe: Shoe) => {
+  const handleBuyClick = useCallback((shoe: Shoe) => {
     trackClick(shoe.id);
     trackShoeClick(shoe.id);
     window.open(getAffiliateUrl(shoe.amazon_url), '_blank');
-  };
+  }, [trackClick, trackShoeClick]);
 
-  const handleShare = async (shoe: Shoe) => {
+  const handleShare = useCallback(async (shoe: Shoe) => {
     const shareData = createAffiliateShareData(shoe, 'share_native');
 
     if (navigator.share) {
@@ -64,30 +67,33 @@ const ClosetPage: React.FC = () => {
     } else {
       navigator.clipboard.writeText(shareData.text);
       trackShare(shoe.id, 'clipboard');
-      showToastMessage('Link copied!');
+      showToast('Link copied!', { type: 'success' });
     }
-  };
+  }, [trackShare, showToast]);
 
-  const handleRemove = async (shoe: Shoe) => {
+  const handleRemove = useCallback(async (shoe: Shoe) => {
     const success = await removeFavorite(shoe.id);
     if (success) {
       trackFavorite(shoe.id, 'remove');
       setShoes(prev => prev.filter(s => s.id !== shoe.id));
-      showToastMessage('Removed from closet');
+      showToast('Removed from closet', { type: 'info' });
     }
-  };
+  }, [removeFavorite, trackFavorite, showToast]);
 
-  const showToastMessage = (message: string) => {
-    setShowToast(message);
-    setTimeout(() => setShowToast(null), 2000);
-  };
+  const handleGoBack = useCallback(() => {
+    navigate(-1);
+  }, [navigate]);
+
+  const handleBrowse = useCallback(() => {
+    navigate('/');
+  }, [navigate]);
 
   if (loading || favoritesLoading) {
     return (
       <div className="min-h-screen bg-zinc-950 pt-4 pb-24 px-4">
         <div className="flex items-center gap-3 mb-6">
           <button
-            onClick={() => navigate(-1)}
+            onClick={handleGoBack}
             className="w-10 h-10 bg-zinc-800 rounded-full flex items-center justify-center text-white"
           >
             <FaArrowLeft />
@@ -95,7 +101,7 @@ const ClosetPage: React.FC = () => {
           <h1 className="text-xl font-bold text-white">My Closet</h1>
         </div>
         <div className="flex items-center justify-center h-64">
-          <div className="w-10 h-10 border-4 border-orange-500 border-t-transparent rounded-full animate-spin" />
+          <LoadingSpinner message="Loading your closet..." />
         </div>
       </div>
     );
@@ -106,7 +112,7 @@ const ClosetPage: React.FC = () => {
       <div className="min-h-screen bg-zinc-950 pt-4 pb-24 px-4">
         <div className="flex items-center gap-3 mb-6">
           <button
-            onClick={() => navigate(-1)}
+            onClick={handleGoBack}
             className="w-10 h-10 bg-zinc-800 rounded-full flex items-center justify-center text-white"
           >
             <FaArrowLeft />
@@ -114,21 +120,15 @@ const ClosetPage: React.FC = () => {
           <h1 className="text-xl font-bold text-white">My Closet</h1>
         </div>
 
-        <div className="flex flex-col items-center justify-center h-[60vh] text-center px-4">
-          <div className="w-20 h-20 bg-zinc-800 rounded-full flex items-center justify-center mb-4">
-            <FaBoxOpen className="text-3xl text-zinc-500" />
-          </div>
-          <h2 className="text-xl font-bold text-white mb-2">Your closet is empty</h2>
-          <p className="text-zinc-400 mb-6 max-w-xs">
-            Start swiping and tap the heart to save sneakers you love
-          </p>
-          <button
-            onClick={() => navigate('/')}
-            className="bg-orange-500 text-white font-bold py-3 px-8 rounded-xl active:scale-95 transition-transform"
-          >
-            Browse Sneakers
-          </button>
-        </div>
+        <EmptyState
+          icon={<FaBoxOpen className="text-3xl text-zinc-500" />}
+          title="Your closet is empty"
+          description="Start swiping and tap the heart to save sneakers you love"
+          action={{
+            label: 'Browse Sneakers',
+            onClick: handleBrowse,
+          }}
+        />
       </div>
     );
   }
@@ -139,7 +139,7 @@ const ClosetPage: React.FC = () => {
       <div className="flex items-center justify-between mb-6">
         <div className="flex items-center gap-3">
           <button
-            onClick={() => navigate(-1)}
+            onClick={handleGoBack}
             className="w-10 h-10 bg-zinc-800 rounded-full flex items-center justify-center text-white"
           >
             <FaArrowLeft />
@@ -214,15 +214,15 @@ const ClosetPage: React.FC = () => {
       </div>
 
       {/* Toast */}
-      <div
-        className={`fixed bottom-24 left-1/2 -translate-x-1/2 bg-zinc-800 text-white px-4 py-2.5 rounded-xl shadow-lg z-50 transition-all duration-300 ${
-          showToast ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4 pointer-events-none'
-        }`}
-      >
-        <span className="text-sm font-medium">{showToast}</span>
-      </div>
+      <Toast
+        message={toast.message}
+        isVisible={toast.isVisible}
+        type={toast.type}
+      />
     </div>
   );
-};
+});
+
+ClosetPage.displayName = 'ClosetPage';
 
 export default ClosetPage;

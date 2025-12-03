@@ -1,13 +1,14 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback, memo } from 'react';
 import { FaSearch, FaFilter, FaTimes } from 'react-icons/fa';
 import { useSneakerSearch, SearchFilters } from '../hooks/useSneakerSearch';
 import { SneakerCard } from '../components/SneakerCard';
+import { SneakerGridSkeleton, EmptyState } from '../components/LoadingStates';
 
 const BRANDS = ['Nike', 'Jordan', 'Adidas', 'New Balance', 'ASICS', 'Puma', 'Converse', 'Vans', 'HOKA', 'Salomon'];
 const STYLES = ['streetwear', 'retro', 'casual', 'hype', 'running', 'athletic', 'classic', 'gorpcore'];
 const GENDERS = ['men', 'women', 'unisex', 'kids'] as const;
 
-const SearchPage: React.FC = () => {
+const SearchPage: React.FC = memo(() => {
   const { searchSneakers, results, isSearching } = useSneakerSearch();
   const [query, setQuery] = useState('');
   const [showFilters, setShowFilters] = useState(false);
@@ -19,36 +20,48 @@ const SearchPage: React.FC = () => {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  const handleSearch = (e: React.FormEvent) => {
+  const handleSearch = useCallback((e: React.FormEvent) => {
     e.preventDefault();
     searchSneakers(query, filters);
-  };
+  }, [query, filters, searchSneakers]);
 
-  const toggleBrand = (brand: string) => {
-    const brands = filters.brands || [];
-    const newBrands = brands.includes(brand)
-      ? brands.filter(b => b !== brand)
-      : [...brands, brand];
-    setFilters({ ...filters, brands: newBrands.length ? newBrands : undefined });
-  };
+  const toggleBrand = useCallback((brand: string) => {
+    setFilters(prev => {
+      const brands = prev.brands || [];
+      const newBrands = brands.includes(brand)
+        ? brands.filter(b => b !== brand)
+        : [...brands, brand];
+      return { ...prev, brands: newBrands.length ? newBrands : undefined };
+    });
+  }, []);
 
-  const toggleStyle = (style: string) => {
-    const styles = filters.styleTags || [];
-    const newStyles = styles.includes(style)
-      ? styles.filter(s => s !== style)
-      : [...styles, style];
-    setFilters({ ...filters, styleTags: newStyles.length ? newStyles : undefined });
-  };
+  const toggleStyle = useCallback((style: string) => {
+    setFilters(prev => {
+      const styles = prev.styleTags || [];
+      const newStyles = styles.includes(style)
+        ? styles.filter(s => s !== style)
+        : [...styles, style];
+      return { ...prev, styleTags: newStyles.length ? newStyles : undefined };
+    });
+  }, []);
 
-  const applyFilters = () => {
+  const applyFilters = useCallback(() => {
     searchSneakers(query, filters);
     setShowFilters(false);
-  };
+  }, [query, filters, searchSneakers]);
 
-  const clearFilters = () => {
+  const clearFilters = useCallback(() => {
     setFilters({});
     searchSneakers(query, {});
-  };
+  }, [query, searchSneakers]);
+
+  const handleOpenFilters = useCallback(() => {
+    setShowFilters(true);
+  }, []);
+
+  const handleCloseFilters = useCallback(() => {
+    setShowFilters(false);
+  }, []);
 
   return (
     <div className="min-h-screen bg-zinc-950 pb-24">
@@ -67,7 +80,7 @@ const SearchPage: React.FC = () => {
           </div>
           <button
             type="button"
-            onClick={() => setShowFilters(true)}
+            onClick={handleOpenFilters}
             className="p-3 bg-zinc-900 border border-zinc-800 rounded-xl text-zinc-400 hover:text-white hover:border-orange-500 transition-colors"
           >
             <FaFilter />
@@ -104,17 +117,13 @@ const SearchPage: React.FC = () => {
       {/* Results */}
       <div className="p-4">
         {isSearching ? (
-          <div className="grid grid-cols-2 gap-3">
-            {[...Array(6)].map((_, i) => (
-              <div key={i} className="aspect-square bg-zinc-900 rounded-xl animate-pulse" />
-            ))}
-          </div>
+          <SneakerGridSkeleton count={6} />
         ) : results.length === 0 ? (
-          <div className="text-center py-16">
-            <p className="text-4xl mb-4">🔍</p>
-            <p className="text-zinc-400">No sneakers found</p>
-            <p className="text-zinc-500 text-sm mt-1">Try different keywords or filters</p>
-          </div>
+          <EmptyState
+            icon={<span className="text-3xl">🔍</span>}
+            title="No sneakers found"
+            description="Try different keywords or filters"
+          />
         ) : (
           <div className="grid grid-cols-2 gap-3">
             {results.map(shoe => (
@@ -130,7 +139,7 @@ const SearchPage: React.FC = () => {
           <div className="bg-zinc-900 w-full max-h-[80vh] rounded-t-3xl overflow-y-auto">
             <div className="sticky top-0 bg-zinc-900 p-4 border-b border-zinc-800 flex justify-between items-center">
               <h2 className="text-lg font-bold text-white">Filters</h2>
-              <button onClick={() => setShowFilters(false)} className="text-zinc-400 hover:text-white">
+              <button onClick={handleCloseFilters} className="text-zinc-400 hover:text-white">
                 <FaTimes />
               </button>
             </div>
@@ -253,6 +262,8 @@ const SearchPage: React.FC = () => {
       )}
     </div>
   );
-};
+});
+
+SearchPage.displayName = 'SearchPage';
 
 export default SearchPage;

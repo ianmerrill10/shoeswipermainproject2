@@ -1,18 +1,29 @@
-import React from 'react';
+import React, { memo, useCallback } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { FaHome, FaSearch, FaMagic, FaUser, FaHeart } from 'react-icons/fa';
 
-const BottomNavigation: React.FC = () => {
+interface NavItem {
+  path: string;
+  icon: React.ComponentType<{ className?: string }>;
+  label: string;
+  special?: boolean;
+}
+
+const navItems: NavItem[] = [
+  { path: '/', icon: FaHome, label: 'Feed' },
+  { path: '/search', icon: FaSearch, label: 'Search' },
+  { path: '/check-fit', icon: FaMagic, label: 'Check Fit', special: true },
+  { path: '/closet', icon: FaHeart, label: 'Closet' },
+  { path: '/profile', icon: FaUser, label: 'Profile' },
+];
+
+const BottomNavigation: React.FC = memo(() => {
   const navigate = useNavigate();
   const location = useLocation();
 
-  const navItems = [
-    { path: '/', icon: FaHome, label: 'Feed' },
-    { path: '/search', icon: FaSearch, label: 'Search' },
-    { path: '/check-fit', icon: FaMagic, label: 'Check Fit', special: true },
-    { path: '/closet', icon: FaHeart, label: 'Closet' },
-    { path: '/profile', icon: FaUser, label: 'Profile' },
-  ];
+  const handleNavigate = useCallback((path: string) => {
+    navigate(path);
+  }, [navigate]);
 
   return (
     <nav className="fixed bottom-0 left-0 right-0 bg-zinc-900/95 backdrop-blur-lg border-t border-zinc-800 safe-bottom z-40">
@@ -24,7 +35,7 @@ const BottomNavigation: React.FC = () => {
             return (
               <button
                 key={item.path}
-                onClick={() => navigate(item.path)}
+                onClick={() => handleNavigate(item.path)}
                 className={`relative -mt-8 flex flex-col items-center justify-center w-16 h-16 rounded-full shadow-lg transition-all ${
                   isActive
                     ? 'bg-gradient-to-br from-orange-500 to-red-500 shadow-orange-500/30'
@@ -39,7 +50,7 @@ const BottomNavigation: React.FC = () => {
           return (
             <button
               key={item.path}
-              onClick={() => navigate(item.path)}
+              onClick={() => handleNavigate(item.path)}
               className="flex flex-col items-center justify-center py-2 px-4 min-w-[60px]"
             >
               <item.icon
@@ -60,6 +71,8 @@ const BottomNavigation: React.FC = () => {
       </div>
     </nav>
   );
-};
+});
+
+BottomNavigation.displayName = 'BottomNavigation';
 
 export default BottomNavigation;
