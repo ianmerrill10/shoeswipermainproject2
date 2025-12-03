@@ -117,11 +117,35 @@ shoeswiper-complete/
 | `framer-motion` | Animations |
 | `tailwindcss` | Styling |
 
-## Testing
+## Build, Test & Validation
 
+All commands should be run from the `shoeswiper-complete/` directory.
+
+```bash
+# Install dependencies
+npm install
+
+# Run development server
+npm run dev
+
+# Build for production
+npm run build
+
+# Run linting
+npm run lint
+
+# Run tests
+npm run test
+
+# Run tests with coverage
+npm run test:coverage
+```
+
+### Testing Guidelines
 - Use Vitest for unit tests
-- Test files go in `src/__tests__/`
-- Run tests with `npm run test`
+- Test files go in `src/__tests__/` or `src/hooks/__tests__/`
+- Always run `npm run lint` and `npm test -- --run` before submitting changes
+- Note: `--run` flag runs tests once (CI mode); omit it for watch mode during development
 
 ## Configuration Reference
 
