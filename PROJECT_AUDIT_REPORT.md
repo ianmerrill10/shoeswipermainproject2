@@ -65,13 +65,15 @@ This audit analyzes the ShoeSwiper project across 20 categories, evaluating code
 | Triggers | ✅ Complete | Auto-create profile on signup |
 
 **Identified Issues:**
-- Missing: price_alerts table (referenced in hooks but not in schema)
-- Missing: price_notifications table
-- Missing: push_subscriptions table
-- Missing: user_referrals table
-- Missing: email_subscriptions table
-- Missing: analytics_events table
-- Missing: music_clicks table
+- Tables referenced in hooks but not in provided schema file:
+  - price_alerts table
+  - price_notifications table
+  - push_subscriptions table
+  - user_referrals table
+  - email_subscriptions table
+  - analytics_events table
+  - music_clicks table
+- Note: These may exist in production database but are not in 001_schema.sql
 
 **Comments Found:** Well documented SQL schema (35+ comments)
 
@@ -150,16 +152,16 @@ This audit analyzes the ShoeSwiper project across 20 categories, evaluating code
 | Recommendations | ✅ Complete | match_shoes_for_outfit RPC |
 
 **Identified Issues:**
-- ⚠️ **SECURITY**: Gemini API key handling needs server-side implementation
+- ⚠️ **SECURITY**: Gemini API key properly handled server-side in Edge Function (supabase/functions/analyze-outfit/index.ts)
 - No usage limit tracking (5 free/month mentioned but not implemented)
-- analyze-outfit Edge Function not included in codebase
+- Rate limiting implemented in Edge Function ✅
 
 **Comments Found:** 6 comments - adequate
 
 ---
 
 ### 8. **NFT Marketplace**
-**Completeness: 85%** ⚠️
+**Completeness: 90%** ✅
 
 | Item | Status | Notes |
 |------|--------|-------|
@@ -172,8 +174,8 @@ This audit analyzes the ShoeSwiper project across 20 categories, evaluating code
 | Ownership History | ✅ Complete | Provenance tracking |
 
 **Identified Issues:**
-- Import alias `@/lib/supabaseClient` in useNFTMarketplace.ts (line 3) may cause issues
-- NFTDetailModal component referenced but not provided for review
+- `@/lib/supabaseClient` import alias configured in vite.config.ts ✅
+- NFTDetailModal component is complete with ownership history ✅
 - No actual blockchain integration (mock only) - documented as expected
 
 **Comments Found:** 3 comments - minimal
@@ -312,7 +314,7 @@ This audit analyzes the ShoeSwiper project across 20 categories, evaluating code
 **Identified Issues:**
 - iOS/Android app IDs empty (expected for pre-launch)
 - Universal links not configured
-- No `/shoe/:id` route in App.tsx
+- No `/shoe/:id` route in App.tsx (dynamic shoe viewing not implemented)
 
 **Comments Found:** 20+ comments - well documented
 
@@ -399,7 +401,7 @@ This audit analyzes the ShoeSwiper project across 20 categories, evaluating code
 ---
 
 ### 20. **Security & Best Practices**
-**Completeness: 60%** ⚠️⚠️
+**Completeness: 70%** ⚠️
 
 | Item | Status | Notes |
 |------|--------|-------|
@@ -410,8 +412,8 @@ This audit analyzes the ShoeSwiper project across 20 categories, evaluating code
 | CSRF | ✅ Complete | Supabase handles |
 
 **Critical Security Issues (from AIContext.md):**
-- ❌ **CRITICAL**: Gemini API key needs server-side move
-- ❌ Rate limiting not implemented
+- ✅ Gemini API key properly handled in Edge Function (server-side)
+- ❌ Rate limiting - partially implemented in Edge Function, not on all endpoints
 - ❌ Encrypted storage not implemented
 - ❌ No PCI-DSS compliance (payments not implemented)
 - ❌ No content moderation
@@ -432,7 +434,7 @@ This audit analyzes the ShoeSwiper project across 20 categories, evaluating code
 | 5. TikTok Feed | 95% | ✅ |
 | 6. Search & Filtering | 90% | ✅ |
 | 7. AI Outfit Analysis | 75% | ⚠️ |
-| 8. NFT Marketplace | 85% | ⚠️ |
+| 8. NFT Marketplace | 90% | ✅ |
 | 9. Affiliate Integration | 95% | ✅ |
 | 10. Music Integration | 90% | ✅ |
 | 11. Admin Dashboard | 85% | ⚠️ |
@@ -444,20 +446,19 @@ This audit analyzes the ShoeSwiper project across 20 categories, evaluating code
 | 17. Styling & UI | 95% | ✅ |
 | 18. Type Safety | 90% | ✅ |
 | 19. Analytics | 85% | ⚠️ |
-| 20. Security | 60% | ⚠️⚠️ |
+| 20. Security | 70% | ⚠️ |
 
-**Overall Average Completeness: 85%**
+**Overall Average Completeness: 86%**
 
 ---
 
 ## Critical Issues (Priority Order)
 
-1. **🔴 CRITICAL - Security**: Gemini API key exposed client-side
-2. **🔴 HIGH - Schema Gap**: 7+ tables referenced in code but missing from database schema
-3. **🟡 MEDIUM - State**: No React Query or Zustand despite being in tech stack
-4. **🟡 MEDIUM - Rate Limiting**: No rate limiting on any endpoints
-5. **🟡 MEDIUM - Edge Function**: analyze-outfit function not in codebase
-6. **🟢 LOW - Type Safety**: Some `any` types remain
+1. **🟡 HIGH - Schema Gap**: 7+ tables referenced in code but not in provided database schema file
+2. **🟡 MEDIUM - State**: No React Query or Zustand despite being in tech stack
+3. **🟡 MEDIUM - Rate Limiting**: Rate limiting implemented in AI edge function, but not on all endpoints
+4. **🟢 LOW - Type Safety**: Some `any` types remain
+5. **🟢 LOW - Testing**: No test coverage
 
 ---
 
@@ -474,9 +475,9 @@ This audit analyzes the ShoeSwiper project across 20 categories, evaluating code
 ## Recommendations
 
 ### Immediate (Before Launch)
-1. Move Gemini API key to Supabase Edge Function secrets
-2. Add missing database tables to schema
-3. Implement rate limiting via Supabase or edge
+1. Add missing database tables to schema file (or verify they exist in production)
+2. Implement rate limiting across all API endpoints
+3. Add input validation middleware
 
 ### Short-term (Sprint 10)
 1. Add React Query for data fetching optimization
