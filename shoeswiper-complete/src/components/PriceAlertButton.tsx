@@ -1,7 +1,9 @@
 import React, { useState } from 'react';
 import { FaBell, FaBellSlash, FaCheck, FaTimes } from 'react-icons/fa';
 import { usePriceAlerts } from '../hooks/usePriceAlerts';
+import { useEmailCapture } from '../hooks/useEmailCapture';
 import { Shoe } from '../lib/types';
+import EmailCaptureModal from './EmailCaptureModal';
 
 interface PriceAlertButtonProps {
   shoe: Shoe;
@@ -15,7 +17,9 @@ const PriceAlertButton: React.FC<PriceAlertButtonProps> = ({
   onAlertSet,
 }) => {
   const { hasAlert, getAlert, addAlert, removeAlert } = usePriceAlerts();
+  const { isSubscribed } = useEmailCapture();
   const [showModal, setShowModal] = useState(false);
+  const [showEmailCapture, setShowEmailCapture] = useState(false);
   const [targetPrice, setTargetPrice] = useState<string>('');
   const [saving, setSaving] = useState(false);
   const [showSuccess, setShowSuccess] = useState(false);
@@ -45,11 +49,17 @@ const PriceAlertButton: React.FC<PriceAlertButtonProps> = ({
 
     if (success) {
       setShowSuccess(true);
+      onAlertSet?.(price);
+
       setTimeout(() => {
         setShowSuccess(false);
         setShowModal(false);
+
+        // Show email capture if not already subscribed
+        if (!isSubscribed) {
+          setTimeout(() => setShowEmailCapture(true), 300);
+        }
       }, 1500);
-      onAlertSet?.(price);
     }
   };
 
@@ -301,6 +311,16 @@ const PriceAlertButton: React.FC<PriceAlertButtonProps> = ({
           </div>
         </div>
       )}
+
+      {/* Email Capture Modal - shows after setting alert if not subscribed */}
+      <EmailCaptureModal
+        isOpen={showEmailCapture}
+        onClose={() => setShowEmailCapture(false)}
+        source="price_alert"
+        shoeData={{ id: shoe.id, name: shoe.name }}
+        title="Get Price Alerts via Email"
+        subtitle="Never miss a deal - we'll email you when prices drop"
+      />
     </>
   );
 };
