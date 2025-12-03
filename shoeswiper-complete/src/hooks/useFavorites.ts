@@ -22,7 +22,7 @@ export const useFavorites = () => {
           const ids = JSON.parse(stored) as string[];
           setFavorites(new Set(ids));
         }
-        if (import.meta.env.DEV) console.log('[Demo] Favorites loaded from localStorage');
+        if (import.meta.env.DEV) console.warn('[Demo] Favorites loaded from localStorage');
       } else {
         // PRODUCTION MODE: Load from Supabase
         const { supabase } = await import('../lib/supabaseClient');
@@ -54,7 +54,7 @@ export const useFavorites = () => {
         newFavorites.add(shoeId);
         setFavorites(newFavorites);
         localStorage.setItem(FAVORITES_STORAGE_KEY, JSON.stringify([...newFavorites]));
-        if (import.meta.env.DEV) console.log(`[Demo] Added to favorites: ${shoeId}`);
+        if (import.meta.env.DEV) console.warn(`[Demo] Added to favorites: ${shoeId}`);
         return true;
       } else {
         // PRODUCTION MODE: Save to Supabase
@@ -75,7 +75,7 @@ export const useFavorites = () => {
         if (error) {
           // Check if already exists (unique constraint)
           if (error.code === '23505') {
-            if (import.meta.env.DEV) console.log('[Favorites] Already favorited');
+            if (import.meta.env.DEV) console.warn('[Favorites] Already favorited');
             return true;
           }
           throw error;
@@ -98,7 +98,7 @@ export const useFavorites = () => {
         newFavorites.delete(shoeId);
         setFavorites(newFavorites);
         localStorage.setItem(FAVORITES_STORAGE_KEY, JSON.stringify([...newFavorites]));
-        if (import.meta.env.DEV) console.log(`[Demo] Removed from favorites: ${shoeId}`);
+        if (import.meta.env.DEV) console.warn(`[Demo] Removed from favorites: ${shoeId}`);
         return true;
       } else {
         // PRODUCTION MODE: Remove from Supabase

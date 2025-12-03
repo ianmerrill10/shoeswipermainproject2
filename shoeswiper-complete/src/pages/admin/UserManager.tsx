@@ -36,7 +36,7 @@ export const UserManager: React.FC = () => {
   const toggleBan = async (id: string, currentStatus: boolean) => {
     // DEMO MODE: Just update local state
     if (DEMO_MODE) {
-      if (import.meta.env.DEV) console.log('[Demo] Toggle ban:', id);
+      if (import.meta.env.DEV) console.warn('[Demo] Toggle ban:', id);
       setUsers(users.map(u => u.id === id ? { ...u, is_banned: !currentStatus } : u));
       return;
     }

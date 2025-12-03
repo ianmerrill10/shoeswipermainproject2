@@ -191,7 +191,7 @@ export const usePriceAlerts = () => {
         const updatedAlerts = [...alerts.filter(a => a.shoeId !== shoe.id), newAlert];
         setAlerts(updatedAlerts);
         localStorage.setItem(PRICE_ALERTS_KEY, JSON.stringify(updatedAlerts));
-        if (import.meta.env.DEV) console.log(`[Demo] Price alert set for ${shoe.name} at $${targetPrice}`);
+        if (import.meta.env.DEV) console.warn(`[Demo] Price alert set for ${shoe.name} at $${targetPrice}`);
         return true;
       } else {
         const { supabase } = await import('../lib/supabaseClient');
@@ -236,7 +236,7 @@ export const usePriceAlerts = () => {
         const updatedAlerts = alerts.filter(a => a.shoeId !== shoeId);
         setAlerts(updatedAlerts);
         localStorage.setItem(PRICE_ALERTS_KEY, JSON.stringify(updatedAlerts));
-        if (import.meta.env.DEV) console.log(`[Demo] Price alert removed for shoe ${shoeId}`);
+        if (import.meta.env.DEV) console.warn(`[Demo] Price alert removed for shoe ${shoeId}`);
         return true;
       } else {
         const { supabase } = await import('../lib/supabaseClient');
@@ -328,10 +328,10 @@ export const usePriceAlerts = () => {
           }
         }
       } catch (err) {
-        if (import.meta.env.DEV) console.log('[PriceAlerts] Push notification not available');
+        if (import.meta.env.DEV) console.warn('[PriceAlerts] Push notification not available');
       }
 
-      if (import.meta.env.DEV) console.log(`[Demo] Price drop alert triggered for ${alert.shoeName}! Now $${newPrice}`);
+      if (import.meta.env.DEV) console.warn(`[Demo] Price drop alert triggered for ${alert.shoeName}! Now $${newPrice}`);
     }
   }, [alerts, notifications]);
 

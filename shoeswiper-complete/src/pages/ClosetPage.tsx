@@ -59,7 +59,7 @@ const ClosetPage: React.FC = () => {
         });
         trackShare(shoe.id, 'native');
       } catch (err) {
-        if (import.meta.env.DEV) console.log('Share cancelled');
+        if (import.meta.env.DEV) console.warn('Share cancelled');
       }
     } else {
       navigator.clipboard.writeText(shareData.text);

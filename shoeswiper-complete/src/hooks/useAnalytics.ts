@@ -90,7 +90,7 @@ export const useAnalytics = () => {
           break;
       }
 
-      if (import.meta.env.DEV) console.log(`[Analytics] ${event}:`, data);
+      if (import.meta.env.DEV) console.warn(`[Analytics] ${event}:`, data);
       return;
     }
 

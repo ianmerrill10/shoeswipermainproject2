@@ -22,7 +22,7 @@ export const useAuthGuard = () => {
       setUser({ id: 'demo-user', email: 'demo@shoeswiper.com' });
       setIsAllowed(true);
       setLoading(false);
-      if (import.meta.env.DEV) console.log('[Demo] Authentication bypassed - Demo mode active');
+      if (import.meta.env.DEV) console.warn('[Demo] Authentication bypassed - Demo mode active');
       return;
     }
 

@@ -232,7 +232,7 @@ export const useNFTMarketplace = () => {
 
         // We don't persist proofUrls in schema here, but they exist in storage
         if (proofUrls.length > 0) {
-          console.info("Stored proof URLs:", proofUrls);
+          if (import.meta.env.DEV) console.warn("Stored proof URLs:", proofUrls);
         }
 
         const minted = transformNFTRow(inserted as SupabaseNFTRow);

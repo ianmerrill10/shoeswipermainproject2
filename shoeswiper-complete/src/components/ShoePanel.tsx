@@ -49,7 +49,7 @@ const ShoePanel: React.FC<ShoePanelProps> = ({ shoe, isOpen, onClose }) => {
         });
         trackShare(shoe.id, 'native');
       } catch (err) {
-        if (import.meta.env.DEV) console.log('Share cancelled');
+        if (import.meta.env.DEV) console.warn('Share cancelled');
       }
     } else {
       // Copy rich share text to clipboard

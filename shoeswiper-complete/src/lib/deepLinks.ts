@@ -215,7 +215,7 @@ export const trackReferralArrival = async (referralCode: string): Promise<void> 
   }));
 
   // In production, send to analytics
-  if (import.meta.env.DEV) console.log('[DeepLink] Referral arrival tracked:', referralCode);
+  if (import.meta.env.DEV) console.warn('[DeepLink] Referral arrival tracked:', referralCode);
 };
 
 /**

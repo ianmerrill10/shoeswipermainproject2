@@ -92,7 +92,7 @@ export const useSneakers = () => {
   const trackView = useCallback(async (id: string) => {
     // DEMO MODE: Just log
     if (DEMO_MODE) {
-      if (import.meta.env.DEV) console.log(`[Demo] View tracked: ${id}`);
+      if (import.meta.env.DEV) console.warn(`[Demo] View tracked: ${id}`);
       return;
     }
 
@@ -108,7 +108,7 @@ export const useSneakers = () => {
   const trackClick = useCallback(async (id: string) => {
     // DEMO MODE: Just log
     if (DEMO_MODE) {
-      if (import.meta.env.DEV) console.log(`[Demo] Click tracked: ${id}`);
+      if (import.meta.env.DEV) console.warn(`[Demo] Click tracked: ${id}`);
       return;
     }
 

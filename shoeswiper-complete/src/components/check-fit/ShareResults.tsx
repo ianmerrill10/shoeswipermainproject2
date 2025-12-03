@@ -21,7 +21,7 @@ export const ShareResults: React.FC<Props> = ({ analysis, recommendations }) => 
           url: 'https://shoeswiper.com',
         });
       } catch (err) {
-        if (import.meta.env.DEV) console.log('Share canceled');
+        if (import.meta.env.DEV) console.warn('Share canceled');
       }
     }
   };
