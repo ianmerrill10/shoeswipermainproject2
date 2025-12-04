@@ -2,21 +2,32 @@ import { useState, useEffect } from 'react';
 import { Shoe } from '../lib/types';
 import { DEMO_MODE, MOCK_SHOES } from '../lib/mockData';
 import { supabase, ADMIN_EMAIL } from '../lib/supabaseClient';
+import {
+  getAmazonProductsByAsin,
+  amazonProductToShoe,
+  ensureAffiliateTag,
+} from '../lib/amazonApi';
+import { AMAZON_API_CONFIG } from '../lib/config';
 
 /**
  * Admin dashboard hook for product management, user oversight, and analytics.
  * Provides CRUD operations for products and access to analytics data.
  * Admin access is restricted to ADMIN_EMAIL (dadsellsgadgets@gmail.com).
  * 
+ * When Amazon API is enabled, provides methods to import products from Amazon.
+ * 
  * @returns Object containing admin state and methods
  * @example
- * const { isAdmin, getProducts, saveProduct, deleteProduct, getAnalytics } = useAdmin();
+ * const { isAdmin, getProducts, saveProduct, deleteProduct, getAnalytics, importFromAmazon } = useAdmin();
  * 
  * // Check admin status before rendering admin UI
  * if (!isAdmin) return <AccessDenied />;
  * 
  * // Fetch all products
  * const products = await getProducts();
+ * 
+ * // Import product from Amazon by ASIN
+ * await importFromAmazon('B07QXLFLXT');
  */
 export const useAdmin = () => {
   const [loading, setLoading] = useState(false);
@@ -44,14 +55,7 @@ export const useAdmin = () => {
    * @returns The URL with affiliate tag appended
    */
   const formatAmazonUrl = (url: string) => {
-    if (!url.includes('amazon.com')) return url;
-    try {
-      const urlObj = new URL(url);
-      urlObj.searchParams.set('tag', 'shoeswiper-20');
-      return urlObj.toString();
-    } catch (e) {
-      return url;
-    }
+    return ensureAffiliateTag(url);
   };
 
   /**
@@ -170,7 +174,8 @@ export const useAdmin = () => {
       return {
         totalUsers: 1,
         totalProducts: MOCK_SHOES.length,
-        clicks: []
+        clicks: [],
+        amazonApiEnabled: AMAZON_API_CONFIG.enabled,
       };
     }
 
@@ -186,8 +191,156 @@ export const useAdmin = () => {
     return {
       totalUsers: userCount || 0,
       totalProducts: productCount || 0,
-      clicks: clicks || []
+      clicks: clicks || [],
+      amazonApiEnabled: AMAZON_API_CONFIG.enabled,
     };
+  };
+
+  /**
+   * Import a product from Amazon by ASIN.
+   * Fetches product data from Amazon PA-API and creates a new product in the database.
+   * Only available when Amazon API is enabled.
+   * 
+   * @param asin - Amazon Standard Identification Number
+   * @param additionalData - Additional shoe data (style_tags, gender, etc.)
+   * @returns The created product or null if import failed
+   */
+  const importFromAmazon = async (
+    asin: string,
+    additionalData?: Partial<Shoe>
+  ): Promise<Shoe | null> => {
+    if (!AMAZON_API_CONFIG.enabled) {
+      console.error('[useAdmin] Amazon API not enabled');
+      return null;
+    }
+
+    // Validate ASIN format
+    if (!/^[A-Z0-9]{10}$/i.test(asin)) {
+      console.error('[useAdmin] Invalid ASIN format:', asin);
+      return null;
+    }
+
+    setLoading(true);
+    try {
+      const products = await getAmazonProductsByAsin([asin]);
+
+      if (!products || products.length === 0) {
+        console.error('[useAdmin] Product not found on Amazon:', asin);
+        return null;
+      }
+
+      const amazonProduct = products[0];
+      const shoe = amazonProductToShoe(amazonProduct, additionalData);
+
+      // Save to database
+      const saved = await saveProduct({
+        ...shoe,
+        style_tags: additionalData?.style_tags || [],
+        color_tags: additionalData?.color_tags || [],
+        gender: additionalData?.gender,
+        is_featured: additionalData?.is_featured || false,
+      });
+
+      if (saved && saved.length > 0) {
+        await logAction('IMPORT_FROM_AMAZON', 'shoes', saved[0].id, {
+          asin,
+          amazon_data: amazonProduct,
+        });
+        return saved[0] as Shoe;
+      }
+
+      return null;
+    } catch (err) {
+      console.error('[useAdmin] Import from Amazon failed:', err);
+      return null;
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  /**
+   * Refresh product data from Amazon for existing products.
+   * Updates price, availability, and other Amazon data.
+   * 
+   * @param productIds - Array of product IDs to refresh
+   * @returns Number of products successfully updated
+   */
+  const refreshAmazonData = async (productIds: string[]): Promise<number> => {
+    if (!AMAZON_API_CONFIG.enabled) {
+      console.error('[useAdmin] Amazon API not enabled');
+      return 0;
+    }
+
+    setLoading(true);
+    let updatedCount = 0;
+
+    try {
+      // Get existing products
+      const { data: existingProducts, error } = await supabase
+        .from('shoes')
+        .select('*')
+        .in('id', productIds);
+
+      if (error || !existingProducts) {
+        throw error || new Error('No products found');
+      }
+
+      // Get ASINs
+      const asins = existingProducts
+        .map((p) => p.amazon_asin)
+        .filter((asin): asin is string => !!asin);
+
+      if (asins.length === 0) {
+        return 0;
+      }
+
+      // Fetch fresh Amazon data
+      const amazonProducts = await getAmazonProductsByAsin(asins);
+
+      if (!amazonProducts) {
+        return 0;
+      }
+
+      // Update each product
+      const productMap = new Map(amazonProducts.map((p) => [p.asin, p]));
+
+      for (const product of existingProducts) {
+        if (!product.amazon_asin) continue;
+
+        const amazonData = productMap.get(product.amazon_asin);
+        if (!amazonData) continue;
+
+        const updatedShoe = amazonProductToShoe(amazonData, product as Shoe);
+
+        const { error: updateError } = await supabase
+          .from('shoes')
+          .update({
+            price: updatedShoe.price,
+            image_url: updatedShoe.image_url,
+            amazon_url: updatedShoe.amazon_url,
+            stock_status: updatedShoe.stock_status,
+            price_last_updated: updatedShoe.price_last_updated,
+            updated_at: new Date().toISOString(),
+          })
+          .eq('id', product.id);
+
+        if (!updateError) {
+          updatedCount++;
+        }
+      }
+
+      await logAction('REFRESH_AMAZON_DATA', 'shoes', undefined, {
+        productIds,
+        updatedCount,
+      });
+
+      return updatedCount;
+    } catch (err) {
+      console.error('[useAdmin] Refresh Amazon data failed:', err);
+      return updatedCount;
+    } finally {
+      setLoading(false);
+    }
   };
 
   return {
@@ -196,6 +349,9 @@ export const useAdmin = () => {
     getProducts,
     saveProduct,
     deleteProduct,
-    getAnalytics
+    getAnalytics,
+    importFromAmazon,
+    refreshAmazonData,
+    isAmazonEnabled: AMAZON_API_CONFIG.enabled,
   };
 };

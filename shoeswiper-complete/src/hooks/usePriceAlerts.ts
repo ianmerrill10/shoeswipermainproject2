@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
-import { DEMO_MODE } from '../lib/config';
+import { DEMO_MODE, AMAZON_API_CONFIG } from '../lib/config';
+import { getAmazonPrice, ensureAffiliateTag } from '../lib/amazonApi';
 
 /**
  * Price drop alert management hook.
@@ -8,10 +9,11 @@ import { DEMO_MODE } from '../lib/config';
  * 
  * In DEMO_MODE, alerts are stored in localStorage.
  * In production, alerts are stored in Supabase price_alerts table.
+ * When Amazon API is enabled, can check real-time prices from Amazon.
  * 
  * @returns Object containing alert state and management methods
  * @example
- * const { alerts, addAlert, hasAlert, simulatePriceDrop } = usePriceAlerts();
+ * const { alerts, addAlert, hasAlert, checkPrices } = usePriceAlerts();
  * 
  * // Add a price alert
  * await addAlert(shoe, 150); // Alert when price drops to $150
@@ -19,8 +21,8 @@ import { DEMO_MODE } from '../lib/config';
  * // Check if alert exists
  * if (hasAlert(shoe.id)) console.log('Alert already set');
  * 
- * // Simulate price drop (DEMO_MODE only)
- * simulatePriceDrop(shoe.id, 140);
+ * // Check current prices (when Amazon API is enabled)
+ * await checkPrices();
  */
 
 const PRICE_ALERTS_KEY = 'shoeswiper_price_alerts';
@@ -196,12 +198,14 @@ export const usePriceAlerts = () => {
     targetPrice: number
   ): Promise<boolean> => {
     try {
+      const amazonUrlWithTag = ensureAffiliateTag(shoe.amazon_url);
+      
       const newAlert: PriceAlert = {
         shoeId: shoe.id,
         shoeName: shoe.name,
         shoeBrand: shoe.brand,
         shoeImage: shoe.image_url,
-        amazonUrl: shoe.amazon_url,
+        amazonUrl: amazonUrlWithTag,
         targetPrice,
         originalPrice: shoe.price ?? undefined,
         currentPrice: shoe.price ?? undefined,
@@ -230,7 +234,7 @@ export const usePriceAlerts = () => {
             shoe_name: shoe.name,
             shoe_brand: shoe.brand,
             shoe_image: shoe.image_url,
-            amazon_url: shoe.amazon_url,
+            amazon_url: amazonUrlWithTag,
             target_price: targetPrice,
             original_price: shoe.price,
             current_price: shoe.price,
@@ -401,6 +405,79 @@ export const usePriceAlerts = () => {
   // Get unread notification count
   const unreadCount = notifications.filter(n => !n.read).length;
 
+  /**
+   * Check current prices from Amazon for all alerts.
+   * Only available when Amazon API is enabled.
+   * Will trigger notifications if prices drop below target.
+   */
+  const checkPrices = useCallback(async (): Promise<number> => {
+    if (!AMAZON_API_CONFIG.enabled) {
+      if (import.meta.env.DEV) {
+        console.warn('[PriceAlerts] Amazon API not enabled, cannot check prices');
+      }
+      return 0;
+    }
+
+    let triggeredCount = 0;
+
+    for (const alert of alerts) {
+      if (alert.triggered) continue;
+
+      // Extract ASIN from Amazon URL
+      const asinMatch = alert.amazonUrl.match(/dp\/([A-Z0-9]{10})/i);
+      if (!asinMatch) continue;
+
+      const asin = asinMatch[1];
+
+      try {
+        const priceData = await getAmazonPrice(asin);
+
+        if (!priceData || priceData.price === null) continue;
+
+        const newPrice = priceData.price;
+        // Note: oldPrice is used by simulatePriceDrop internally
+        const _oldPrice = alert.currentPrice || alert.originalPrice || 0;
+
+        // Update current price
+        const updatedAlerts = alerts.map(a =>
+          a.shoeId === alert.shoeId
+            ? { ...a, currentPrice: newPrice, lastChecked: new Date().toISOString() }
+            : a
+        );
+        setAlerts(updatedAlerts);
+
+        if (!DEMO_MODE) {
+          const { supabase } = await import('../lib/supabaseClient');
+          const { data: { user } } = await supabase.auth.getUser();
+
+          if (user) {
+            await supabase
+              .from('price_alerts')
+              .update({
+                current_price: newPrice,
+                last_checked: new Date().toISOString(),
+              })
+              .eq('user_id', user.id)
+              .eq('shoe_id', alert.shoeId);
+          }
+        } else {
+          localStorage.setItem(PRICE_ALERTS_KEY, JSON.stringify(updatedAlerts));
+        }
+
+        // Check if price dropped below target
+        if (newPrice <= alert.targetPrice && !alert.triggered) {
+          // Trigger the price drop notification
+          await simulatePriceDrop(alert.shoeId, newPrice);
+          triggeredCount++;
+        }
+      } catch (err) {
+        console.error(`[PriceAlerts] Error checking price for ${alert.shoeName}:`, err);
+      }
+    }
+
+    return triggeredCount;
+  }, [alerts, simulatePriceDrop]);
+
   return {
     alerts,
     notifications,
@@ -411,9 +488,11 @@ export const usePriceAlerts = () => {
     hasAlert,
     getAlert,
     simulatePriceDrop,
+    checkPrices,
     markNotificationRead,
     clearNotifications,
     refreshAlerts: loadAlerts,
     refreshNotifications: loadNotifications,
+    isAmazonEnabled: AMAZON_API_CONFIG.enabled,
   };
 };

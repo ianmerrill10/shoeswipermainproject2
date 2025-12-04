@@ -13,13 +13,22 @@ export const AFFILIATE_TAG = 'shoeswiper-20';
 // Set to true once Amazon Product Advertising API is connected
 export const SHOW_PRICES = false;
 
-// Amazon API configuration (for future use)
+// Amazon API configuration
+// SECURITY NOTE: Amazon API credentials are stored server-side ONLY
+// They are accessed via Supabase Edge Functions, never exposed to client
 export const AMAZON_API_CONFIG = {
   enabled: false, // Set to true when API access is granted
   partnerTag: AFFILIATE_TAG,
   marketplace: 'www.amazon.com',
-  // API credentials will be stored in environment variables:
-  // VITE_AMAZON_ACCESS_KEY, VITE_AMAZON_SECRET_KEY
+  // Cache settings
+  cacheTTLMinutes: 30, // How long to cache product data in memory
+  maxCacheAgeHours: 24, // When to consider Supabase cache stale
+  // Rate limiting
+  minRequestIntervalMs: 1000, // Min 1 second between Amazon API calls
+  // Search defaults
+  defaultSearchIndex: 'Fashion',
+  defaultItemCount: 10,
+  maxItemsPerRequest: 10,
 };
 
 // Admin email for access control

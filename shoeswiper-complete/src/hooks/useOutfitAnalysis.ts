@@ -2,6 +2,11 @@ import { useState } from 'react';
 import { Shoe } from '../lib/types';
 import { DEMO_MODE, MOCK_SHOES } from '../lib/mockData';
 import { supabase } from '../lib/supabaseClient';
+import {
+  searchAmazonProducts,
+  ensureAffiliateTag,
+} from '../lib/amazonApi';
+import { AMAZON_API_CONFIG } from '../lib/config';
 
 /**
  * AI-powered outfit analysis hook for sneaker recommendations.
@@ -10,6 +15,7 @@ import { supabase } from '../lib/supabaseClient';
  * 
  * In DEMO_MODE, returns mock analysis results.
  * In production, calls Supabase Edge Function 'analyze-outfit'.
+ * When Amazon API is enabled, can also fetch recommendations from Amazon.
  * 
  * @returns Object containing analysis methods, results, and recommendations
  * @example
@@ -76,12 +82,36 @@ export const useOutfitAnalysis = () => {
       const taggedData = (data || []).map((shoe: OutfitAnalysisShoeResult) => ({
         ...shoe,
         media: { has_3d_model: false },
-        amazon_url: shoe.amazon_url.includes('shoeswiper-20')
-          ? shoe.amazon_url
-          : `${shoe.amazon_url}${shoe.amazon_url.includes('?') ? '&' : '?'}tag=shoeswiper-20`
+        amazon_url: ensureAffiliateTag(shoe.amazon_url),
       }));
 
       setRecommendations(taggedData);
+
+      // If Amazon API is enabled and we have few results, supplement with Amazon search
+      if (AMAZON_API_CONFIG.enabled && taggedData.length < 3 && styles.length > 0) {
+        try {
+          const searchKeywords = `${styles.join(' ')} sneakers shoes`;
+          const amazonResult = await searchAmazonProducts(searchKeywords, {
+            searchIndex: 'Fashion',
+            itemCount: 5,
+          });
+
+          if (amazonResult && amazonResult.products.length > 0) {
+            // Add Amazon results that don't duplicate existing recommendations
+            const existingAsins = new Set(taggedData.map((s: OutfitAnalysisShoeResult) => s.amazon_url?.match(/dp\/([A-Z0-9]+)/)?.[1]));
+            const newProducts = amazonResult.products.filter(
+              (p) => !existingAsins.has(p.amazon_asin)
+            );
+
+            setRecommendations([...taggedData, ...newProducts.slice(0, 5 - taggedData.length)]);
+          }
+        } catch (amazonErr) {
+          // Amazon supplementation failed, but we still have database results
+          if (import.meta.env.DEV) {
+            console.warn('[useOutfitAnalysis] Amazon supplementation failed:', amazonErr);
+          }
+        }
+      }
     } catch (dbErr) {
       console.error('Recommendation fetch failed:', dbErr);
       // Fallback: Just get popular shoes if matching fails
@@ -90,7 +120,13 @@ export const useOutfitAnalysis = () => {
         .select('*')
         .order('favorite_count', { ascending: false })
         .limit(5);
-      setRecommendations(fallback as Shoe[] || []);
+      
+      const fallbackWithTags = (fallback || []).map((shoe: Shoe) => ({
+        ...shoe,
+        amazon_url: ensureAffiliateTag(shoe.amazon_url),
+      }));
+      
+      setRecommendations(fallbackWithTags as Shoe[]);
     }
   };
 

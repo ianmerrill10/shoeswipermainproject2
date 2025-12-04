@@ -3,10 +3,19 @@ import { useQuery } from '@tanstack/react-query';
 import { Shoe } from '../lib/types';
 import { DEMO_MODE, getShuffledShoes, getFeaturedShoes, MOCK_SHOES } from '../lib/mockData';
 import { supabase } from '../lib/supabaseClient';
+import {
+  getAmazonProductsByAsin,
+  amazonProductToShoe,
+  ensureAffiliateTag,
+} from '../lib/amazonApi';
+import { AMAZON_API_CONFIG } from '../lib/config';
 
 /**
  * Main sneaker feed data fetching hook with React Query caching.
  * Provides methods for fetching sneakers, featured items, and tracking analytics.
+ * 
+ * In DEMO_MODE: Uses mock data from mockData.ts
+ * In PRODUCTION: Fetches from Supabase and enriches with Amazon PA-API data
  * 
  * @returns Object containing sneaker data, loading state, and methods
  * @example
@@ -20,9 +29,87 @@ import { supabase } from '../lib/supabaseClient';
  */
 export const useSneakers = () => {
   /**
-   * Fetch function for infinite feed
+   * Enriches shoes with fresh Amazon data if API is enabled
    */
-  const fetchInfiniteFeed = async (page: number = 0, limit: number = 5): Promise<Shoe[]> => {
+  const enrichWithAmazonData = async (shoes: Shoe[]): Promise<Shoe[]> => {
+    if (!AMAZON_API_CONFIG.enabled || shoes.length === 0) {
+      return shoes;
+    }
+
+    try {
+      // Get ASINs from shoes that have them
+      const asins = shoes
+        .map((shoe) => shoe.amazon_asin)
+        .filter((asin): asin is string => !!asin);
+
+      if (asins.length === 0) {
+        return shoes;
+      }
+
+      const amazonProducts = await getAmazonProductsByAsin(asins);
+
+      if (!amazonProducts || amazonProducts.length === 0) {
+        return shoes;
+      }
+
+      // Create a map for quick lookup
+      const productMap = new Map(amazonProducts.map((p) => [p.asin, p]));
+
+      // Enrich shoes with Amazon data
+      return shoes.map((shoe) => {
+        const amazonData = shoe.amazon_asin
+          ? productMap.get(shoe.amazon_asin)
+          : null;
+
+        if (amazonData) {
+          return amazonProductToShoe(amazonData, shoe);
+        }
+
+        // Ensure affiliate tag even if no Amazon data
+        return {
+          ...shoe,
+          amazon_url: ensureAffiliateTag(shoe.amazon_url),
+        };
+      });
+    } catch (err) {
+      console.error('[useSneakers] Amazon enrichment failed:', err);
+      return shoes;
+    }
+  };
+
+  /**
+   * useQuery for sneakers - provides caching and automatic refetching
+   */
+  const { data: sneakersData, isLoading: loading, error: queryError } = useQuery({
+    queryKey: ['sneakers'],
+    queryFn: async () => {
+      // DEMO MODE: Use mock data
+      if (DEMO_MODE) {
+        const shuffled = getShuffledShoes();
+        return shuffled.slice(0, 50);
+      }
+
+      // PRODUCTION MODE: Use Supabase
+      const { data, error } = await supabase
+        .from('shoes')
+        .select('*')
+        .eq('is_active', true)
+        .order('view_count', { ascending: false })
+        .range(0, 49);
+
+      if (error) throw error;
+      
+      const shoes = data as Shoe[];
+      
+      // Enrich with Amazon data if enabled
+      return await enrichWithAmazonData(shoes);
+    },
+  });
+
+  /**
+   * Get Infinite Feed (backward compatible wrapper)
+   */
+  const getInfiniteFeed = useCallback(async (page: number = 0, limit: number = 5): Promise<Shoe[]> => {
     // DEMO MODE: Use mock data
     if (DEMO_MODE) {
       const shuffled = getShuffledShoes();
@@ -43,22 +130,11 @@ export const useSneakers = () => {
       .range(from, to);
 
     if (error) throw error;
-    return data as Shoe[];
-  };
-
-  /**
-   * useQuery for sneakers - provides caching and automatic refetching
-   */
-  const { data: sneakersData, isLoading: loading, error: queryError } = useQuery({
-    queryKey: ['sneakers'],
-    queryFn: () => fetchInfiniteFeed(0, 50), // Load initial batch
-  });
-
-  /**
-   * Get Infinite Feed (backward compatible wrapper)
-   */
-  const getInfiniteFeed = useCallback(async (page: number = 0, limit: number = 5): Promise<Shoe[]> => {
-    return fetchInfiniteFeed(page, limit);
+    
+    const shoes = data as Shoe[];
+    
+    // Enrich with Amazon data if enabled
+    return await enrichWithAmazonData(shoes);
   }, []);
 
   /**
@@ -76,7 +152,11 @@ export const useSneakers = () => {
       .select('*')
       .eq('is_featured', true)
       .limit(10);
-    return data as Shoe[] || [];
+    
+    const shoes = (data as Shoe[]) || [];
+    
+    // Enrich with Amazon data if enabled
+    return await enrichWithAmazonData(shoes);
   }, []);
 
   /**
@@ -96,7 +176,16 @@ export const useSneakers = () => {
       .single();
 
     if (error) return null;
-    return data as Shoe;
+    
+    const shoe = data as Shoe;
+    
+    // Enrich with Amazon data if enabled and ASIN exists
+    if (AMAZON_API_CONFIG.enabled && shoe?.amazon_asin) {
+      const enriched = await enrichWithAmazonData([shoe]);
+      return enriched[0] || shoe;
+    }
+    
+    return shoe;
   }, []);
 
   /**
