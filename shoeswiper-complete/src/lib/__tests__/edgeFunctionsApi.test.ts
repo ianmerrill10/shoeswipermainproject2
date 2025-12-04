@@ -14,10 +14,6 @@ vi.mock('../supabaseClient', () => ({
     })),
     rpc: vi.fn().mockResolvedValue({ data: [], error: null }),
   },
-}));
-
-// Mock config
-vi.mock('../config', () => ({
   AFFILIATE_TAG: 'shoeswiper-20',
 }));
 

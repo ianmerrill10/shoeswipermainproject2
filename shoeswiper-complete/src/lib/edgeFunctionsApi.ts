@@ -3,8 +3,21 @@
 // Centralized service for calling Supabase Edge Functions
 // ============================================
 
-import { supabase } from './supabaseClient';
-import { AFFILIATE_TAG } from './config';
+import { supabase, AFFILIATE_TAG } from './supabaseClient';
+
+// ============================================
+// CONSTANTS
+// ============================================
+
+/** Maximum image size for outfit analysis (10MB) */
+const MAX_IMAGE_SIZE_BYTES = 10 * 1024 * 1024;
+
+/** Database table names */
+const TABLE_AFFILIATE_CLICKS = 'affiliate_clicks';
+const TABLE_ANALYTICS_EVENTS = 'analytics_events';
+
+/** RPC function names */
+const RPC_MATCH_SHOES_FOR_OUTFIT = 'match_shoes_for_outfit';
 
 // ============================================
 // TYPES
@@ -173,9 +186,8 @@ export async function analyzeOutfit(
   // Remove data URL prefix if present
   const cleanBase64 = imageBase64.replace(/^data:image\/\w+;base64,/, '');
 
-  // Check size (max 10MB encoded)
-  const MAX_SIZE = 10 * 1024 * 1024;
-  if (cleanBase64.length > MAX_SIZE) {
+  // Check size (max image size)
+  if (cleanBase64.length > MAX_IMAGE_SIZE_BYTES) {
     return {
       success: false,
       error: 'Image too large. Maximum size is 10MB.',
@@ -242,7 +254,7 @@ async function trackAffiliateClickDirect(
 ): Promise<EdgeFunctionResult<TrackAffiliateResponse>> {
   try {
     // Record the click
-    const { error: clickError } = await supabase.from('affiliate_clicks').insert({
+    const { error: clickError } = await supabase.from(TABLE_AFFILIATE_CLICKS).insert({
       shoe_id: shoeId,
       clicked_at: new Date().toISOString(),
     });
@@ -367,7 +379,7 @@ export async function matchShoesForOutfit(
   match_score: number;
 }>>> {
   try {
-    const { data, error } = await supabase.rpc('match_shoes_for_outfit', {
+    const { data, error } = await supabase.rpc(RPC_MATCH_SHOES_FOR_OUTFIT, {
       p_style_tags: styleTags,
       p_color_tags: colorTags,
       p_limit: limit,
@@ -428,7 +440,7 @@ export async function trackAnalyticsEvent(
   eventData: Record<string, unknown>
 ): Promise<EdgeFunctionResult<{ tracked: boolean }>> {
   try {
-    const { error } = await supabase.from('analytics_events').insert({
+    const { error } = await supabase.from(TABLE_ANALYTICS_EVENTS).insert({
       event_type: eventType,
       event_data: eventData,
       created_at: new Date().toISOString(),
