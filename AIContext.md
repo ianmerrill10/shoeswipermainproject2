@@ -349,12 +349,11 @@ shoeswiper-complete/
 | 1 | **Deploy to Production** | Ready | CRITICAL |
 | 2 | Switch DEMO_MODE to false | Ready | CRITICAL |
 | 3 | Configure Supabase + Stripe | Setup needed | CRITICAL |
-| 4 | Trending Feed Tab | Ready | MEDIUM |
-| 5 | Exit Intent Popup | Ready | HIGH |
-| 6 | Onboarding Flow | Hook exists | MEDIUM |
-| 7 | Social Features | Needs Design | MEDIUM |
-| 8 | 3D Model Viewer | Blocked (needs .glb) | MEDIUM |
-| 9 | AR Try-On | Needs WebXR | HIGH |
+| 4 | Trending Feed Tab | Ready to build | MEDIUM |
+| 5 | Onboarding Flow | Hook exists, needs UI | MEDIUM |
+| 6 | Social Features | Needs Design | MEDIUM |
+| 7 | 3D Model Viewer | Blocked (needs .glb) | MEDIUM |
+| 8 | AR Try-On | Needs WebXR | HIGH |
 
 ### RECENTLY COMPLETED (via Copilot PRs):
 - [x] Security Hardening (rate limiting, CORS, validation, sanitization)
@@ -365,6 +364,7 @@ shoeswiper-complete/
 - [x] SEO Structured Data
 - [x] Vercel Deployment Config
 - [x] TypeScript/ESLint Fixes
+- [x] Exit Intent Popup (10% off offer, email capture)
 
 ---
 
