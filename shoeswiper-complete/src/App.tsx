@@ -23,6 +23,8 @@ import { AdminLayout } from './components/admin/AdminLayout';
 import BottomNavigation from './components/BottomNavigation';
 import OnboardingFlow from './components/OnboardingFlow';
 import LoadingSpinner from './components/LoadingSpinner';
+import ExitIntentPopup from './components/ExitIntentPopup';
+import { useExitIntent } from './hooks/useExitIntent';
 
 const ONBOARDING_KEY = 'shoeswiper_onboarding';
 
@@ -30,6 +32,12 @@ function App() {
   const { user, loading, isAllowed } = useAuthGuard();
   const [showOnboarding, setShowOnboarding] = useState(false);
   const [onboardingChecked, setOnboardingChecked] = useState(false);
+
+  // Exit Intent Popup - triggers when user is about to leave
+  const { showExitIntent, dismiss: dismissExitIntent } = useExitIntent({
+    delay: 10000, // Wait 10 seconds before enabling
+    cookieDays: 7, // Don't show again for 7 days after dismissing
+  });
 
   // Check if onboarding should be shown
   useEffect(() => {
@@ -130,6 +138,9 @@ function App() {
       {!['/auth', '/admin'].some(path => window.location.pathname.startsWith(path)) && (
         <BottomNavigation />
       )}
+
+      {/* Exit Intent Popup - captures leaving users */}
+      <ExitIntentPopup isOpen={showExitIntent} onClose={dismissExitIntent} />
     </div>
   );
 }

@@ -16,3 +16,6 @@ export { useAmazonPrices, useShoePrice } from './useAmazonPrices';
 // Animation hooks
 export { useReducedMotion, useHaptics, useSwipeGesture } from './useAnimations';
 export type { SwipeDirection } from './useAnimations';
+
+// Exit intent detection
+export { useExitIntent } from './useExitIntent';
