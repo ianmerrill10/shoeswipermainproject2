@@ -21,7 +21,7 @@ import {
   shoeKeys, 
   userKeys, 
   StaleTime, 
-  CacheTime,
+  CacheTime as _CacheTime,
   createOptimisticUpdate,
 } from './apiQueryConfig';
 import { Shoe } from './types';
