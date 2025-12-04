@@ -6,7 +6,7 @@ const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY || 'placeholder-k
 
 // Only validate environment variables if NOT in demo mode
 if (!DEMO_MODE && (!import.meta.env.VITE_SUPABASE_URL || !import.meta.env.VITE_SUPABASE_ANON_KEY)) {
-  console.error('Missing Supabase environment variables. Check your .env file.');
+  if (import.meta.env.DEV) console.error('Missing Supabase environment variables. Check your .env file.');
 }
 
 // Create Supabase client (will only be used in production mode)

@@ -61,7 +61,9 @@ const NFTMintFlow: React.FC<NFTMintFlowProps> = ({ onMinted }) => {
       try {
         const { data, error: userError } = await supabase.auth.getUser();
         if (userError) {
-          console.error(userError);
+          if (import.meta.env.DEV) {
+            console.error(userError);
+          }
           return;
         }
         const user = data.user;
@@ -84,7 +86,9 @@ const NFTMintFlow: React.FC<NFTMintFlowProps> = ({ onMinted }) => {
           .eq("user_id", user.id);
 
         if (closetError) {
-          console.error(closetError);
+          if (import.meta.env.DEV) {
+            console.error(closetError);
+          }
           return;
         }
 

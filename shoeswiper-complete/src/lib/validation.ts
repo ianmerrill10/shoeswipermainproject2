@@ -569,3 +569,176 @@ export function validateDisplayName(name: string): ValidationResult {
 
   return { valid: true, sanitized };
 }
+
+// ============================================
+// UUID VALIDATION
+// ============================================
+
+// UUID v4 regex pattern
+const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+
+/**
+ * Validates a UUID v4 format string
+ * Note: Only validates UUID v4 format (version 4, variant 1)
+ * @param id - The UUID string to validate
+ * @returns Validation result with sanitized UUID (lowercase)
+ */
+export function validateUUID(id: string): ValidationResult {
+  if (typeof id !== 'string') {
+    return { valid: false, sanitized: '', error: 'ID must be a string' };
+  }
+
+  const sanitized = id.trim().toLowerCase();
+
+  if (!sanitized) {
+    return { valid: false, sanitized: '', error: 'ID is required' };
+  }
+
+  if (!UUID_REGEX.test(sanitized)) {
+    return { valid: false, sanitized, error: 'Invalid UUID format' };
+  }
+
+  return { valid: true, sanitized };
+}
+
+// ============================================
+// AMAZON ASIN VALIDATION
+// ============================================
+
+// Amazon ASIN format: 10 alphanumeric characters
+const ASIN_REGEX = /^[A-Z0-9]{10}$/i;
+
+/**
+ * Validates an Amazon ASIN (Standard Identification Number)
+ * @param asin - The ASIN string to validate
+ * @returns Validation result with sanitized ASIN (uppercase)
+ */
+export function validateASIN(asin: string): ValidationResult {
+  if (typeof asin !== 'string') {
+    return { valid: false, sanitized: '', error: 'ASIN must be a string' };
+  }
+
+  const sanitized = asin.trim().toUpperCase();
+
+  if (!sanitized) {
+    return { valid: false, sanitized: '', error: 'ASIN is required' };
+  }
+
+  if (!ASIN_REGEX.test(sanitized)) {
+    return { valid: false, sanitized, error: 'Invalid ASIN format (must be 10 alphanumeric characters)' };
+  }
+
+  return { valid: true, sanitized };
+}
+
+// ============================================
+// AFFILIATE URL VALIDATION
+// ============================================
+
+import { AFFILIATE_TAG } from './config';
+
+/**
+ * Validates an Amazon affiliate URL and ensures it has the correct affiliate tag
+ * @param url - The Amazon URL to validate
+ * @returns Validation result with sanitized URL including affiliate tag
+ */
+export function validateAffiliateUrl(url: string): ValidationResult {
+  const urlResult = validateUrl(url);
+  
+  if (!urlResult.valid) {
+    return urlResult;
+  }
+
+  try {
+    const parsed = new URL(urlResult.sanitized);
+    const hostname = parsed.hostname.toLowerCase();
+
+    // Must be an Amazon domain
+    if (!hostname.includes('amazon.')) {
+      return { valid: false, sanitized: url, error: 'URL must be from Amazon domain' };
+    }
+
+    // Ensure affiliate tag is present
+    if (!parsed.searchParams.has('tag')) {
+      parsed.searchParams.set('tag', AFFILIATE_TAG);
+    } else {
+      // Verify it's our affiliate tag
+      const existingTag = parsed.searchParams.get('tag');
+      if (existingTag !== AFFILIATE_TAG) {
+        parsed.searchParams.set('tag', AFFILIATE_TAG);
+      }
+    }
+
+    return { valid: true, sanitized: parsed.href };
+  } catch {
+    return { valid: false, sanitized: url, error: 'Invalid URL format' };
+  }
+}
+
+// ============================================
+// SECURE STORAGE UTILITIES
+// ============================================
+
+/**
+ * Obfuscates data for localStorage storage using Base64 encoding.
+ * WARNING: This is NOT encryption - it only provides basic obfuscation.
+ * Do NOT use for sensitive data (passwords, tokens, PII).
+ * For truly sensitive data, use server-side storage with proper encryption.
+ * @param data - The data to obfuscate
+ * @returns Base64 encoded string
+ */
+export function obfuscateForStorage(data: string): string {
+  if (typeof data !== 'string') {
+    return '';
+  }
+  try {
+    return btoa(encodeURIComponent(data));
+  } catch {
+    return '';
+  }
+}
+
+/**
+ * Decodes obfuscated data from localStorage
+ * Companion to obfuscateForStorage()
+ * @param encoded - The obfuscated string to decode
+ * @returns Decoded string
+ */
+export function deobfuscateFromStorage(encoded: string): string {
+  if (typeof encoded !== 'string') {
+    return '';
+  }
+  try {
+    return decodeURIComponent(atob(encoded));
+  } catch {
+    return '';
+  }
+}
+
+/**
+ * List of approved storage keys for non-sensitive UI state only.
+ * WARNING: Do NOT store PII, passwords, tokens, or sensitive data in localStorage.
+ * Email addresses should be stored server-side with proper encryption.
+ * These keys are for UI preferences and non-sensitive feature states only.
+ */
+export const SAFE_STORAGE_KEYS = [
+  'shoeswiper_favorites',           // Shoe IDs only, no PII
+  'shoeswiper_onboarding',          // UI state (completed steps)
+  'shoeswiper_preferences',         // UI preferences (theme, etc.)
+  'shoeswiper_price_alerts',        // Price thresholds, no PII
+  'shoeswiper_price_notifications', // Notification preferences
+  'shoeswiper_referral',            // Referral code (public)
+  'shoeswiper_my_referral_code',    // User's own referral code
+  'shoeswiper_referral_stats',      // Count statistics only
+  'shoeswiper_email_capture',       // Boolean flag only (captured yes/no)
+  'shoeswiper_email_list',          // DEPRECATED: emails should be server-side
+] as const;
+
+/**
+ * Checks if a storage key is in the approved safe list
+ * @param key - The localStorage key to check
+ * @returns True if the key is in the safe list
+ */
+export function isSafeStorageKey(key: string): boolean {
+  return SAFE_STORAGE_KEYS.includes(key as typeof SAFE_STORAGE_KEYS[number]);
+}

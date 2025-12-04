@@ -35,7 +35,9 @@ const NFTMarketplace: React.FC = () => {
     const fetchUser = async () => {
       const { data, error: userError } = await supabase.auth.getUser();
       if (userError) {
-        console.error(userError);
+        if (import.meta.env.DEV) {
+          console.error(userError);
+        }
         return;
       }
       setUserId(data.user?.id ?? null);
@@ -74,7 +76,9 @@ const NFTMarketplace: React.FC = () => {
         ownerId: activeTab === "my" ? userId ?? undefined : undefined,
       });
     } catch (e) {
-      console.error(e);
+      if (import.meta.env.DEV) {
+        console.error(e);
+      }
     }
   };
 

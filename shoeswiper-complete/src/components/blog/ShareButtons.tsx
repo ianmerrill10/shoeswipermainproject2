@@ -35,7 +35,9 @@ export default function ShareButtons({
       await navigator.clipboard.writeText(url);
       // Could add a toast notification here
     } catch (err) {
-      console.error('Failed to copy link:', err);
+      if (import.meta.env.DEV) {
+        console.error('Failed to copy link:', err);
+      }
     }
   };
 
