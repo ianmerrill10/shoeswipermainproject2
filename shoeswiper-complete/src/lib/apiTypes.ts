@@ -327,3 +327,130 @@ export interface ListResponse<T> {
   page: number;
   pageSize: number;
 }
+
+// ============================================
+// EDGE FUNCTION API TYPES
+// ============================================
+
+/**
+ * Outfit analysis request payload
+ */
+export interface AnalyzeOutfitRequest {
+  image: string; // Base64 encoded image data (without prefix)
+}
+
+/**
+ * Outfit analysis response from Gemini Vision API
+ */
+export interface AnalyzeOutfitResponse {
+  rating: number; // 1-10 rating
+  feedback: string; // Personalized style feedback
+  style_tags: string[]; // Detected style tags
+  dominant_colors: string[]; // Dominant colors in the outfit
+  detected_shoe: string | null; // Description of shoes if visible
+}
+
+/**
+ * Affiliate click tracking request
+ */
+export interface TrackAffiliateRequest {
+  shoeId: string;
+  source?: string; // Where the click originated (feed, search, etc.)
+  metadata?: Record<string, unknown>; // Additional tracking data
+}
+
+/**
+ * Affiliate click tracking response
+ */
+export interface TrackAffiliateResponse {
+  success: boolean;
+  tracked: boolean;
+  affiliateUrl?: string;
+  message: string;
+}
+
+/**
+ * Checkout session request for Stripe
+ */
+export interface CreateCheckoutRequest {
+  items: Array<{
+    priceId: string;
+    quantity: number;
+  }>;
+  successUrl: string;
+  cancelUrl: string;
+  customerId?: string;
+  metadata?: Record<string, string>;
+}
+
+/**
+ * Checkout session response from Stripe
+ */
+export interface CreateCheckoutResponse {
+  sessionId: string;
+  url: string;
+}
+
+/**
+ * Error response structure from Edge Functions
+ */
+export interface EdgeFunctionError {
+  error: string;
+  fallback?: boolean;
+}
+
+/**
+ * Result type for Edge Function calls - Success case
+ */
+export interface EdgeFunctionSuccess<T> {
+  success: true;
+  data: T;
+}
+
+/**
+ * Result type for Edge Function calls - Error case
+ */
+export interface EdgeFunctionFailure {
+  success: false;
+  error: string;
+  fallback: boolean;
+}
+
+/**
+ * Result type for Edge Function calls
+ */
+export type EdgeFunctionResult<T> = EdgeFunctionSuccess<T> | EdgeFunctionFailure;
+
+/**
+ * Shoe match result from outfit analysis
+ */
+export interface ShoeMatchResult {
+  id: string;
+  name: string;
+  brand: string;
+  price: number;
+  image_url: string;
+  amazon_url: string;
+  style_tags: string[];
+  color_tags: string[];
+  match_score: number;
+}
+
+/**
+ * Analytics event types
+ */
+export type AnalyticsEventType =
+  | 'shoe_view'
+  | 'shoe_click'
+  | 'music_click'
+  | 'panel_open'
+  | 'share'
+  | 'favorite'
+  | 'swipe';
+
+/**
+ * Analytics tracking result
+ */
+export interface AnalyticsTrackingResult {
+  tracked: boolean;
+}

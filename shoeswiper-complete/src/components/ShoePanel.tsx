@@ -18,7 +18,7 @@ const ShoePanel: React.FC<ShoePanelProps> = ({ shoe, isOpen, onClose }) => {
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
   const [showShareToast, setShowShareToast] = useState(false);
   const { toggleFavorite, isFavorite } = useFavorites();
-  const { trackFavorite, trackShare } = useAnalytics();
+  const { trackFavorite, trackShare, trackShoeClick } = useAnalytics();
 
   // Generate view angles (in production these would be real image URLs)
   const viewAngles = [
@@ -33,6 +33,8 @@ const ShoePanel: React.FC<ShoePanelProps> = ({ shoe, isOpen, onClose }) => {
   const sizes = shoe.sizes_available || ['7', '7.5', '8', '8.5', '9', '9.5', '10', '10.5', '11', '11.5', '12', '13'];
 
   const handleBuyClick = () => {
+    // Track the affiliate click for analytics
+    trackShoeClick(shoe.id);
     window.open(getAffiliateUrl(shoe.amazon_url), '_blank');
   };
 

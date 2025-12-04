@@ -71,6 +71,36 @@ vi.mock('../../lib/supabaseClient', () => ({
   },
 }));
 
+// Mock edgeFunctionsApi
+vi.mock('../../lib/edgeFunctionsApi', () => ({
+  analyzeOutfit: vi.fn().mockResolvedValue({
+    success: true,
+    data: {
+      rating: 8,
+      feedback: 'Great style!',
+      style_tags: ['streetwear', 'casual'],
+      dominant_colors: ['black', 'white'],
+      detected_shoe: 'Nike Air Force 1',
+    },
+  }),
+  matchShoesForOutfit: vi.fn().mockResolvedValue({
+    success: true,
+    data: [
+      {
+        id: 'shoe-1',
+        name: 'Air Force 1',
+        brand: 'Nike',
+        price: 110,
+        image_url: 'https://example.com/af1.jpg',
+        amazon_url: 'https://amazon.com/dp/B123?tag=shoeswiper-20',
+        style_tags: ['streetwear', 'casual'],
+        color_tags: ['white'],
+        match_score: 90,
+      },
+    ],
+  }),
+}));
+
 describe('useOutfitAnalysis', () => {
   beforeEach(() => {
     vi.clearAllMocks();

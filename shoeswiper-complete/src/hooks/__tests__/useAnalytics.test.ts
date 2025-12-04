@@ -35,6 +35,19 @@ vi.mock('../../lib/supabaseClient', () => ({
   },
 }));
 
+// Mock edgeFunctionsApi for production mode
+vi.mock('../../lib/edgeFunctionsApi', () => ({
+  trackAffiliateClick: vi.fn().mockResolvedValue({
+    success: true,
+    data: {
+      success: true,
+      tracked: true,
+      affiliateUrl: 'https://amazon.com/dp/B123?tag=shoeswiper-20',
+      message: 'Click tracked successfully',
+    },
+  }),
+}));
+
 // Mock console.warn for demo mode logging
 const originalWarn = console.warn;
 const mockWarn = vi.fn();
