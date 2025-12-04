@@ -1,5 +1,3 @@
-import React from 'react';
-
 interface ShareButtonsProps {
   url: string;
   title: string;
@@ -148,7 +146,7 @@ export default function ShareButtons({
       </button>
 
       {/* Native Share (mobile) */}
-      {typeof navigator !== 'undefined' && navigator.share && (
+      {typeof navigator !== 'undefined' && typeof navigator.share === 'function' && (
         <button
           onClick={handleNativeShare}
           className="p-2 rounded-full bg-orange-500 text-white hover:bg-orange-600 transition-colors"

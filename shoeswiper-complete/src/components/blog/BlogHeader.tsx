@@ -2,14 +2,14 @@ import React from 'react';
 import { Link } from 'react-router-dom';
 import { BlogType, BLOG_CONFIGS } from '../../lib/blogTypes';
 
-interface BlogHeaderProps {
-  blogType: BlogType;
+export interface BlogHeaderProps {
+  blogType?: BlogType;
   showSearch?: boolean;
   transparent?: boolean;
 }
 
 export default function BlogHeader({
-  blogType,
+  blogType = 'sneaker',
   showSearch = true,
   transparent = false,
 }: BlogHeaderProps) {
