@@ -9,6 +9,12 @@ import {
   sanitizeText,
   sanitizeHtml,
   validateDisplayName,
+  validateUUID,
+  validateASIN,
+  validateAffiliateUrl,
+  encodeForStorage,
+  decodeFromStorage,
+  isSafeStorageKey,
 } from '../validation';
 
 // ============================================
@@ -784,5 +790,256 @@ describe('validateDisplayName', () => {
       const result = validateDisplayName('John;Doe');
       expect(result.valid).toBe(false);
     });
+  });
+});
+
+// ============================================
+// UUID VALIDATION TESTS
+// ============================================
+
+describe('validateUUID', () => {
+  describe('valid UUIDs', () => {
+    it('should accept valid UUID v4', () => {
+      const result = validateUUID('550e8400-e29b-41d4-a716-446655440000');
+      expect(result.valid).toBe(true);
+      expect(result.sanitized).toBe('550e8400-e29b-41d4-a716-446655440000');
+    });
+
+    it('should accept uppercase UUID and convert to lowercase', () => {
+      const result = validateUUID('550E8400-E29B-41D4-A716-446655440000');
+      expect(result.valid).toBe(true);
+      expect(result.sanitized).toBe('550e8400-e29b-41d4-a716-446655440000');
+    });
+
+    it('should accept mixed case UUID', () => {
+      const result = validateUUID('550e8400-E29b-41d4-A716-446655440000');
+      expect(result.valid).toBe(true);
+      expect(result.sanitized).toBe('550e8400-e29b-41d4-a716-446655440000');
+    });
+
+    it('should trim whitespace', () => {
+      const result = validateUUID('  550e8400-e29b-41d4-a716-446655440000  ');
+      expect(result.valid).toBe(true);
+      expect(result.sanitized).toBe('550e8400-e29b-41d4-a716-446655440000');
+    });
+  });
+
+  describe('invalid UUIDs', () => {
+    it('should reject empty string', () => {
+      const result = validateUUID('');
+      expect(result.valid).toBe(false);
+      expect(result.error).toBe('ID is required');
+    });
+
+    it('should reject non-string input', () => {
+      const result = validateUUID(123 as unknown as string);
+      expect(result.valid).toBe(false);
+      expect(result.error).toBe('ID must be a string');
+    });
+
+    it('should reject UUID with wrong version number', () => {
+      // Version should be 4, this has 5
+      const result = validateUUID('550e8400-e29b-51d4-a716-446655440000');
+      expect(result.valid).toBe(false);
+      expect(result.error).toBe('Invalid UUID format');
+    });
+
+    it('should reject UUID with invalid characters', () => {
+      const result = validateUUID('550e8400-e29b-41d4-a716-44665544000g');
+      expect(result.valid).toBe(false);
+      expect(result.error).toBe('Invalid UUID format');
+    });
+
+    it('should reject UUID with wrong length', () => {
+      const result = validateUUID('550e8400-e29b-41d4-a716-44665544000');
+      expect(result.valid).toBe(false);
+      expect(result.error).toBe('Invalid UUID format');
+    });
+
+    it('should reject random string', () => {
+      const result = validateUUID('not-a-uuid');
+      expect(result.valid).toBe(false);
+      expect(result.error).toBe('Invalid UUID format');
+    });
+  });
+});
+
+// ============================================
+// AMAZON ASIN VALIDATION TESTS
+// ============================================
+
+describe('validateASIN', () => {
+  describe('valid ASINs', () => {
+    it('should accept valid ASIN', () => {
+      const result = validateASIN('B08N5WRWNW');
+      expect(result.valid).toBe(true);
+      expect(result.sanitized).toBe('B08N5WRWNW');
+    });
+
+    it('should accept lowercase ASIN and convert to uppercase', () => {
+      const result = validateASIN('b08n5wrwnw');
+      expect(result.valid).toBe(true);
+      expect(result.sanitized).toBe('B08N5WRWNW');
+    });
+
+    it('should trim whitespace', () => {
+      const result = validateASIN('  B08N5WRWNW  ');
+      expect(result.valid).toBe(true);
+      expect(result.sanitized).toBe('B08N5WRWNW');
+    });
+
+    it('should accept numeric only ASIN', () => {
+      const result = validateASIN('0123456789');
+      expect(result.valid).toBe(true);
+      expect(result.sanitized).toBe('0123456789');
+    });
+  });
+
+  describe('invalid ASINs', () => {
+    it('should reject empty string', () => {
+      const result = validateASIN('');
+      expect(result.valid).toBe(false);
+      expect(result.error).toBe('ASIN is required');
+    });
+
+    it('should reject non-string input', () => {
+      const result = validateASIN(123 as unknown as string);
+      expect(result.valid).toBe(false);
+      expect(result.error).toBe('ASIN must be a string');
+    });
+
+    it('should reject ASIN with wrong length (too short)', () => {
+      const result = validateASIN('B08N5WRW');
+      expect(result.valid).toBe(false);
+      expect(result.error).toBe('Invalid ASIN format (must be 10 alphanumeric characters)');
+    });
+
+    it('should reject ASIN with wrong length (too long)', () => {
+      const result = validateASIN('B08N5WRWNWABC');
+      expect(result.valid).toBe(false);
+      expect(result.error).toBe('Invalid ASIN format (must be 10 alphanumeric characters)');
+    });
+
+    it('should reject ASIN with special characters', () => {
+      const result = validateASIN('B08N5WRW-W');
+      expect(result.valid).toBe(false);
+      expect(result.error).toBe('Invalid ASIN format (must be 10 alphanumeric characters)');
+    });
+  });
+});
+
+// ============================================
+// AFFILIATE URL VALIDATION TESTS
+// ============================================
+
+describe('validateAffiliateUrl', () => {
+  describe('valid Amazon URLs', () => {
+    it('should accept valid Amazon URL and add affiliate tag', () => {
+      const result = validateAffiliateUrl('https://www.amazon.com/dp/B08N5WRWNW');
+      expect(result.valid).toBe(true);
+      expect(result.sanitized).toContain('tag=shoeswiper-20');
+    });
+
+    it('should keep existing correct affiliate tag', () => {
+      const result = validateAffiliateUrl('https://www.amazon.com/dp/B08N5WRWNW?tag=shoeswiper-20');
+      expect(result.valid).toBe(true);
+      expect(result.sanitized).toContain('tag=shoeswiper-20');
+      // Should only have one tag parameter
+      expect(result.sanitized.split('tag=').length).toBe(2);
+    });
+
+    it('should replace incorrect affiliate tag', () => {
+      const result = validateAffiliateUrl('https://www.amazon.com/dp/B08N5WRWNW?tag=other-tag-20');
+      expect(result.valid).toBe(true);
+      expect(result.sanitized).toContain('tag=shoeswiper-20');
+      expect(result.sanitized).not.toContain('tag=other-tag-20');
+    });
+
+    it('should work with amazon.co.uk', () => {
+      const result = validateAffiliateUrl('https://www.amazon.co.uk/dp/B08N5WRWNW');
+      expect(result.valid).toBe(true);
+      expect(result.sanitized).toContain('tag=shoeswiper-20');
+    });
+  });
+
+  describe('invalid URLs', () => {
+    it('should reject non-Amazon URL', () => {
+      const result = validateAffiliateUrl('https://www.google.com/search?q=shoes');
+      expect(result.valid).toBe(false);
+      expect(result.error).toBe('URL must be from Amazon domain');
+    });
+
+    it('should reject empty URL', () => {
+      const result = validateAffiliateUrl('');
+      expect(result.valid).toBe(false);
+      expect(result.error).toBe('URL is required');
+    });
+
+    it('should reject invalid URL format', () => {
+      const result = validateAffiliateUrl('not-a-url');
+      expect(result.valid).toBe(false);
+      expect(result.error).toBe('Invalid URL format');
+    });
+
+    it('should reject javascript: protocol', () => {
+      const result = validateAffiliateUrl('javascript:alert(1)');
+      expect(result.valid).toBe(false);
+    });
+  });
+});
+
+// ============================================
+// STORAGE UTILITY TESTS
+// ============================================
+
+describe('encodeForStorage and decodeFromStorage', () => {
+  it('should encode and decode basic strings', () => {
+    const original = 'Hello, World!';
+    const encoded = encodeForStorage(original);
+    const decoded = decodeFromStorage(encoded);
+    expect(decoded).toBe(original);
+  });
+
+  it('should handle special characters', () => {
+    const original = 'Test with émojis 🎉 and ñ characters';
+    const encoded = encodeForStorage(original);
+    const decoded = decodeFromStorage(encoded);
+    expect(decoded).toBe(original);
+  });
+
+  it('should handle empty string', () => {
+    const encoded = encodeForStorage('');
+    const decoded = decodeFromStorage(encoded);
+    expect(decoded).toBe('');
+  });
+
+  it('should return empty string for non-string input to encode', () => {
+    const result = encodeForStorage(123 as unknown as string);
+    expect(result).toBe('');
+  });
+
+  it('should return empty string for non-string input to decode', () => {
+    const result = decodeFromStorage(123 as unknown as string);
+    expect(result).toBe('');
+  });
+
+  it('should return empty string for invalid base64', () => {
+    const result = decodeFromStorage('not-valid-base64!!!');
+    expect(result).toBe('');
+  });
+});
+
+describe('isSafeStorageKey', () => {
+  it('should return true for allowed keys', () => {
+    expect(isSafeStorageKey('shoeswiper_favorites')).toBe(true);
+    expect(isSafeStorageKey('shoeswiper_onboarding')).toBe(true);
+    expect(isSafeStorageKey('shoeswiper_preferences')).toBe(true);
+    expect(isSafeStorageKey('shoeswiper_price_alerts')).toBe(true);
+  });
+
+  it('should return false for unknown keys', () => {
+    expect(isSafeStorageKey('unknown_key')).toBe(false);
+    expect(isSafeStorageKey('shoeswiper_sensitive_data')).toBe(false);
+    expect(isSafeStorageKey('')).toBe(false);
   });
 });

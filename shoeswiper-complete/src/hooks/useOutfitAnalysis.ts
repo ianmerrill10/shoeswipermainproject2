@@ -83,7 +83,9 @@ export const useOutfitAnalysis = () => {
 
       setRecommendations(taggedData);
     } catch (dbErr) {
-      console.error('Recommendation fetch failed:', dbErr);
+      if (import.meta.env.DEV) {
+        console.error('Recommendation fetch failed:', dbErr);
+      }
       // Fallback: Just get popular shoes if matching fails
       const { data: fallback } = await supabase
         .from('shoes')
@@ -134,7 +136,9 @@ export const useOutfitAnalysis = () => {
       await fetchRecommendations(result.style_tags, result.dominant_colors);
 
     } catch (err: unknown) {
-      console.error(err);
+      if (import.meta.env.DEV) {
+        console.error(err);
+      }
       const errorMessage = err instanceof Error ? err.message : "AI Analysis unavailable. Select your style manually.";
       setError(errorMessage);
     } finally {

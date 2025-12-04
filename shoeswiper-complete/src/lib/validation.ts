@@ -569,3 +569,170 @@ export function validateDisplayName(name: string): ValidationResult {
 
   return { valid: true, sanitized };
 }
+
+// ============================================
+// UUID VALIDATION
+// ============================================
+
+// UUID v4 regex pattern
+const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+
+/**
+ * Validates a UUID (v4 format)
+ * @param id - The UUID string to validate
+ * @returns Validation result with sanitized UUID (lowercase)
+ */
+export function validateUUID(id: string): ValidationResult {
+  if (typeof id !== 'string') {
+    return { valid: false, sanitized: '', error: 'ID must be a string' };
+  }
+
+  const sanitized = id.trim().toLowerCase();
+
+  if (!sanitized) {
+    return { valid: false, sanitized: '', error: 'ID is required' };
+  }
+
+  if (!UUID_REGEX.test(sanitized)) {
+    return { valid: false, sanitized, error: 'Invalid UUID format' };
+  }
+
+  return { valid: true, sanitized };
+}
+
+// ============================================
+// AMAZON ASIN VALIDATION
+// ============================================
+
+// Amazon ASIN format: 10 alphanumeric characters
+const ASIN_REGEX = /^[A-Z0-9]{10}$/i;
+
+/**
+ * Validates an Amazon ASIN (Standard Identification Number)
+ * @param asin - The ASIN string to validate
+ * @returns Validation result with sanitized ASIN (uppercase)
+ */
+export function validateASIN(asin: string): ValidationResult {
+  if (typeof asin !== 'string') {
+    return { valid: false, sanitized: '', error: 'ASIN must be a string' };
+  }
+
+  const sanitized = asin.trim().toUpperCase();
+
+  if (!sanitized) {
+    return { valid: false, sanitized: '', error: 'ASIN is required' };
+  }
+
+  if (!ASIN_REGEX.test(sanitized)) {
+    return { valid: false, sanitized, error: 'Invalid ASIN format (must be 10 alphanumeric characters)' };
+  }
+
+  return { valid: true, sanitized };
+}
+
+// ============================================
+// AFFILIATE URL VALIDATION
+// ============================================
+
+import { AFFILIATE_TAG } from './config';
+
+/**
+ * Validates an Amazon affiliate URL and ensures it has the correct affiliate tag
+ * @param url - The Amazon URL to validate
+ * @returns Validation result with sanitized URL including affiliate tag
+ */
+export function validateAffiliateUrl(url: string): ValidationResult {
+  const urlResult = validateUrl(url);
+  
+  if (!urlResult.valid) {
+    return urlResult;
+  }
+
+  try {
+    const parsed = new URL(urlResult.sanitized);
+    const hostname = parsed.hostname.toLowerCase();
+
+    // Must be an Amazon domain
+    if (!hostname.includes('amazon.')) {
+      return { valid: false, sanitized: url, error: 'URL must be from Amazon domain' };
+    }
+
+    // Ensure affiliate tag is present
+    if (!parsed.searchParams.has('tag')) {
+      parsed.searchParams.set('tag', AFFILIATE_TAG);
+    } else {
+      // Verify it's our affiliate tag
+      const existingTag = parsed.searchParams.get('tag');
+      if (existingTag !== AFFILIATE_TAG) {
+        parsed.searchParams.set('tag', AFFILIATE_TAG);
+      }
+    }
+
+    return { valid: true, sanitized: parsed.href };
+  } catch {
+    return { valid: false, sanitized: url, error: 'Invalid URL format' };
+  }
+}
+
+// ============================================
+// SECURE STORAGE UTILITIES
+// ============================================
+
+/**
+ * Encodes data for safe localStorage storage (obfuscation, not encryption)
+ * Note: For truly sensitive data, use server-side storage or proper encryption
+ * @param data - The data to encode
+ * @returns Base64 encoded string
+ */
+export function encodeForStorage(data: string): string {
+  if (typeof data !== 'string') {
+    return '';
+  }
+  try {
+    return btoa(encodeURIComponent(data));
+  } catch {
+    return '';
+  }
+}
+
+/**
+ * Decodes data from localStorage
+ * @param encoded - The encoded string to decode
+ * @returns Decoded string
+ */
+export function decodeFromStorage(encoded: string): string {
+  if (typeof encoded !== 'string') {
+    return '';
+  }
+  try {
+    return decodeURIComponent(atob(encoded));
+  } catch {
+    return '';
+  }
+}
+
+/**
+ * List of storage keys that should NOT contain sensitive data
+ * Any data stored must be considered potentially visible to users
+ */
+export const SAFE_STORAGE_KEYS = [
+  'shoeswiper_favorites',
+  'shoeswiper_onboarding',
+  'shoeswiper_preferences',
+  'shoeswiper_price_alerts',
+  'shoeswiper_price_notifications',
+  'shoeswiper_referral',
+  'shoeswiper_my_referral_code',
+  'shoeswiper_referral_stats',
+  'shoeswiper_email_capture',
+  'shoeswiper_email_list',
+] as const;
+
+/**
+ * Checks if a storage key is in the approved safe list
+ * @param key - The localStorage key to check
+ * @returns True if the key is in the safe list
+ */
+export function isSafeStorageKey(key: string): boolean {
+  return SAFE_STORAGE_KEYS.includes(key as typeof SAFE_STORAGE_KEYS[number]);
+}

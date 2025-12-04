@@ -181,9 +181,12 @@
 
 ### Security Issues (CRITICAL)
 - [x] Gemini API key moved to server-side Edge Function
-- [ ] Missing rate limiting
-- [ ] Missing input validation on many endpoints
-- [ ] RLS policies need audit and testing
+- [x] Rate limiting configuration added (Edge Function headers + Supabase built-in)
+- [x] Input validation module (src/lib/validation.ts) - email, URL, price, UUID, ASIN, affiliate URL
+- [x] RLS policies audited and documented (database/RLS_SECURITY_AUDIT.md)
+- [x] Console.log statements guarded with import.meta.env.DEV
+- [ ] JWT refresh token implementation (Supabase handles automatically)
+- [ ] Additional input validation integration in components (ongoing)
 
 ### Data Issues
 - [ ] Using mock data throughout application

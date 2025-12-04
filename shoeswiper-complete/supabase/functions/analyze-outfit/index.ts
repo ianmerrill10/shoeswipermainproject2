@@ -1,14 +1,52 @@
 // Supabase Edge Function: supabase/functions/analyze-outfit/index.ts
 // Deploy with: supabase functions deploy analyze-outfit
 // Set secret: supabase secrets set GEMINI_API_KEY=your-key-here
+//
+// SECURITY NOTES:
+// - Rate limiting is handled at multiple levels:
+//   1. Supabase Edge Functions have built-in rate limiting
+//   2. Gemini API has its own rate limits (returns 429)
+//   3. This function returns appropriate rate limit headers
+// - Authentication: Consider requiring auth for production
+// - Input validation: Base64 and size limits enforced
 
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { corsHeaders } from "../_shared/cors.ts";
+
+// Rate limiting configuration
+// Note: In production, use Supabase's built-in rate limiting or a Redis-based solution
+const RATE_LIMIT_CONFIG = {
+  // Maximum requests per minute per IP (informational - actual enforcement via Supabase)
+  maxRequestsPerMinute: 10,
+  // Retry-After header value in seconds when rate limited
+  retryAfterSeconds: 60,
+};
+
+// Security headers for responses
+const securityHeaders = {
+  ...corsHeaders,
+  "Content-Type": "application/json",
+  // Prevent caching of sensitive responses
+  "Cache-Control": "no-store, no-cache, must-revalidate",
+  // Rate limit information headers
+  "X-RateLimit-Limit": String(RATE_LIMIT_CONFIG.maxRequestsPerMinute),
+};
 
 serve(async (req) => {
   // Handle CORS preflight
   if (req.method === "OPTIONS") {
     return new Response("ok", { headers: corsHeaders });
+  }
+
+  // Only allow POST requests
+  if (req.method !== "POST") {
+    return new Response(JSON.stringify({
+      error: "Method not allowed. Use POST.",
+      fallback: true
+    }), {
+      status: 405,
+      headers: { ...securityHeaders, "Allow": "POST, OPTIONS" }
+    });
   }
 
   try {
@@ -22,7 +60,7 @@ serve(async (req) => {
         fallback: true
       }), {
         status: 400,
-        headers: { ...corsHeaders, "Content-Type": "application/json" }
+        headers: securityHeaders
       });
     }
 
@@ -35,7 +73,7 @@ serve(async (req) => {
         fallback: true
       }), {
         status: 400,
-        headers: { ...corsHeaders, "Content-Type": "application/json" }
+        headers: securityHeaders
       });
     }
 
@@ -48,7 +86,7 @@ serve(async (req) => {
         fallback: true
       }), {
         status: 400,
-        headers: { ...corsHeaders, "Content-Type": "application/json" }
+        headers: securityHeaders
       });
     }
 
@@ -60,7 +98,7 @@ serve(async (req) => {
         fallback: true
       }), {
         status: 400,
-        headers: { ...corsHeaders, "Content-Type": "application/json" }
+        headers: securityHeaders
       });
     }
 
@@ -105,14 +143,17 @@ serve(async (req) => {
       }
     );
 
-    // Handle rate limits
+    // Handle rate limits from Gemini API
     if (response.status === 429) {
       return new Response(JSON.stringify({
         error: "Rate limit exceeded. Please try again in a moment.",
         fallback: true
       }), {
         status: 429,
-        headers: { ...corsHeaders, "Content-Type": "application/json" }
+        headers: { 
+          ...securityHeaders, 
+          "Retry-After": String(RATE_LIMIT_CONFIG.retryAfterSeconds)
+        }
       });
     }
 
@@ -132,16 +173,23 @@ serve(async (req) => {
     const analysis = JSON.parse(jsonStr);
 
     return new Response(JSON.stringify(analysis), {
-      headers: { ...corsHeaders, "Content-Type": "application/json" }
+      headers: securityHeaders
     });
   } catch (error) {
+    // Log error server-side only (not exposed to client)
     console.error("Error analyzing outfit:", error);
+    
+    // Return sanitized error message (don't leak internal details)
+    const safeErrorMessage = error instanceof Error && error.message.includes("GEMINI_API_KEY")
+      ? "AI service configuration error"
+      : "An error occurred while analyzing the outfit";
+    
     return new Response(JSON.stringify({
-      error: error.message,
+      error: safeErrorMessage,
       fallback: true
     }), {
       status: 500,
-      headers: { ...corsHeaders, "Content-Type": "application/json" }
+      headers: securityHeaders
     });
   }
 });

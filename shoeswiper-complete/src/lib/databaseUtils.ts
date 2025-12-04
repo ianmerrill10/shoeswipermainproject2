@@ -64,7 +64,9 @@ export async function fetchShoesPaginated(
   });
 
   if (error) {
-    console.error('Error fetching paginated shoes:', error);
+    if (import.meta.env.DEV) {
+      console.error('Error fetching paginated shoes:', error);
+    }
     throw error;
   }
 
@@ -111,7 +113,9 @@ export async function fetchTrendingShoesPaginated(
   });
 
   if (error) {
-    console.error('Error fetching trending shoes:', error);
+    if (import.meta.env.DEV) {
+      console.error('Error fetching trending shoes:', error);
+    }
     throw error;
   }
 
@@ -154,7 +158,9 @@ export async function fetchPopularShoesPaginated(
   });
 
   if (error) {
-    console.error('Error fetching popular shoes:', error);
+    if (import.meta.env.DEV) {
+      console.error('Error fetching popular shoes:', error);
+    }
     throw error;
   }
 
@@ -198,7 +204,9 @@ export async function toggleFavorite(
   });
 
   if (error) {
-    console.error('Error toggling favorite:', error);
+    if (import.meta.env.DEV) {
+      console.error('Error toggling favorite:', error);
+    }
     throw error;
   }
 
@@ -230,7 +238,9 @@ export async function addToCloset(
   });
 
   if (error) {
-    console.error('Error adding to closet:', error);
+    if (import.meta.env.DEV) {
+      console.error('Error adding to closet:', error);
+    }
     throw error;
   }
 
@@ -264,7 +274,9 @@ export async function trackShoeEngagement(
   });
 
   if (error) {
-    console.error('Error tracking engagement:', error);
+    if (import.meta.env.DEV) {
+      console.error('Error tracking engagement:', error);
+    }
   }
 }
 
@@ -293,7 +305,9 @@ export async function getUserDashboard(
   });
 
   if (error) {
-    console.error('Error fetching user dashboard:', error);
+    if (import.meta.env.DEV) {
+      console.error('Error fetching user dashboard:', error);
+    }
     throw error;
   }
 
@@ -340,7 +354,9 @@ export async function searchShoesRanked(
   });
 
   if (error) {
-    console.error('Error searching shoes:', error);
+    if (import.meta.env.DEV) {
+      console.error('Error searching shoes:', error);
+    }
     throw error;
   }
 
@@ -367,7 +383,9 @@ export async function getSimilarShoes(
   });
 
   if (error) {
-    console.error('Error fetching similar shoes:', error);
+    if (import.meta.env.DEV) {
+      console.error('Error fetching similar shoes:', error);
+    }
     throw error;
   }
 
@@ -397,7 +415,9 @@ export async function createPriceAlert(
   });
 
   if (error) {
-    console.error('Error creating price alert:', error);
+    if (import.meta.env.DEV) {
+      console.error('Error creating price alert:', error);
+    }
     throw error;
   }
 
@@ -436,7 +456,9 @@ export async function getAnalyticsSummary(
   });
 
   if (error) {
-    console.error('Error fetching analytics summary:', error);
+    if (import.meta.env.DEV) {
+      console.error('Error fetching analytics summary:', error);
+    }
     throw error;
   }
 
@@ -467,7 +489,9 @@ export async function batchUpdatePrices(
   });
 
   if (error) {
-    console.error('Error batch updating prices:', error);
+    if (import.meta.env.DEV) {
+      console.error('Error batch updating prices:', error);
+    }
     throw error;
   }
 
@@ -493,7 +517,9 @@ export async function cleanupOldAnalytics(
   });
 
   if (error) {
-    console.error('Error cleaning up analytics:', error);
+    if (import.meta.env.DEV) {
+      console.error('Error cleaning up analytics:', error);
+    }
     throw error;
   }
 
