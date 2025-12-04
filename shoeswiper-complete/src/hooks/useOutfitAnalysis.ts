@@ -3,6 +3,28 @@ import { Shoe } from '../lib/types';
 import { DEMO_MODE, MOCK_SHOES } from '../lib/mockData';
 import { supabase } from '../lib/supabaseClient';
 
+/**
+ * AI-powered outfit analysis hook for sneaker recommendations.
+ * Analyzes uploaded outfit images using Google Gemini Vision API
+ * and returns matching sneaker recommendations based on style and color.
+ * 
+ * In DEMO_MODE, returns mock analysis results.
+ * In production, calls Supabase Edge Function 'analyze-outfit'.
+ * 
+ * @returns Object containing analysis methods, results, and recommendations
+ * @example
+ * const { analyzeImage, manualAnalyze, analysis, recommendations } = useOutfitAnalysis();
+ * 
+ * // Analyze an uploaded outfit image
+ * await analyzeImage(file);
+ * 
+ * // Get recommendations after analysis
+ * console.log(analysis?.style_tags, recommendations);
+ * 
+ * // Manual fallback if AI is unavailable
+ * await manualAnalyze('streetwear');
+ */
+
 export interface OutfitAnalysis {
   rating: number;
   style_tags: string[];

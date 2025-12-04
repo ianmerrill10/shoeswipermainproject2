@@ -1,5 +1,21 @@
-// useBlog Hook - React Query hooks for blog functionality
-// =========================================================
+/**
+ * React Query hooks for blog content management.
+ * Provides data fetching, caching, and mutation hooks for blog posts,
+ * search, subscriptions, and analytics tracking.
+ * 
+ * Uses React Query for automatic caching with configurable stale times.
+ * 
+ * @example
+ * // Fetch paginated blog posts
+ * const { data: posts, isLoading } = useBlogPosts('sneakers', { page: 1 });
+ * 
+ * // Fetch single post by slug
+ * const { data: post } = useBlogPost('sneakers', 'best-running-shoes-2024');
+ * 
+ * // Subscribe to blog newsletter
+ * const subscribeMutation = useSubscribeToBlog('sneakers');
+ * subscribeMutation.mutate('user@example.com');
+ */
 
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import {

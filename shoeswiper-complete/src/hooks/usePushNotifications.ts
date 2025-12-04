@@ -1,6 +1,27 @@
 import { useState, useEffect, useCallback } from 'react';
 import { DEMO_MODE } from '../lib/config';
 
+/**
+ * Push notification permission and delivery management hook.
+ * Handles service worker registration, permission requests,
+ * and sending local/push notifications for price drops, new releases, and restocks.
+ * 
+ * Settings are stored in localStorage and synced to Supabase in production.
+ * 
+ * @returns Object containing notification state and trigger methods
+ * @example
+ * const { isEnabled, requestPermission, notifyPriceDrop } = usePushNotifications();
+ * 
+ * // Request notification permission
+ * const granted = await requestPermission();
+ * 
+ * // Send price drop notification
+ * await notifyPriceDrop('Air Jordan 1', 200, 150, amazonUrl, shoeId);
+ * 
+ * // Update notification preferences
+ * updateSettings({ priceDrops: true, newReleases: false });
+ */
+
 const PUSH_SETTINGS_KEY = 'shoeswiper_push_settings';
 
 export interface PushSettings {

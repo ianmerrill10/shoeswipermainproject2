@@ -4,6 +4,20 @@ import { Shoe } from '../lib/types';
 import { DEMO_MODE, getShuffledShoes, getFeaturedShoes, MOCK_SHOES } from '../lib/mockData';
 import { supabase } from '../lib/supabaseClient';
 
+/**
+ * Main sneaker feed data fetching hook with React Query caching.
+ * Provides methods for fetching sneakers, featured items, and tracking analytics.
+ * 
+ * @returns Object containing sneaker data, loading state, and methods
+ * @example
+ * const { getInfiniteFeed, trackView, trackClick, loading } = useSneakers();
+ * 
+ * // Load sneakers for infinite scroll
+ * const shoes = await getInfiniteFeed(page, 5);
+ * 
+ * // Track when shoe becomes visible
+ * trackView(shoe.id);
+ */
 export const useSneakers = () => {
   /**
    * Fetch function for infinite feed

@@ -3,6 +3,9 @@ import { Shoe } from '../lib/types';
 import { DEMO_MODE, searchShoes } from '../lib/mockData';
 import { supabase } from '../lib/supabaseClient';
 
+/**
+ * Search filter options for sneaker queries.
+ */
 export interface SearchFilters {
   brands?: string[];
   minPrice?: number;
@@ -13,6 +16,22 @@ export interface SearchFilters {
   sortBy?: 'price_asc' | 'price_desc' | 'newest' | 'trending';
 }
 
+/**
+ * Search and filter sneakers hook with full-text search support.
+ * Supports filtering by brand, price range, gender, style tags, and color tags.
+ * 
+ * @returns Object containing search method, results, and loading state
+ * @example
+ * const { searchSneakers, results, isSearching } = useSneakerSearch();
+ * 
+ * // Search with filters
+ * await searchSneakers('jordan', {
+ *   brands: ['Nike'],
+ *   minPrice: 100,
+ *   maxPrice: 300,
+ *   sortBy: 'price_asc'
+ * });
+ */
 export const useSneakerSearch = () => {
   const [results, setResults] = useState<Shoe[]>([]);
   const [isSearching, setIsSearching] = useState(false);

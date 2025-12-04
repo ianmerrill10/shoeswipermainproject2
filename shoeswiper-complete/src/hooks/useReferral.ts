@@ -1,6 +1,30 @@
 import { useState, useEffect, useCallback } from 'react';
 import { DEMO_MODE } from '../lib/config';
 
+/**
+ * Referral program management hook.
+ * Manages user referral codes, tracking shares and signups,
+ * and calculating reward tiers based on referral performance.
+ * 
+ * Reward tiers: Starter (0) -> Bronze (3) -> Silver (10) -> Gold (25) -> Diamond (50)
+ * 
+ * In DEMO_MODE, referral data is stored in localStorage.
+ * In production, data is stored in Supabase user_referrals table.
+ * 
+ * @returns Object containing referral code, stats, and sharing methods
+ * @example
+ * const { referralCode, referralStats, shareReferralLink, getRewardTier } = useReferral();
+ * 
+ * // Get shareable referral URL
+ * const url = getReferralUrl(); // https://shoeswiper.com/?ref=SS123ABC
+ * 
+ * // Share via native share or clipboard
+ * const result = await shareReferralLink();
+ * 
+ * // Check reward tier
+ * const tier = getRewardTier(); // { tier: 'Bronze', progress: 50, ... }
+ */
+
 const REFERRAL_STORAGE_KEY = 'shoeswiper_referral';
 const USER_REFERRAL_CODE_KEY = 'shoeswiper_my_referral_code';
 const REFERRAL_STATS_KEY = 'shoeswiper_referral_stats';

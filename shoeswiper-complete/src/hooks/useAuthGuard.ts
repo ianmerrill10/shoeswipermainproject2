@@ -7,10 +7,28 @@ type User = {
   email?: string;
 };
 
+/**
+ * Checks if an email is in the allowed list.
+ * @param email - Email to check
+ * @returns True if email is allowed
+ */
 const isEmailAllowed = (email: string | undefined): boolean => {
   return email ? ALLOWED_EMAILS.includes(email) : false;
 };
 
+/**
+ * Protected route guard hook that checks if user's email is in the allowed list.
+ * In DEMO_MODE, authentication is bypassed and all users are allowed.
+ * 
+ * @returns Object containing user, loading state, and allowed status
+ * @example
+ * const { user, loading, isAllowed } = useAuthGuard();
+ * 
+ * if (loading) return <LoadingSpinner />;
+ * if (!isAllowed) return <AccessDenied />;
+ * 
+ * return <ProtectedContent />;
+ */
 export const useAuthGuard = () => {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);

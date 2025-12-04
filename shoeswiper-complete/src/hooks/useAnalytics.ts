@@ -1,6 +1,27 @@
 import { useCallback } from 'react';
 import { DEMO_MODE } from '../lib/config';
 
+/**
+ * Event tracking hook for user interactions, affiliate clicks, and engagement metrics.
+ * Provides methods to track various user actions for analytics and revenue attribution.
+ * 
+ * In DEMO_MODE, events are stored in memory and logged to console.
+ * In production, events are sent to Supabase analytics tables.
+ * 
+ * @returns Object containing tracking methods and analytics summary
+ * @example
+ * const { trackShoeView, trackShoeClick, trackMusicClick } = useAnalytics();
+ * 
+ * // Track when shoe card becomes visible
+ * trackShoeView(shoe.id);
+ * 
+ * // Track Amazon buy button click
+ * trackShoeClick(shoe.id);
+ * 
+ * // Track music link click
+ * trackMusicClick('spotify', shoe.id, 'Song Name', 'Artist');
+ */
+
 // Analytics event types for type safety
 export type AnalyticsEvent =
   | 'shoe_view'
