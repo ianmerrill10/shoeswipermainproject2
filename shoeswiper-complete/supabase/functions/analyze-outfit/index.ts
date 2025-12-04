@@ -1,9 +1,32 @@
 // Supabase Edge Function: supabase/functions/analyze-outfit/index.ts
 // Deploy with: supabase functions deploy analyze-outfit
-// Set secret: supabase secrets set GEMINI_API_KEY=your-key-here
+// Set secrets:
+//   supabase secrets set GEMINI_API_KEY=your-key-here
+//   supabase secrets set SUPABASE_URL=https://<project>.supabase.co
+//   supabase secrets set SUPABASE_SERVICE_ROLE_KEY=your-service-role-key
 
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2.42.0";
 import { corsHeaders } from "../_shared/cors.ts";
+
+const DEFAULT_MONTHLY_LIMIT = 10;
+
+const SUPABASE_URL = Deno.env.get("SUPABASE_URL");
+const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
+
+if (!SUPABASE_URL || !SUPABASE_SERVICE_ROLE_KEY) {
+  console.error("Supabase credentials are not configured for the analyze-outfit function");
+}
+
+interface UsageSummary {
+  monthly_limit: number;
+  remaining: number;
+}
+
+const getCurrentPeriodStart = () => {
+  const now = new Date();
+  return new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), 1));
+};
 
 serve(async (req) => {
   // Handle CORS preflight
@@ -11,7 +34,48 @@ serve(async (req) => {
     return new Response("ok", { headers: corsHeaders });
   }
 
+  let supabaseClient;
+  let usageReserved = false;
+  let userId: string | null = null;
+
   try {
+    if (!SUPABASE_URL || !SUPABASE_SERVICE_ROLE_KEY) {
+      return new Response(JSON.stringify({
+        error: "Server misconfiguration",
+        fallback: true
+      }), {
+        status: 500,
+        headers: { ...corsHeaders, "Content-Type": "application/json" }
+      });
+    }
+
+    // Create a Supabase client scoped to the user's session for auth + admin writes
+    supabaseClient = createClient(
+      SUPABASE_URL,
+      SUPABASE_SERVICE_ROLE_KEY,
+      {
+        global: {
+          headers: {
+            Authorization: req.headers.get("Authorization") ?? ""
+          }
+        }
+      }
+    );
+
+    const { data: authData, error: authError } = await supabaseClient.auth.getUser();
+
+    if (authError || !authData?.user) {
+      return new Response(JSON.stringify({
+        error: "Unauthorized",
+        fallback: true
+      }), {
+        status: 401,
+        headers: { ...corsHeaders, "Content-Type": "application/json" }
+      });
+    }
+
+    userId = authData.user.id;
+
     // Validate request body
     let body;
     try {
@@ -63,6 +127,61 @@ serve(async (req) => {
         headers: { ...corsHeaders, "Content-Type": "application/json" }
       });
     }
+
+    // Check AI usage limits
+    const currentPeriod = getCurrentPeriodStart();
+    const { data: usageRow, error: usageError } = await supabaseClient
+      .from("ai_usage_limits")
+      .select("monthly_limit, used_this_month, period_start")
+      .eq("user_id", authData.user.id)
+      .maybeSingle();
+
+    if (usageError) {
+      console.error("Usage lookup failed", usageError);
+      throw usageError;
+    }
+
+    const monthlyLimit = usageRow?.monthly_limit ?? DEFAULT_MONTHLY_LIMIT;
+    const periodStart = usageRow?.period_start ? new Date(usageRow.period_start) : null;
+    const usedThisMonth = periodStart &&
+      periodStart.getUTCFullYear() === currentPeriod.getUTCFullYear() &&
+      periodStart.getUTCMonth() === currentPeriod.getUTCMonth()
+      ? usageRow?.used_this_month ?? 0
+      : 0;
+
+    if (monthlyLimit - usedThisMonth <= 0) {
+      const usage: UsageSummary = {
+        monthly_limit: monthlyLimit,
+        remaining: 0
+      };
+
+      return new Response(JSON.stringify({
+        error: "Monthly AI analysis limit reached",
+        usage,
+        fallback: true
+      }), {
+        status: 429,
+        headers: { ...corsHeaders, "Content-Type": "application/json" }
+      });
+    }
+
+    // Reserve the usage before calling the AI model to avoid double spending
+    const { error: usageUpdateError } = await supabaseClient
+      .from("ai_usage_limits")
+      .upsert({
+        user_id: authData.user.id,
+        monthly_limit: monthlyLimit,
+        used_this_month: usedThisMonth + 1,
+        period_start: currentPeriod.toISOString(),
+        updated_at: new Date().toISOString()
+      }, { onConflict: "user_id" });
+
+    if (usageUpdateError) {
+      console.error("Usage update failed", usageUpdateError);
+      throw usageUpdateError;
+    }
+
+    usageReserved = true;
 
     // Call Gemini Vision API
     const GEMINI_API_KEY = Deno.env.get("GEMINI_API_KEY");
@@ -131,13 +250,57 @@ serve(async (req) => {
     const jsonStr = text.replace(/```json/g, '').replace(/```/g, '').trim();
     const analysis = JSON.parse(jsonStr);
 
-    return new Response(JSON.stringify(analysis), {
+    const usage: UsageSummary = {
+      monthly_limit: monthlyLimit,
+      remaining: Math.max(monthlyLimit - (usedThisMonth + 1), 0)
+    };
+
+    return new Response(JSON.stringify({ analysis, usage }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" }
     });
   } catch (error) {
     console.error("Error analyzing outfit:", error);
+
+    if (usageReserved && supabaseClient && userId) {
+      try {
+        const currentPeriod = getCurrentPeriodStart();
+        const { data: usageRow, error: rollbackFetchError } = await supabaseClient
+          .from("ai_usage_limits")
+          .select("used_this_month, period_start")
+          .eq("user_id", userId)
+          .maybeSingle();
+
+        if (rollbackFetchError) {
+          console.warn("Failed to load usage for rollback", rollbackFetchError);
+        }
+
+        if (usageRow) {
+          const periodStart = usageRow.period_start ? new Date(usageRow.period_start) : null;
+          const isCurrentPeriod = periodStart &&
+            periodStart.getUTCFullYear() === currentPeriod.getUTCFullYear() &&
+            periodStart.getUTCMonth() === currentPeriod.getUTCMonth();
+
+          const usedThisMonth = isCurrentPeriod ? usageRow.used_this_month ?? 0 : 0;
+          const newUsedValue = Math.max(usedThisMonth - 1, 0);
+
+          const { error: rollbackError } = await supabaseClient
+            .from("ai_usage_limits")
+            .update({ used_this_month: newUsedValue, updated_at: new Date().toISOString() })
+            .eq("user_id", userId);
+
+          if (rollbackError) {
+            console.warn("Failed to rollback AI usage after error", rollbackError);
+          }
+        }
+      } catch (rollbackUnexpectedError) {
+        console.warn("Unexpected error during usage rollback", rollbackUnexpectedError);
+      }
+    }
+
+    const errorMessage = error instanceof Error ? error.message : "An unexpected error occurred";
+
     return new Response(JSON.stringify({
-      error: error.message,
+      error: errorMessage,
       fallback: true
     }), {
       status: 500,

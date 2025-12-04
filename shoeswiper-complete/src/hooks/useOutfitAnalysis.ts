@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Shoe } from '../lib/types';
 import { DEMO_MODE, MOCK_SHOES } from '../lib/mockData';
 import { supabase } from '../lib/supabaseClient';
@@ -33,6 +33,11 @@ export interface OutfitAnalysis {
   feedback: string;
 }
 
+export interface UsageSummary {
+  monthly_limit: number;
+  remaining: number;
+}
+
 interface OutfitAnalysisShoeResult {
   id: string;
   name: string;
@@ -50,6 +55,28 @@ export const useOutfitAnalysis = () => {
   const [analysis, setAnalysis] = useState<OutfitAnalysis | null>(null);
   const [recommendations, setRecommendations] = useState<Shoe[]>([]);
   const [error, setError] = useState<string | null>(null);
+  const [usage, setUsage] = useState<UsageSummary | null>(null);
+
+  const DEFAULT_MONTHLY_LIMIT = 10;
+  const DEMO_MONTHLY_LIMIT = 5;
+
+  const getCurrentPeriodStart = () => {
+    const now = new Date();
+    return new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), 1));
+  };
+
+  const computeRemaining = (monthlyLimit: number, usedThisMonth: number, periodStart?: string | null) => {
+    if (!periodStart) return Math.max(monthlyLimit - usedThisMonth, 0);
+
+    const currentPeriod = getCurrentPeriodStart();
+    const start = new Date(periodStart);
+
+    if (start.getUTCFullYear() !== currentPeriod.getUTCFullYear() || start.getUTCMonth() !== currentPeriod.getUTCMonth()) {
+      return monthlyLimit;
+    }
+
+    return Math.max(monthlyLimit - usedThisMonth, 0);
+  };
 
   // Helper to fetch recommendations using our SQL function
   const fetchRecommendations = async (styles: string[], colors: string[]) => {
@@ -108,6 +135,11 @@ export const useOutfitAnalysis = () => {
         feedback: 'Great style! Here are some sneakers that would match perfectly.'
       };
       setAnalysis(mockResult);
+      setUsage(prev => {
+        const monthlyLimit = prev?.monthly_limit ?? DEMO_MONTHLY_LIMIT;
+        const remaining = Math.max((prev?.remaining ?? monthlyLimit) - 1, 0);
+        return { monthly_limit: monthlyLimit, remaining };
+      });
       await fetchRecommendations(mockResult.style_tags, mockResult.dominant_colors);
       setIsAnalyzing(false);
       return;
@@ -125,9 +157,20 @@ export const useOutfitAnalysis = () => {
         body: { image: base64Image }
       });
 
-      if (aiError) throw new Error('AI Service Unavailable');
+      if (aiData?.usage) {
+        setUsage(aiData.usage as UsageSummary);
+      }
 
-      const result: OutfitAnalysis = aiData;
+      if (aiError) {
+        const errorMessage = (aiData as { error?: string })?.error || aiError.message || 'AI Service Unavailable';
+        throw new Error(errorMessage);
+      }
+
+      if (aiData?.error) {
+        throw new Error(aiData.error as string);
+      }
+
+      const result: OutfitAnalysis = (aiData as { analysis?: OutfitAnalysis })?.analysis ?? (aiData as OutfitAnalysis);
       setAnalysis(result);
 
       // Perform the smart match
@@ -137,6 +180,7 @@ export const useOutfitAnalysis = () => {
       console.error(err);
       const errorMessage = err instanceof Error ? err.message : "AI Analysis unavailable. Select your style manually.";
       setError(errorMessage);
+      setAnalysis(null);
     } finally {
       setIsAnalyzing(false);
     }
@@ -160,5 +204,33 @@ export const useOutfitAnalysis = () => {
     setIsAnalyzing(false);
   };
 
-  return { analyzeImage, manualAnalyze, isAnalyzing, analysis, recommendations, error };
+  // Initial usage fetch (non-blocking)
+  useEffect(() => {
+    const loadUsage = async () => {
+      if (DEMO_MODE) {
+        setUsage({ monthly_limit: DEMO_MONTHLY_LIMIT, remaining: DEMO_MONTHLY_LIMIT });
+        return;
+      }
+
+      const { data, error: usageError } = await supabase
+        .from('ai_usage_limits')
+        .select('monthly_limit, used_this_month, period_start')
+        .maybeSingle();
+
+      if (usageError) {
+        console.error('Failed to fetch AI usage limits', usageError);
+        return;
+      }
+
+      const monthlyLimit = data?.monthly_limit ?? DEFAULT_MONTHLY_LIMIT;
+      const usedThisMonth = data?.used_this_month ?? 0;
+      const remaining = computeRemaining(monthlyLimit, usedThisMonth, data?.period_start as string | null);
+
+      setUsage({ monthly_limit: monthlyLimit, remaining });
+    };
+
+    loadUsage();
+  }, []);
+
+  return { analyzeImage, manualAnalyze, isAnalyzing, analysis, recommendations, error, usage };
 };

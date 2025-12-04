@@ -8,7 +8,7 @@ import { ManualStyleSelector } from '../components/check-fit/ManualStyleSelector
 export const CheckMyFit: React.FC = () => {
   const [imagePreview, setImagePreview] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const { analyzeImage, manualAnalyze, isAnalyzing, analysis, recommendations, error } = useOutfitAnalysis();
+  const { analyzeImage, manualAnalyze, isAnalyzing, analysis, recommendations, error, usage } = useOutfitAnalysis();
 
   const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
@@ -34,7 +34,18 @@ export const CheckMyFit: React.FC = () => {
       </header>
 
       <main className="p-4 max-w-md mx-auto">
-        
+
+        {usage && (
+          <div className="mb-4 bg-zinc-900 border border-zinc-800 rounded-xl p-4 shadow-lg">
+            <p className="text-sm font-semibold text-white">
+              {usage.remaining > 0
+                ? `${usage.remaining} free analyses left this month`
+                : `You've used all ${usage.monthly_limit} free analyses this month`}
+            </p>
+            <p className="text-xs text-zinc-400 mt-1">Usage resets monthly. Upgrade options coming soon.</p>
+          </div>
+        )}
+
         {/* State 1: Upload / Capture */}
         {!imagePreview && (
           <div className="flex flex-col items-center justify-center h-[70vh] border-2 border-dashed border-zinc-700 rounded-3xl bg-zinc-900/30">

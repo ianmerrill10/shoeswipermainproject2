@@ -57,19 +57,38 @@ const mockSelect = vi.fn().mockReturnThis();
 const mockOrder = vi.fn().mockReturnThis();
 const mockLimit = vi.fn().mockReturnThis();
 
-vi.mock('../../lib/supabaseClient', () => ({
-  supabase: {
-    functions: {
-      invoke: (...args: unknown[]) => mockInvoke(...args),
-    },
-    rpc: (...args: unknown[]) => mockRpc(...args),
-    from: vi.fn(() => ({
-      select: mockSelect,
-      order: mockOrder,
-      limit: mockLimit,
+vi.mock('../../lib/supabaseClient', () => {
+  const usageSelect = vi.fn(() => ({
+    maybeSingle: vi.fn(async () => ({
+      data: {
+        monthly_limit: 5,
+        used_this_month: 1,
+        period_start: new Date().toISOString(),
+      },
+      error: null,
     })),
-  },
-}));
+  }));
+
+  return {
+    supabase: {
+      functions: {
+        invoke: (...args: unknown[]) => mockInvoke(...args),
+      },
+      rpc: (...args: unknown[]) => mockRpc(...args),
+      from: vi.fn((table: string) => {
+        if (table === 'ai_usage_limits') {
+          return { select: usageSelect } as any;
+        }
+
+        return {
+          select: mockSelect,
+          order: mockOrder,
+          limit: mockLimit,
+        };
+      }),
+    },
+  };
+});
 
 describe('useOutfitAnalysis', () => {
   beforeEach(() => {
@@ -107,6 +126,7 @@ describe('useOutfitAnalysis', () => {
     expect(result.current.analysis?.dominant_colors).toContain('white');
     expect(result.current.analysis?.detected_shoe).toBe('Demo Analysis');
     expect(result.current.error).toBeNull();
+    expect(result.current.usage?.monthly_limit).toBe(5);
   });
 
   it('should provide recommendations after demo analysis', async () => {
@@ -202,10 +222,118 @@ describe('useOutfitAnalysis - Production Mode', () => {
     vi.resetModules();
   });
 
-  it('should call Supabase edge function in production mode', async () => {
-    // We can't easily test production mode without resetting all mocks,
-    // but we can verify the mock setup is correct
-    expect(mockInvoke).toBeDefined();
-    expect(mockRpc).toBeDefined();
+  it('should surface remaining usage after successful analysis', async () => {
+    vi.doMock('../../lib/config', () => ({ DEMO_MODE: false }));
+    vi.doMock('../../lib/mockData', () => ({ DEMO_MODE: false, MOCK_SHOES: [] }));
+
+    const usageSelect = vi.fn(() => ({
+      maybeSingle: vi.fn(async () => ({
+        data: {
+          monthly_limit: 3,
+          used_this_month: 1,
+          period_start: new Date().toISOString(),
+        },
+        error: null,
+      })),
+    }));
+
+    const mockAnalysis = {
+      rating: 7,
+      style_tags: ['streetwear'],
+      dominant_colors: ['black'],
+      detected_shoe: 'Test shoe',
+      feedback: 'Looks good',
+    };
+
+    vi.doMock('../../lib/supabaseClient', () => ({
+      supabase: {
+        functions: {
+          invoke: vi.fn(async () => ({
+            data: { analysis: mockAnalysis, usage: { monthly_limit: 3, remaining: 1 } },
+            error: null,
+          })),
+        },
+        rpc: vi.fn(async () => ({ data: [], error: null })),
+        from: vi.fn((table: string) => {
+          if (table === 'ai_usage_limits') {
+            return { select: usageSelect } as any;
+          }
+
+          return {
+            select: vi.fn().mockReturnThis(),
+            order: vi.fn().mockReturnThis(),
+            limit: vi.fn().mockResolvedValue({ data: [], error: null }),
+          };
+        }),
+      },
+    }));
+
+    const { useOutfitAnalysis: prodUseOutfitAnalysis } = await import('../useOutfitAnalysis');
+    const { result } = renderHook(() => prodUseOutfitAnalysis());
+
+    const mockFile = new File(['test'], 'test.jpg', { type: 'image/jpeg' });
+
+    await act(async () => {
+      await result.current.analyzeImage(mockFile);
+    });
+
+    await waitFor(() => {
+      expect(result.current.analysis?.rating).toBe(7);
+      expect(result.current.usage?.remaining).toBe(1);
+    });
+  });
+
+  it('should surface quota errors when limit is reached', async () => {
+    vi.doMock('../../lib/config', () => ({ DEMO_MODE: false }));
+    vi.doMock('../../lib/mockData', () => ({ DEMO_MODE: false, MOCK_SHOES: [] }));
+
+    const usageSelect = vi.fn(() => ({
+      maybeSingle: vi.fn(async () => ({
+        data: {
+          monthly_limit: 1,
+          used_this_month: 1,
+          period_start: new Date().toISOString(),
+        },
+        error: null,
+      })),
+    }));
+
+    vi.doMock('../../lib/supabaseClient', () => ({
+      supabase: {
+        functions: {
+          invoke: vi.fn(async () => ({
+            data: { error: 'Monthly AI analysis limit reached', usage: { monthly_limit: 1, remaining: 0 } },
+            error: { message: 'Monthly AI analysis limit reached' },
+          })),
+        },
+        rpc: vi.fn(async () => ({ data: [], error: null })),
+        from: vi.fn((table: string) => {
+          if (table === 'ai_usage_limits') {
+            return { select: usageSelect } as any;
+          }
+
+          return {
+            select: vi.fn().mockReturnThis(),
+            order: vi.fn().mockReturnThis(),
+            limit: vi.fn().mockResolvedValue({ data: [], error: null }),
+          };
+        }),
+      },
+    }));
+
+    const { useOutfitAnalysis: prodUseOutfitAnalysis } = await import('../useOutfitAnalysis');
+    const { result } = renderHook(() => prodUseOutfitAnalysis());
+
+    const mockFile = new File(['test'], 'test.jpg', { type: 'image/jpeg' });
+
+    await act(async () => {
+      await result.current.analyzeImage(mockFile);
+    });
+
+    await waitFor(() => {
+      expect(result.current.error).toContain('Monthly AI analysis limit reached');
+      expect(result.current.usage?.remaining).toBe(0);
+      expect(result.current.analysis).toBeNull();
+    });
   });
 });
