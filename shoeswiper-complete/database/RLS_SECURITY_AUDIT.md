@@ -139,9 +139,26 @@ CREATE POLICY "Admin can manage generation queue" ON blog_generation_queue
 
 ## Medium Priority Issues Fixed
 
-### 9. `user_referrals` - Duplicate SELECT Policies
-**Issue:** Conflicting policies (own data + public codes)  
-**Fix:** Clarified policy - users see own data, public can verify codes exist
+### 9. `user_referrals` - Overly Permissive Public SELECT Policy
+**Issue:** Policy "Public can view referral codes" with `USING (true)` exposed all referral data including `user_id`, `total_signups`, `earned_rewards`, etc. to any user  
+**Risk:** Sensitive user data exposure, business intelligence leakage  
+**Fix:** Removed the overly permissive policy and created a secure `validate_referral_code(TEXT)` function that only returns whether a code exists (boolean), exposing no user data
+
+```sql
+-- BEFORE (VULNERABLE):
+CREATE POLICY "Public can view referral codes" ON user_referrals 
+    FOR SELECT USING (true);
+
+-- AFTER (SECURE):
+-- Removed public SELECT policy
+-- Created secure function for code validation only:
+CREATE OR REPLACE FUNCTION validate_referral_code(referral_code TEXT)
+RETURNS BOOLEAN AS $$
+BEGIN
+    RETURN EXISTS (SELECT 1 FROM user_referrals WHERE code = referral_code);
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
+```
 
 ---
 
@@ -152,6 +169,7 @@ CREATE POLICY "Admin can manage generation queue" ON blog_generation_queue
 3. **Foreign Key Relationships:** All FK relationships properly cascade deletes
 4. **Sensitive Data Protection:** User data is properly scoped to authenticated users
 5. **Public Data:** Only appropriate data (active shoes, published posts) is publicly readable
+6. **Secure Functions:** Where public access is needed (e.g., referral code validation), secure functions expose minimal data
 
 ---
 

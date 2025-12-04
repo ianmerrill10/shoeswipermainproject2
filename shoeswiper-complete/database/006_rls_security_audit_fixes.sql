@@ -178,23 +178,37 @@ CREATE POLICY "Admin can view all comments" ON blog_comments
 
 -- 3.1 FIX: user_referrals - duplicate SELECT policies
 -- Remove the overly permissive "Public can view referral codes" policy
--- This could leak user data. Instead, create a specific policy for code lookup
+-- This could leak user data (user_id, earnings, signup counts, etc.)
 DROP POLICY IF EXISTS "Public can view referral codes" ON user_referrals;
 
--- Allow public to check if a referral code exists (for validation during signup)
--- but don't expose user_id or other sensitive data
-CREATE POLICY "Public can verify referral codes exist" ON user_referrals 
-    FOR SELECT USING (
-        -- Only allow selecting the code column essentially
-        -- Users can view their own full data
-        auth.uid() = user_id 
-        OR 
-        -- Public can see codes exist (for validation) but this is limited by what's selected
-        true
-    );
+-- Only allow users to view their own referral data
+-- The existing "Users can view own referral data" policy in 003 handles this
+-- For public referral code validation, use the secure function below
 
--- Note: The application should only SELECT the 'code' column for public verification
--- Full data is protected by only exposing necessary columns in API
+-- Create a secure function for public referral code validation
+-- This function only returns whether the code exists, not any user data
+CREATE OR REPLACE FUNCTION validate_referral_code(referral_code TEXT)
+RETURNS BOOLEAN AS $$
+BEGIN
+    -- Input validation: return false for null, empty, or overly long codes
+    IF referral_code IS NULL OR LENGTH(TRIM(referral_code)) = 0 THEN
+        RETURN FALSE;
+    END IF;
+    
+    -- Limit code length to prevent abuse (referral codes should be reasonable length)
+    IF LENGTH(referral_code) > 50 THEN
+        RETURN FALSE;
+    END IF;
+    
+    -- Only return whether the code exists, no user data exposed
+    -- PostgreSQL parameterized queries handle SQL injection protection
+    RETURN EXISTS (SELECT 1 FROM user_referrals WHERE code = TRIM(referral_code));
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
+
+-- Grant execute to public for code validation during signup
+GRANT EXECUTE ON FUNCTION validate_referral_code(TEXT) TO anon;
+GRANT EXECUTE ON FUNCTION validate_referral_code(TEXT) TO authenticated;
 
 -- 3.2: No UPDATE needed for favorites (users just add/remove, not update)
 -- 3.3: No UPDATE needed for user_sneakers (users just add/remove, not update)
