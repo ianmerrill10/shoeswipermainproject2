@@ -20,8 +20,7 @@ import { apiClient, get, post, put, del } from './apiClient';
 import { 
   shoeKeys, 
   userKeys, 
-  StaleTime, 
-  CacheTime,
+  StaleTime,
   createOptimisticUpdate,
 } from './apiQueryConfig';
 import { Shoe } from './types';
@@ -176,7 +175,6 @@ export function useInfiniteShoes(
       PaginatedResponse<Shoe>,
       ApiError,
       InfiniteData<PaginatedResponse<Shoe>>,
-      PaginatedResponse<Shoe>,
       QueryKey,
       number
     >,

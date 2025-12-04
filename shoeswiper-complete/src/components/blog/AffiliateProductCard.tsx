@@ -1,4 +1,3 @@
-import React from 'react';
 import { FaAmazon } from 'react-icons/fa';
 import { AffiliateProduct } from '../../lib/blogTypes';
 import { useRecordAffiliateClick } from '../../hooks/useBlog';

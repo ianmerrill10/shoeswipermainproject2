@@ -145,7 +145,6 @@ export const requestLoggingInterceptor: RequestInterceptor = (url, options) => {
 export const responseLoggingInterceptor: ResponseInterceptor = async (response, request) => {
   if (import.meta.env.DEV) {
     const method = (request.options.method || 'GET').toUpperCase();
-    const duration = performance.now(); // Note: This won't be accurate, just for illustration
     // eslint-disable-next-line no-console
     console.log(
       `[API Response] ${method} ${request.url} - ${response.status} ${response.statusText}`

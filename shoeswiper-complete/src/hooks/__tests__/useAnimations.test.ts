@@ -116,7 +116,7 @@ describe('useHaptics', () => {
   it('should report isSupported as false when vibrate does not exist', () => {
     // Use Object.defineProperty with proper descriptor
     const tempNav = Object.assign({}, navigator);
-    delete (tempNav as Record<string, unknown>).vibrate;
+    delete (tempNav as unknown as Record<string, unknown>).vibrate;
     Object.defineProperty(window, 'navigator', {
       value: tempNav,
       configurable: true,
