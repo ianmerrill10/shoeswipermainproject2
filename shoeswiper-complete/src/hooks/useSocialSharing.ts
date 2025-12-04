@@ -86,7 +86,9 @@ export const useSocialSharing = (referralCode?: string) => {
     if (DEMO_MODE) {
       demoShareAnalytics.push(event);
       if (import.meta.env.DEV) {
-        console.warn('[Social Share] Event tracked:', event);
+        // Using console.debug for non-error development logging
+        // eslint-disable-next-line no-console
+        console.debug('[Social Share] Event tracked:', event);
       }
     } else {
       // Production: send to Supabase
@@ -121,7 +123,10 @@ export const useSocialSharing = (referralCode?: string) => {
       return { success: false, method: 'cancelled', error: 'Native share not supported' };
     }
 
-    const utm = generateUTMParams('whatsapp', content.type); // Generic mobile share
+    // For native sharing (Web Share API), we use 'whatsapp' as the UTM content
+    // since it's primarily used on mobile devices where WhatsApp is common.
+    // The actual platform shared to is determined by the user's device share sheet.
+    const utm = generateUTMParams('whatsapp', content.type);
     const shareUrl = buildTrackedUrl(content.url, utm, referralCode);
 
     try {
