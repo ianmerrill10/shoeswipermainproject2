@@ -323,6 +323,7 @@ Only users with emails in `ALLOWED_EMAILS` can access the application in product
 - [API Documentation](docs/API.md) - Hooks and component documentation
 - [Architecture Overview](docs/ARCHITECTURE.md) - System design and data flow
 - [Deployment Guide](docs/DEPLOYMENT.md) - Production deployment instructions
+- [Agent Orchestration](docs/AGENT-ORCHESTRATION.md) - AI agent automation system
 - [Security Policy](SECURITY.md) - Security practices and vulnerability reporting
 - [Contributing Guide](CONTRIBUTING.md) - How to contribute to the project
 
