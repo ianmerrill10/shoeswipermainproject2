@@ -12,16 +12,13 @@ import {
   UseMutationOptions,
   QueryKey,
   useInfiniteQuery,
-  UseInfiniteQueryOptions,
-  InfiniteData,
 } from '@tanstack/react-query';
 import { ApiError, PaginatedResponse, ShoeApiResponse, UserPreferencesApiResponse } from './apiTypes';
 import { apiClient, get, post, put, del } from './apiClient';
 import { 
   shoeKeys, 
   userKeys, 
-  StaleTime, 
-  CacheTime,
+  StaleTime,
   createOptimisticUpdate,
 } from './apiQueryConfig';
 import { Shoe } from './types';
@@ -170,26 +167,9 @@ export function useInfiniteShoes(
     brand?: string;
     gender?: 'men' | 'women' | 'unisex' | 'kids';
     styleTags?: string[];
-  } = {},
-  options?: Omit<
-    UseInfiniteQueryOptions<
-      PaginatedResponse<Shoe>,
-      ApiError,
-      InfiniteData<PaginatedResponse<Shoe>>,
-      PaginatedResponse<Shoe>,
-      QueryKey,
-      number
-    >,
-    'queryKey' | 'queryFn' | 'getNextPageParam' | 'initialPageParam'
-  >
+  } = {}
 ) {
-  return useInfiniteQuery<
-    PaginatedResponse<Shoe>,
-    ApiError,
-    InfiniteData<PaginatedResponse<Shoe>>,
-    QueryKey,
-    number
-  >({
+  return useInfiniteQuery({
     queryKey: [...shoeKeys.lists(), 'infinite', filters],
     queryFn: async ({ pageParam }) => {
       const response = await apiClient.get<PaginatedResponse<Shoe>>('/shoes', {
@@ -203,14 +183,13 @@ export function useInfiniteShoes(
       return response.data;
     },
     initialPageParam: 1,
-    getNextPageParam: (lastPage) => {
+    getNextPageParam: (lastPage: PaginatedResponse<Shoe>) => {
       if (lastPage.pagination.hasMore) {
         return lastPage.pagination.page + 1;
       }
       return undefined;
     },
     staleTime: StaleTime.SHORT,
-    ...options,
   });
 }
 

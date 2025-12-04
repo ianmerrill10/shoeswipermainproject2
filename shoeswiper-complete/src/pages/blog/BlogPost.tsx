@@ -55,7 +55,7 @@ export default function BlogPost() {
   if (isLoading) {
     return (
       <div className="min-h-screen bg-gray-50">
-        <BlogHeader />
+        <BlogHeader blogType={blogType} />
         <div className="max-w-4xl mx-auto px-4 py-8">
           <div className="animate-pulse">
             <div className="h-8 bg-gray-200 rounded w-3/4 mb-4" />
@@ -75,7 +75,7 @@ export default function BlogPost() {
   if (error || !post) {
     return (
       <div className="min-h-screen bg-gray-50">
-        <BlogHeader />
+        <BlogHeader blogType={blogType} />
         <div className="max-w-4xl mx-auto px-4 py-16 text-center">
           <h1 className="text-4xl font-bold text-gray-900 mb-4">Post Not Found</h1>
           <p className="text-gray-600 mb-8">
@@ -94,7 +94,7 @@ export default function BlogPost() {
 
   return (
     <div className="min-h-screen bg-gray-50">
-      <BlogHeader />
+      <BlogHeader blogType={blogType} />
 
       {/* Breadcrumb */}
       <div className="bg-white border-b">

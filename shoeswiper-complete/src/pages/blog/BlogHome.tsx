@@ -28,7 +28,7 @@ export default function BlogHome() {
 
   return (
     <div className="min-h-screen bg-gray-50">
-      <BlogHeader />
+      <BlogHeader blogType="sneaker" />
       
       {/* Hero Section */}
       <section className="bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900 text-white py-16 px-4">

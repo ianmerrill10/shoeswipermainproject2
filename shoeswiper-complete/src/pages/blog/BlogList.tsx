@@ -63,7 +63,7 @@ export default function BlogList() {
   if (!BLOG_CONFIGS[blogType]) {
     return (
       <div className="min-h-screen bg-gray-50">
-        <BlogHeader />
+        <BlogHeader blogType="sneaker" />
         <div className="max-w-4xl mx-auto px-4 py-16 text-center">
           <h1 className="text-4xl font-bold text-gray-900 mb-4">Category Not Found</h1>
           <p className="text-gray-600 mb-8">
@@ -82,7 +82,7 @@ export default function BlogList() {
 
   return (
     <div className="min-h-screen bg-gray-50">
-      <BlogHeader />
+      <BlogHeader blogType={blogType} />
 
       {/* Category Hero */}
       <section 

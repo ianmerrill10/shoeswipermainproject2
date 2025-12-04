@@ -21,8 +21,9 @@ export class ApiError extends Error {
     super(message);
     this.name = 'ApiError';
     // Maintain proper stack trace for where error was thrown
-    if (Error.captureStackTrace) {
-      Error.captureStackTrace(this, ApiError);
+    const ErrorWithCapture = Error as unknown as { captureStackTrace?: (target: Error, constructor: NewableFunction) => void };
+    if (typeof ErrorWithCapture.captureStackTrace === 'function') {
+      ErrorWithCapture.captureStackTrace(this, ApiError);
     }
   }
 
@@ -87,8 +88,9 @@ export class NetworkError extends Error {
   constructor(message: string = 'Network request failed') {
     super(message);
     this.name = 'NetworkError';
-    if (Error.captureStackTrace) {
-      Error.captureStackTrace(this, NetworkError);
+    const ErrorWithCapture = Error as unknown as { captureStackTrace?: (target: Error, constructor: NewableFunction) => void };
+    if (typeof ErrorWithCapture.captureStackTrace === 'function') {
+      ErrorWithCapture.captureStackTrace(this, NetworkError);
     }
   }
 
@@ -104,8 +106,9 @@ export class TimeoutError extends Error {
   constructor(message: string = 'Request timed out') {
     super(message);
     this.name = 'TimeoutError';
-    if (Error.captureStackTrace) {
-      Error.captureStackTrace(this, TimeoutError);
+    const ErrorWithCapture = Error as unknown as { captureStackTrace?: (target: Error, constructor: NewableFunction) => void };
+    if (typeof ErrorWithCapture.captureStackTrace === 'function') {
+      ErrorWithCapture.captureStackTrace(this, TimeoutError);
     }
   }
 
