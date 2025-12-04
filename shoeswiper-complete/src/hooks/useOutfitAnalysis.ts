@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { Shoe } from '../lib/types';
 import { DEMO_MODE, MOCK_SHOES } from '../lib/mockData';
 import { supabase } from '../lib/supabaseClient';
+import { analyzeOutfit as analyzeOutfitApi, matchShoesForOutfit } from '../lib/edgeFunctionsApi';
 
 /**
  * AI-powered outfit analysis hook for sneaker recommendations.
@@ -62,29 +63,31 @@ export const useOutfitAnalysis = () => {
       return;
     }
 
-    // PRODUCTION MODE: Use Supabase
+    // PRODUCTION MODE: Use Edge Functions API
     try {
-      // Call the RPC function we created in SQL
-      const { data, error } = await supabase.rpc('match_shoes_for_outfit', {
-        query_styles: styles,
-        query_colors: colors
-      });
-
-      if (error) throw error;
-
-      // Ensure affiliate tags exist on returned data
-      const taggedData = (data || []).map((shoe: OutfitAnalysisShoeResult) => ({
-        ...shoe,
-        media: { has_3d_model: false },
-        amazon_url: shoe.amazon_url.includes('shoeswiper-20')
-          ? shoe.amazon_url
-          : `${shoe.amazon_url}${shoe.amazon_url.includes('?') ? '&' : '?'}tag=shoeswiper-20`
-      }));
-
-      setRecommendations(taggedData);
+      const result = await matchShoesForOutfit(styles, colors, 5);
+      
+      if (result.success) {
+        // Transform to Shoe type with required fields
+        const shoesWithDefaults = result.data.map((shoe: OutfitAnalysisShoeResult) => ({
+          ...shoe,
+          favorite_count: 0,
+          view_count: 0,
+          click_count: 0,
+          is_active: true,
+          is_featured: false,
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString(),
+          amazon_asin: '',
+        }));
+        setRecommendations(shoesWithDefaults as Shoe[]);
+      } else {
+        throw new Error(result.error);
+      }
     } catch (dbErr) {
       if (import.meta.env.DEV) {
-        console.error('Recommendation fetch failed:', dbErr);
+        // eslint-disable-next-line no-console
+        console.log('Recommendation fetch failed:', dbErr);
       }
       // Fallback: Just get popular shoes if matching fails
       const { data: fallback } = await supabase
@@ -115,21 +118,38 @@ export const useOutfitAnalysis = () => {
       return;
     }
 
-    // PRODUCTION MODE: Use Supabase AI
+    // PRODUCTION MODE: Use Edge Functions API
     try {
-      const base64Image = await new Promise<string>((resolve) => {
+      const base64Image = await new Promise<string>((resolve, reject) => {
         const reader = new FileReader();
         reader.readAsDataURL(file);
-        reader.onload = () => resolve((reader.result as string).split(',')[1]);
+        reader.onload = () => {
+          const result = reader.result as string;
+          // Extract base64 data after the comma
+          const base64Data = result.split(',')[1];
+          if (base64Data) {
+            resolve(base64Data);
+          } else {
+            reject(new Error('Failed to read image file'));
+          }
+        };
+        reader.onerror = () => reject(new Error('Failed to read image file'));
       });
 
-      const { data: aiData, error: aiError } = await supabase.functions.invoke('analyze-outfit', {
-        body: { image: base64Image }
-      });
+      const apiResult = await analyzeOutfitApi(base64Image);
 
-      if (aiError) throw new Error('AI Service Unavailable');
+      if (!apiResult.success) {
+        throw new Error(apiResult.error || 'AI Service Unavailable');
+      }
 
-      const result: OutfitAnalysis = aiData;
+      const result: OutfitAnalysis = {
+        rating: apiResult.data.rating,
+        style_tags: apiResult.data.style_tags,
+        dominant_colors: apiResult.data.dominant_colors,
+        detected_shoe: apiResult.data.detected_shoe || 'Not detected',
+        feedback: apiResult.data.feedback,
+      };
+      
       setAnalysis(result);
 
       // Perform the smart match
@@ -137,7 +157,8 @@ export const useOutfitAnalysis = () => {
 
     } catch (err: unknown) {
       if (import.meta.env.DEV) {
-        console.error(err);
+        // eslint-disable-next-line no-console
+        console.log('Outfit analysis error:', err);
       }
       const errorMessage = err instanceof Error ? err.message : "AI Analysis unavailable. Select your style manually.";
       setError(errorMessage);

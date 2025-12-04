@@ -118,6 +118,7 @@ export const useAnalytics = () => {
     // PRODUCTION MODE: Send to Supabase
     try {
       const { supabase } = await import('../lib/supabaseClient');
+      const { trackAffiliateClick } = await import('../lib/edgeFunctionsApi');
 
       await supabase.from('analytics_events').insert({
         event_type: event,
@@ -127,11 +128,8 @@ export const useAnalytics = () => {
 
       // Also update specific tracking tables based on event type
       if (event === 'shoe_click' && data.shoe_id) {
-        await supabase.from('affiliate_clicks').insert({
-          shoe_id: data.shoe_id,
-          clicked_at: timestamp,
-        });
-        await supabase.rpc('increment_shoe_click', { shoe_id: data.shoe_id });
+        // Use Edge Functions API for affiliate tracking
+        await trackAffiliateClick(data.shoe_id as string, 'analytics', data);
       }
 
       if (event === 'music_click' && data.platform) {
@@ -144,7 +142,10 @@ export const useAnalytics = () => {
         });
       }
     } catch (err) {
-      console.error('[Analytics] Error tracking event:', err);
+      if (import.meta.env.DEV) {
+        // eslint-disable-next-line no-console
+        console.log('[Analytics] Error tracking event:', err);
+      }
     }
   }, []);
 

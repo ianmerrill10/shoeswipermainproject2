@@ -2,6 +2,7 @@ import React from 'react';
 import { FaAmazon, FaCheck } from 'react-icons/fa';
 import { motion } from 'framer-motion';
 import { getAffiliateUrl } from '../lib/supabaseClient';
+import { trackAffiliateClick } from '../lib/edgeFunctionsApi';
 
 interface BuyNowButtonProps {
   amazonUrl: string;
@@ -28,6 +29,13 @@ export const BuyNowButton: React.FC<BuyNowButtonProps> = ({
   const buttonText = variant === 'compact' ? 'Buy' : 'Buy Now';
 
   const handleClick = (_e: React.MouseEvent<HTMLAnchorElement>) => {
+    // Track affiliate click for analytics (non-blocking)
+    if (shoeId) {
+      trackAffiliateClick(shoeId, 'buy_now_button').catch(() => {
+        // Non-blocking - analytics shouldn't prevent purchase
+      });
+    }
+    
     if (import.meta.env.DEV) {
       // eslint-disable-next-line no-console
       console.log('[BuyNowButton] Click tracked:', { shoeId, url: affiliateUrl });
