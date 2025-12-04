@@ -32,6 +32,8 @@ export default function BlogPost() {
       // Record view
       recordView.mutate({ blogType, postId: post.id });
     }
+    // Note: recordView is intentionally excluded from deps as we only want to record view once per post change
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [post, blogConfig.name, blogType]);
 
   // Format date

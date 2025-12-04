@@ -150,7 +150,8 @@ const SwipeFeedPage: React.FC = () => {
   }, [isFavorite, toggleFavorite, trackFavorite, shoes.length]);
 
   const handleSwipeLeft = useCallback((shoe: Shoe) => {
-    // Skip/dislike the shoe
+    // Skip/dislike the shoe - debug log for development only
+    // eslint-disable-next-line no-console
     if (import.meta.env.DEV) console.log('Swiped left on', shoe.name);
     
     // Move to next shoe after animation
