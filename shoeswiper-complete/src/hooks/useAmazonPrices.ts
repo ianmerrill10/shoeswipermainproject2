@@ -236,7 +236,10 @@ export const useShoePrice = (asin: string | undefined) => {
 
   return useQuery({
     queryKey: ['amazon-price', asin],
-    queryFn: () => getPrice(asin!),
+    queryFn: () => {
+      if (!asin) throw new Error('ASIN is required');
+      return getPrice(asin);
+    },
     enabled: !!asin && isApiEnabled,
     staleTime: AMAZON_API_CONFIG.cacheDuration,
     gcTime: AMAZON_API_CONFIG.cacheDuration * 2,

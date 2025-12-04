@@ -31,7 +31,7 @@ export const BuyNowButton: React.FC<BuyNowButtonProps> = ({
     // Track affiliate click for revenue attribution
     if (shoeId) {
       const asin = extractAsinFromUrl(amazonUrl);
-      trackAffiliateClick(shoeId, asin || undefined, 'buy_button');
+      trackAffiliateClick(shoeId, asin ?? undefined, 'buy_button');
     }
     
     if (import.meta.env.DEV) {

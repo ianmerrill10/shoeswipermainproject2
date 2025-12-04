@@ -103,8 +103,12 @@ export const trackAffiliateClick = async (
       if (import.meta.env.DEV) console.error('[Affiliate] Error tracking click:', clickError);
     }
 
-    // Increment shoe click count
-    await supabase.rpc('increment_shoe_click', { shoe_id: shoeId });
+    // Increment shoe click count (ignore errors as this RPC may not exist in all environments)
+    try {
+      await supabase.rpc('increment_shoe_click', { shoe_id: shoeId });
+    } catch (rpcError) {
+      if (import.meta.env.DEV) console.warn('[Affiliate] increment_shoe_click RPC not available:', rpcError);
+    }
   } catch (err) {
     if (import.meta.env.DEV) console.error('[Affiliate] Error tracking click:', err);
   }
