@@ -1,0 +1,290 @@
+name: Performance Monitoring
+
+on:
+  deployment_status:
+  schedule:
+    # Run every 6 hours
+    - cron: '0 */6 * * *'
+  workflow_dispatch:
+    inputs:
+      target_url:
+        description: 'URL to test (defaults to production)'
+        required: false
+        type: string
+
+permissions:
+  contents: read
+  issues: write
+  deployments: read
+
+env:
+  # Default production URL - will be overridden by deployment URL if available
+  DEFAULT_URL: 'https://shoeswiper.vercel.app'
+
+jobs:
+  lighthouse-audit:
+    name: Lighthouse Audit
+    runs-on: ubuntu-latest
+    if: github.event_name == 'workflow_dispatch' || github.event_name == 'schedule' || (github.event_name == 'deployment_status' && github.event.deployment_status.state == 'success')
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Determine target URL
+        id: target
+        run: |
+          if [ -n "${{ github.event.inputs.target_url }}" ]; then
+            TARGET_URL="${{ github.event.inputs.target_url }}"
+          elif [ -n "${{ github.event.deployment_status.target_url }}" ]; then
+            TARGET_URL="${{ github.event.deployment_status.target_url }}"
+          else
+            TARGET_URL="${{ env.DEFAULT_URL }}"
+          fi
+          echo "url=$TARGET_URL" >> $GITHUB_OUTPUT
+          echo "Target URL: $TARGET_URL"
+
+      - name: Wait for deployment to stabilize
+        run: sleep 30
+
+      - name: Run Lighthouse CI
+        uses: treosh/lighthouse-ci-action@v12
+        id: lighthouse
+        with:
+          urls: |
+            ${{ steps.target.outputs.url }}
+          uploadArtifacts: true
+          temporaryPublicStorage: true
+          runs: 3
+        continue-on-error: true
+
+      - name: Parse Lighthouse Results
+        id: parse
+        run: |
+          # Create a summary of Lighthouse scores
+          echo "## 📊 Lighthouse Performance Report" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "**Target URL:** ${{ steps.target.outputs.url }}" >> $GITHUB_STEP_SUMMARY
+          echo "**Tested at:** $(date -u +"%Y-%m-%d %H:%M:%S UTC")" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          
+          # Check if results exist
+          if [ -f ".lighthouseci/manifest.json" ]; then
+            echo "### Core Web Vitals" >> $GITHUB_STEP_SUMMARY
+            echo "" >> $GITHUB_STEP_SUMMARY
+            
+            # Parse scores from manifest
+            PERFORMANCE=$(jq -r '.[0].summary.performance // "N/A"' .lighthouseci/manifest.json 2>/dev/null || echo "N/A")
+            ACCESSIBILITY=$(jq -r '.[0].summary.accessibility // "N/A"' .lighthouseci/manifest.json 2>/dev/null || echo "N/A")
+            BEST_PRACTICES=$(jq -r '.[0].summary."best-practices" // "N/A"' .lighthouseci/manifest.json 2>/dev/null || echo "N/A")
+            SEO=$(jq -r '.[0].summary.seo // "N/A"' .lighthouseci/manifest.json 2>/dev/null || echo "N/A")
+            
+            echo "| Metric | Score |" >> $GITHUB_STEP_SUMMARY
+            echo "|--------|-------|" >> $GITHUB_STEP_SUMMARY
+            
+            # Format scores as percentages
+            if [ "$PERFORMANCE" != "N/A" ]; then
+              PERF_PCT=$(echo "$PERFORMANCE * 100" | bc 2>/dev/null || echo "N/A")
+              echo "| Performance | ${PERF_PCT}% |" >> $GITHUB_STEP_SUMMARY
+            fi
+            if [ "$ACCESSIBILITY" != "N/A" ]; then
+              ACC_PCT=$(echo "$ACCESSIBILITY * 100" | bc 2>/dev/null || echo "N/A")
+              echo "| Accessibility | ${ACC_PCT}% |" >> $GITHUB_STEP_SUMMARY
+            fi
+            if [ "$BEST_PRACTICES" != "N/A" ]; then
+              BP_PCT=$(echo "$BEST_PRACTICES * 100" | bc 2>/dev/null || echo "N/A")
+              echo "| Best Practices | ${BP_PCT}% |" >> $GITHUB_STEP_SUMMARY
+            fi
+            if [ "$SEO" != "N/A" ]; then
+              SEO_PCT=$(echo "$SEO * 100" | bc 2>/dev/null || echo "N/A")
+              echo "| SEO | ${SEO_PCT}% |" >> $GITHUB_STEP_SUMMARY
+            fi
+            
+            # Set outputs for alerting
+            echo "performance=$PERFORMANCE" >> $GITHUB_OUTPUT
+          else
+            echo "⚠️ Lighthouse results not found" >> $GITHUB_STEP_SUMMARY
+            echo "performance=0" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Alert on poor performance
+        if: steps.parse.outputs.performance != '' && steps.parse.outputs.performance != 'N/A'
+        run: |
+          PERF=${{ steps.parse.outputs.performance }}
+          THRESHOLD=0.5
+          
+          if (( $(echo "$PERF < $THRESHOLD" | bc -l 2>/dev/null || echo "0") )); then
+            echo "::warning::Performance score is below threshold ($PERF < $THRESHOLD)"
+          fi
+
+  uptime-check:
+    name: Uptime Check
+    runs-on: ubuntu-latest
+    if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
+    outputs:
+      status: ${{ steps.check.outputs.status }}
+      response_time: ${{ steps.check.outputs.response_time }}
+    steps:
+      - name: Check site availability
+        id: check
+        run: |
+          TARGET_URL="${{ github.event.inputs.target_url || env.DEFAULT_URL }}"
+          echo "🌐 Checking availability of: $TARGET_URL"
+          
+          # Measure response time and status
+          START=$(date +%s%N)
+          HTTP_STATUS=$(curl -s -o /dev/null -w "%{http_code}" --max-time 30 "$TARGET_URL" 2>/dev/null || echo "000")
+          END=$(date +%s%N)
+          
+          RESPONSE_TIME=$(( (END - START) / 1000000 ))
+          
+          echo "status=$HTTP_STATUS" >> $GITHUB_OUTPUT
+          echo "response_time=$RESPONSE_TIME" >> $GITHUB_OUTPUT
+          
+          echo "## 🏥 Uptime Check" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "| Metric | Value |" >> $GITHUB_STEP_SUMMARY
+          echo "|--------|-------|" >> $GITHUB_STEP_SUMMARY
+          echo "| URL | $TARGET_URL |" >> $GITHUB_STEP_SUMMARY
+          echo "| HTTP Status | $HTTP_STATUS |" >> $GITHUB_STEP_SUMMARY
+          echo "| Response Time | ${RESPONSE_TIME}ms |" >> $GITHUB_STEP_SUMMARY
+          echo "| Timestamp | $(date -u +"%Y-%m-%d %H:%M:%S UTC") |" >> $GITHUB_STEP_SUMMARY
+          
+          if [ "$HTTP_STATUS" = "200" ]; then
+            echo "✅ Site is healthy" >> $GITHUB_STEP_SUMMARY
+          else
+            echo "❌ Site may be experiencing issues" >> $GITHUB_STEP_SUMMARY
+            echo "::error::Site returned HTTP $HTTP_STATUS"
+          fi
+
+      - name: Alert on downtime
+        if: steps.check.outputs.status != '200'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const run_url = `${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}`;
+            
+            // Check for existing open downtime issues
+            const { data: issues } = await github.rest.issues.listForRepo({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              state: 'open',
+              labels: 'downtime'
+            });
+            
+            const existingIssue = issues.find(i => i.title.includes('Site Down'));
+            
+            if (existingIssue) {
+              // Add comment to existing issue
+              await github.rest.issues.createComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: existingIssue.number,
+                body: `### Continued Downtime Detected
+                
+                - **Status:** HTTP ${{ steps.check.outputs.status }}
+                - **Response Time:** ${{ steps.check.outputs.response_time }}ms
+                - **Timestamp:** ${new Date().toISOString()}
+                - **Workflow Run:** [View Logs](${run_url})`
+              });
+            } else {
+              // Create new issue
+              await github.rest.issues.create({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                title: `🚨 Site Down - HTTP ${{ steps.check.outputs.status }}`,
+                body: `## Site Downtime Alert
+                
+                The production site is experiencing issues.
+                
+                ### Details
+                - **URL:** ${{ env.DEFAULT_URL }}
+                - **HTTP Status:** ${{ steps.check.outputs.status }}
+                - **Response Time:** ${{ steps.check.outputs.response_time }}ms
+                - **Detected at:** ${new Date().toISOString()}
+                - **Workflow Run:** [View Logs](${run_url})
+                
+                ### Immediate Actions Required
+                1. Check Vercel deployment status
+                2. Verify Supabase connectivity
+                3. Check DNS resolution
+                4. Review recent deployments
+                
+                ---
+                _This issue was automatically created by the monitoring workflow._`,
+                labels: ['downtime', 'urgent', 'automated']
+              });
+            }
+
+  bundle-analysis:
+    name: Bundle Size Analysis
+    runs-on: ubuntu-latest
+    if: github.event_name == 'push' || github.event_name == 'pull_request'
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20.x'
+          cache: 'npm'
+          cache-dependency-path: shoeswiper-complete/package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+        working-directory: shoeswiper-complete
+
+      - name: Build and analyze
+        run: |
+          npm run build
+          
+          # Calculate bundle sizes
+          echo "## 📦 Bundle Analysis" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "| Asset | Size | Gzipped |" >> $GITHUB_STEP_SUMMARY
+          echo "|-------|------|---------|" >> $GITHUB_STEP_SUMMARY
+          
+          # Find all JS files in dist/assets
+          if [ -d "dist/assets" ]; then
+            for file in dist/assets/*.js; do
+              if [ -f "$file" ]; then
+                FILENAME=$(basename "$file")
+                SIZE=$(du -h "$file" | cut -f1)
+                GZIP_SIZE=$(gzip -c "$file" | wc -c | awk '{printf "%.1fK", $1/1024}')
+                echo "| $FILENAME | $SIZE | $GZIP_SIZE |" >> $GITHUB_STEP_SUMMARY
+              fi
+            done
+            
+            for file in dist/assets/*.css; do
+              if [ -f "$file" ]; then
+                FILENAME=$(basename "$file")
+                SIZE=$(du -h "$file" | cut -f1)
+                GZIP_SIZE=$(gzip -c "$file" | wc -c | awk '{printf "%.1fK", $1/1024}')
+                echo "| $FILENAME | $SIZE | $GZIP_SIZE |" >> $GITHUB_STEP_SUMMARY
+              fi
+            done
+          fi
+          
+          # Total size
+          TOTAL=$(du -sh dist | cut -f1)
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "**Total build size:** $TOTAL" >> $GITHUB_STEP_SUMMARY
+        working-directory: shoeswiper-complete
+
+  monitoring-summary:
+    name: Monitoring Summary
+    runs-on: ubuntu-latest
+    needs: [lighthouse-audit, uptime-check]
+    if: always() && (github.event_name == 'schedule' || github.event_name == 'workflow_dispatch')
+    steps:
+      - name: Create summary
+        run: |
+          echo "## 📈 Monitoring Summary" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "| Check | Status |" >> $GITHUB_STEP_SUMMARY
+          echo "|-------|--------|" >> $GITHUB_STEP_SUMMARY
+          echo "| Lighthouse | ${{ needs.lighthouse-audit.result }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Uptime | ${{ needs.uptime-check.result }} |" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "---" >> $GITHUB_STEP_SUMMARY
+          echo "*Monitoring completed at $(date -u +"%Y-%m-%d %H:%M:%S UTC")*" >> $GITHUB_STEP_SUMMARY

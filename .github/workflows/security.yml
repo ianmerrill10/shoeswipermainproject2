@@ -1,0 +1,263 @@
+name: Security Scanning
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
+  schedule:
+    # Run every day at 2 AM UTC
+    - cron: '0 2 * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  security-events: write
+
+jobs:
+  dependency-audit:
+    name: Dependency Audit
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20.x'
+          cache: 'npm'
+          cache-dependency-path: shoeswiper-complete/package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+        working-directory: shoeswiper-complete
+
+      - name: Run npm audit
+        run: |
+          echo "🔍 Running npm audit..."
+          npm audit --audit-level=high || true
+          
+          # Create audit report
+          npm audit --json > audit-report.json 2>/dev/null || true
+          
+          # Check for high/critical vulnerabilities
+          VULN_COUNT=$(npm audit --json 2>/dev/null | jq '.metadata.vulnerabilities.high + .metadata.vulnerabilities.critical' 2>/dev/null || echo "0")
+          
+          echo "High/Critical vulnerabilities found: $VULN_COUNT"
+          
+          if [ "$VULN_COUNT" -gt "0" ]; then
+            echo "⚠️ High or critical vulnerabilities detected!"
+            echo "::warning::High or critical vulnerabilities found in dependencies"
+          else
+            echo "✅ No high or critical vulnerabilities found"
+          fi
+        working-directory: shoeswiper-complete
+
+      - name: Upload audit report
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: npm-audit-report
+          path: shoeswiper-complete/audit-report.json
+          retention-days: 30
+
+  code-scanning:
+    name: Code Scanning
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Check for exposed secrets
+        run: |
+          echo "🔐 Scanning for exposed secrets..."
+          
+          # Check for potential API keys and secrets
+          PATTERNS=(
+            "sk_live_"
+            "sk_test_[a-zA-Z0-9]{24,}"
+            "pk_live_"
+            "AKIA[0-9A-Z]{16}"
+            "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9"
+            "ghp_[a-zA-Z0-9]{36}"
+            "github_pat_"
+          )
+          
+          FOUND_SECRETS=0
+          
+          for pattern in "${PATTERNS[@]}"; do
+            if grep -rE "$pattern" --include="*.ts" --include="*.tsx" --include="*.js" --include="*.json" shoeswiper-complete/src 2>/dev/null; then
+              echo "⚠️ Potential secret found matching pattern: $pattern"
+              FOUND_SECRETS=$((FOUND_SECRETS + 1))
+            fi
+          done
+          
+          if [ $FOUND_SECRETS -gt 0 ]; then
+            echo "::error::Potential secrets found in source code!"
+            exit 1
+          else
+            echo "✅ No exposed secrets found"
+          fi
+
+      - name: Check for VITE_ prefix misuse
+        run: |
+          echo "🔍 Checking for improper VITE_ prefix usage..."
+          
+          # Check for sensitive keys that should NOT have VITE_ prefix
+          SENSITIVE_PATTERNS=(
+            "VITE_.*SECRET"
+            "VITE_.*SERVICE_KEY"
+            "VITE_.*PRIVATE"
+            "VITE_.*API_KEY.*=.*sk_"
+            "VITE_GEMINI"
+            "VITE_STRIPE_SECRET"
+          )
+          
+          FOUND_ISSUES=0
+          
+          for pattern in "${SENSITIVE_PATTERNS[@]}"; do
+            if grep -rE "$pattern" --include="*.env*" --include="*.ts" --include="*.tsx" . 2>/dev/null | grep -v ".env.example"; then
+              echo "⚠️ Potential sensitive key with VITE_ prefix: $pattern"
+              FOUND_ISSUES=$((FOUND_ISSUES + 1))
+            fi
+          done
+          
+          if [ $FOUND_ISSUES -gt 0 ]; then
+            echo "::error::Sensitive keys should not have VITE_ prefix!"
+            exit 1
+          else
+            echo "✅ No VITE_ prefix misuse found"
+          fi
+
+      - name: Check for unguarded console.log
+        run: |
+          echo "📝 Checking for unguarded console.log statements..."
+          
+          # Find console.log that's not wrapped in DEV check
+          cd shoeswiper-complete/src
+          
+          # Get all console.log occurrences
+          CONSOLE_LOGS=$(grep -rn "console\.log" --include="*.ts" --include="*.tsx" . 2>/dev/null || true)
+          
+          if [ -n "$CONSOLE_LOGS" ]; then
+            # Check if they're properly guarded
+            UNGUARDED=0
+            while IFS= read -r line; do
+              FILE=$(echo "$line" | cut -d: -f1)
+              LINE_NUM=$(echo "$line" | cut -d: -f2)
+              
+              # Check if the line or surrounding context has DEV check
+              if ! grep -B 3 -A 1 "console\.log" "$FILE" 2>/dev/null | grep -q "import.meta.env.DEV"; then
+                echo "⚠️ Potentially unguarded console.log: $line"
+                UNGUARDED=$((UNGUARDED + 1))
+              fi
+            done <<< "$CONSOLE_LOGS"
+            
+            if [ $UNGUARDED -gt 0 ]; then
+              echo "::warning::Found $UNGUARDED potentially unguarded console.log statements"
+            fi
+          else
+            echo "✅ No console.log statements found"
+          fi
+
+  license-check:
+    name: License Check
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20.x'
+          cache: 'npm'
+          cache-dependency-path: shoeswiper-complete/package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+        working-directory: shoeswiper-complete
+
+      - name: Check licenses
+        run: |
+          echo "📜 Checking dependency licenses..."
+          
+          # Install license-checker
+          npm install -g license-checker
+          
+          # Run license check
+          license-checker --summary --production > license-summary.txt
+          
+          echo "License Summary:"
+          cat license-summary.txt
+          
+          # Check for problematic licenses
+          PROBLEMATIC_LICENSES="GPL-3.0|AGPL|SSPL|Commons Clause"
+          
+          if license-checker --production --csv | grep -E "$PROBLEMATIC_LICENSES"; then
+            echo "::warning::Found dependencies with potentially problematic licenses"
+          else
+            echo "✅ No problematic licenses found"
+          fi
+        working-directory: shoeswiper-complete
+
+      - name: Upload license report
+        uses: actions/upload-artifact@v4
+        with:
+          name: license-report
+          path: shoeswiper-complete/license-summary.txt
+          retention-days: 30
+
+  security-summary:
+    name: Security Summary
+    runs-on: ubuntu-latest
+    needs: [dependency-audit, code-scanning, license-check]
+    if: always()
+    steps:
+      - name: Generate summary
+        run: |
+          echo "## 🔐 Security Scan Summary" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "| Check | Status |" >> $GITHUB_STEP_SUMMARY
+          echo "|-------|--------|" >> $GITHUB_STEP_SUMMARY
+          echo "| Dependency Audit | ${{ needs.dependency-audit.result == 'success' && '✅ Passed' || '⚠️ Check logs' }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Code Scanning | ${{ needs.code-scanning.result == 'success' && '✅ Passed' || '❌ Issues found' }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| License Check | ${{ needs.license-check.result == 'success' && '✅ Passed' || '⚠️ Review needed' }} |" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "---" >> $GITHUB_STEP_SUMMARY
+          echo "*Scan completed at $(date -u +"%Y-%m-%d %H:%M:%S UTC")*" >> $GITHUB_STEP_SUMMARY
+
+      - name: Notify on critical failures
+        if: needs.code-scanning.result == 'failure'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const run_url = `${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}`;
+            
+            await github.rest.issues.create({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              title: `🚨 Security Scan Failed - ${new Date().toISOString().split('T')[0]}`,
+              body: `## Security Scan Alert
+              
+              The automated security scan has detected potential issues that require immediate attention.
+              
+              ### Details
+              - **Branch:** \`${{ github.ref_name }}\`
+              - **Commit:** \`${{ github.sha }}\`
+              - **Triggered by:** @${{ github.actor }}
+              - **Workflow Run:** [View Logs](${run_url})
+              
+              ### Required Actions
+              1. Review the security scan logs
+              2. Address any exposed secrets immediately
+              3. Fix code scanning issues
+              4. Re-run the security scan
+              
+              ---
+              _This issue was automatically created by the security scanning workflow._`,
+              labels: ['security', 'urgent', 'automated']
+            });

@@ -1,5 +1,8 @@
 # ShoeSwiper 👟
 
+[![CI](https://github.com/ianmerrill10/shoeswipermainproject2/actions/workflows/ci.yml/badge.svg)](https://github.com/ianmerrill10/shoeswipermainproject2/actions/workflows/ci.yml)
+[![Production Deployment](https://github.com/ianmerrill10/shoeswipermainproject2/actions/workflows/production.yml/badge.svg)](https://github.com/ianmerrill10/shoeswipermainproject2/actions/workflows/production.yml)
+[![Security Scanning](https://github.com/ianmerrill10/shoeswipermainproject2/actions/workflows/security.yml/badge.svg)](https://github.com/ianmerrill10/shoeswipermainproject2/actions/workflows/security.yml)
 [![Node.js Version](https://img.shields.io/badge/node-%3E%3D20.0.0-brightgreen)](https://nodejs.org/)
 [![React](https://img.shields.io/badge/React-18.2-blue)](https://reactjs.org/)
 [![TypeScript](https://img.shields.io/badge/TypeScript-5.2-blue)](https://www.typescriptlang.org/)

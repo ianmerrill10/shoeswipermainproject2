@@ -1,0 +1,138 @@
+name: Deployment Status
+
+on:
+  deployment_status:
+  workflow_run:
+    workflows: ["Production Deployment", "Preview Deployment"]
+    types:
+      - completed
+
+permissions:
+  contents: read
+  deployments: read
+  issues: write
+
+jobs:
+  report-status:
+    name: Report Deployment Status
+    runs-on: ubuntu-latest
+    if: github.event_name == 'deployment_status'
+    steps:
+      - name: Report success
+        if: github.event.deployment_status.state == 'success'
+        run: |
+          echo "## ✅ Deployment Successful" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "| Field | Value |" >> $GITHUB_STEP_SUMMARY
+          echo "|-------|-------|" >> $GITHUB_STEP_SUMMARY
+          echo "| Environment | ${{ github.event.deployment_status.environment }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| URL | ${{ github.event.deployment_status.target_url }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Deployed at | $(date -u +"%Y-%m-%d %H:%M:%S UTC") |" >> $GITHUB_STEP_SUMMARY
+
+      - name: Report failure
+        if: github.event.deployment_status.state == 'failure'
+        run: |
+          echo "## ❌ Deployment Failed" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "| Field | Value |" >> $GITHUB_STEP_SUMMARY
+          echo "|-------|-------|" >> $GITHUB_STEP_SUMMARY
+          echo "| Environment | ${{ github.event.deployment_status.environment }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Failed at | $(date -u +"%Y-%m-%d %H:%M:%S UTC") |" >> $GITHUB_STEP_SUMMARY
+
+  track-workflow-completion:
+    name: Track Workflow Completion
+    runs-on: ubuntu-latest
+    if: github.event_name == 'workflow_run'
+    steps:
+      - name: Report workflow result
+        run: |
+          WORKFLOW_NAME="${{ github.event.workflow_run.name }}"
+          CONCLUSION="${{ github.event.workflow_run.conclusion }}"
+          RUN_URL="${{ github.event.workflow_run.html_url }}"
+          
+          if [ "$CONCLUSION" = "success" ]; then
+            EMOJI="✅"
+            STATUS="succeeded"
+          elif [ "$CONCLUSION" = "failure" ]; then
+            EMOJI="❌"
+            STATUS="failed"
+          elif [ "$CONCLUSION" = "cancelled" ]; then
+            EMOJI="⏹️"
+            STATUS="was cancelled"
+          else
+            EMOJI="ℹ️"
+            STATUS="completed with status: $CONCLUSION"
+          fi
+          
+          echo "## $EMOJI Workflow $STATUS" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "| Field | Value |" >> $GITHUB_STEP_SUMMARY
+          echo "|-------|-------|" >> $GITHUB_STEP_SUMMARY
+          echo "| Workflow | $WORKFLOW_NAME |" >> $GITHUB_STEP_SUMMARY
+          echo "| Status | $CONCLUSION |" >> $GITHUB_STEP_SUMMARY
+          echo "| Branch | ${{ github.event.workflow_run.head_branch }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Commit | \`${{ github.event.workflow_run.head_sha }}\` |" >> $GITHUB_STEP_SUMMARY
+          echo "| Run | [View Details]($RUN_URL) |" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "*Completed at $(date -u +"%Y-%m-%d %H:%M:%S UTC")*" >> $GITHUB_STEP_SUMMARY
+
+      - name: Create issue on production failure
+        if: github.event.workflow_run.name == 'Production Deployment' && github.event.workflow_run.conclusion == 'failure'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const workflowUrl = '${{ github.event.workflow_run.html_url }}';
+            const branch = '${{ github.event.workflow_run.head_branch }}';
+            const sha = '${{ github.event.workflow_run.head_sha }}';
+            
+            // Check if there's already an open issue for this failure
+            const { data: issues } = await github.rest.issues.listForRepo({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              state: 'open',
+              labels: 'deployment-failure'
+            });
+            
+            const existingIssue = issues.find(i => 
+              i.title.includes('Production Deployment Failed') &&
+              i.body.includes(sha.substring(0, 7))
+            );
+            
+            if (existingIssue) {
+              // Add comment to existing issue
+              await github.rest.issues.createComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: existingIssue.number,
+                body: `### Deployment still failing\n\n- **Time:** ${new Date().toISOString()}\n- **Workflow Run:** [View Logs](${workflowUrl})`
+              });
+              console.log(`Updated existing issue #${existingIssue.number}`);
+            } else {
+              // Create new issue
+              await github.rest.issues.create({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                title: `🚨 Production Deployment Failed - ${sha.substring(0, 7)}`,
+                body: `## Production Deployment Failure
+                
+                The production deployment has failed and requires attention.
+                
+                ### Details
+                - **Branch:** \`${branch}\`
+                - **Commit:** \`${sha}\`
+                - **Workflow Run:** [View Logs](${workflowUrl})
+                - **Failed at:** ${new Date().toISOString()}
+                
+                ### Checklist
+                - [ ] Review workflow logs for errors
+                - [ ] Check if the issue is with the build or deployment
+                - [ ] Verify environment variables and secrets
+                - [ ] Test locally to reproduce the issue
+                - [ ] Fix the issue and push a new commit
+                
+                ---
+                _This issue was automatically created by the deployment tracking workflow._`,
+                labels: ['deployment-failure', 'urgent', 'automated']
+              });
+              console.log('Created new deployment failure issue');
+            }
