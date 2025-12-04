@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { FaHeart, FaRegHeart, FaAmazon, FaTag } from 'react-icons/fa';
 import { Shoe } from '../lib/types';
 import { useSneakers } from '../hooks/useSneakers';
-import { shouldShowPrice, formatPrice, AFFILIATE_TAG } from '../lib/supabaseClient';
+import { shouldShowPrice, formatPrice, getAffiliateUrl, trackAffiliateClick, extractAsinFromUrl } from '../lib/supabaseClient';
 
 interface Props {
   shoe: Shoe;
@@ -13,17 +13,16 @@ export const SneakerCard: React.FC<Props> = ({ shoe, variant = 'grid' }) => {
   const { trackClick } = useSneakers();
   const [isLiked, setIsLiked] = useState(false);
 
-  const getAffiliateLink = (url: string) => {
-    if (url.includes(`tag=${AFFILIATE_TAG}`)) return url;
-    const separator = url.includes('?') ? '&' : '?';
-    return `${url}${separator}tag=${AFFILIATE_TAG}`;
-  };
-
   const showPrice = shouldShowPrice(shoe.price);
 
   const handleBuyClick = () => {
+    // Track both general click and affiliate click for revenue attribution
     trackClick(shoe.id);
-    window.open(getAffiliateLink(shoe.amazon_url), '_blank');
+    const asin = extractAsinFromUrl(shoe.amazon_url);
+    trackAffiliateClick(shoe.id, asin || undefined, 'sneaker_card');
+    
+    // Use centralized getAffiliateUrl to ensure tag is always present
+    window.open(getAffiliateUrl(shoe.amazon_url), '_blank');
   };
 
   const toggleLike = (e: React.MouseEvent) => {

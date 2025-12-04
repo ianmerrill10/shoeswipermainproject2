@@ -1,7 +1,7 @@
 import React from 'react';
 import { FaAmazon, FaCheck } from 'react-icons/fa';
 import { motion } from 'framer-motion';
-import { getAffiliateUrl } from '../lib/supabaseClient';
+import { getAffiliateUrl, trackAffiliateClick, extractAsinFromUrl } from '../lib/supabaseClient';
 
 interface BuyNowButtonProps {
   amazonUrl: string;
@@ -28,6 +28,12 @@ export const BuyNowButton: React.FC<BuyNowButtonProps> = ({
   const buttonText = variant === 'compact' ? 'Buy' : 'Buy Now';
 
   const handleClick = (_e: React.MouseEvent<HTMLAnchorElement>) => {
+    // Track affiliate click for revenue attribution
+    if (shoeId) {
+      const asin = extractAsinFromUrl(amazonUrl);
+      trackAffiliateClick(shoeId, asin || undefined, 'buy_button');
+    }
+    
     if (import.meta.env.DEV) {
       // eslint-disable-next-line no-console
       console.log('[BuyNowButton] Click tracked:', { shoeId, url: affiliateUrl });
