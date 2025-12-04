@@ -237,36 +237,42 @@ const FeedPage: React.FC = () => {
         scrollbarWidth: 'none',
         msOverflowStyle: 'none'
       }}
+      role="feed"
+      aria-label="Sneaker feed"
     >
       {/* Notification Bell - Fixed Position */}
       <button
         onClick={openNotificationsPanel}
+        aria-label={`Notifications${unreadCount > 0 ? `, ${unreadCount} unread` : ''}`}
         className="fixed top-4 right-4 z-30 w-11 h-11 bg-black/40 backdrop-blur-sm rounded-full flex items-center justify-center active:scale-90 transition-transform"
       >
-        <FaBell className="text-white text-lg" />
+        <FaBell className="text-white text-lg" aria-hidden="true" />
         {unreadCount > 0 && (
-          <span className="absolute -top-1 -right-1 min-w-[18px] h-[18px] bg-red-500 text-white text-[10px] font-bold rounded-full flex items-center justify-center px-1">
+          <span className="absolute -top-1 -right-1 min-w-[18px] h-[18px] bg-red-500 text-white text-[10px] font-bold rounded-full flex items-center justify-center px-1" aria-hidden="true">
             {unreadCount > 9 ? '9+' : unreadCount}
           </span>
         )}
       </button>
 
       {shoes.map((shoe, index) => (
-        <div
+        <article
           key={shoe.id}
           data-index={index}
           className="feed-card h-screen min-h-screen snap-start snap-always relative"
           style={{ scrollSnapAlign: 'start', scrollSnapStop: 'always' }}
+          aria-label={`${shoe.brand} ${shoe.name}`}
+          aria-setsize={shoes.length}
+          aria-posinset={index + 1}
         >
           {/* Background Image */}
           <img
             src={shoe.image_url}
-            alt={shoe.name}
+            alt={`${shoe.brand} ${shoe.name}${shoe.colorway ? ` in ${shoe.colorway}` : ''}`}
             className="absolute inset-0 w-full h-full object-cover"
           />
 
           {/* Gradient Overlay */}
-          <div className="absolute inset-0 bg-gradient-to-b from-black/40 via-transparent to-black/95 pointer-events-none" />
+          <div className="absolute inset-0 bg-gradient-to-b from-black/40 via-transparent to-black/95 pointer-events-none" aria-hidden="true" />
 
           {/* Content */}
           <div className="absolute bottom-32 left-0 right-16 p-6 z-10">
@@ -311,51 +317,57 @@ const FeedPage: React.FC = () => {
             {/* Buy Button */}
             <button
               onClick={() => handleBuyClick(shoe)}
+              aria-label={`Buy ${shoe.name} on Amazon`}
               className="w-full bg-white text-black font-black py-4 rounded-xl flex items-center justify-center gap-3 text-base active:scale-95 transition-transform shadow-lg"
             >
-              <FaAmazon className="text-2xl" />
+              <FaAmazon className="text-2xl" aria-hidden="true" />
               BUY ON AMAZON
             </button>
           </div>
 
           {/* Side Actions */}
-          <div className="absolute right-3 bottom-44 flex flex-col gap-5 z-10">
+          <div className="absolute right-3 bottom-44 flex flex-col gap-5 z-10" role="group" aria-label="Sneaker actions">
             <button
               onClick={() => handleFavorite(shoe)}
+              aria-label={isFavorite(shoe.id) ? `Remove ${shoe.name} from favorites` : `Add ${shoe.name} to favorites`}
+              aria-pressed={isFavorite(shoe.id)}
               className="flex flex-col items-center gap-1"
             >
               <div className={`w-11 h-11 backdrop-blur-sm rounded-full flex items-center justify-center active:scale-90 transition-all ${
                 isFavorite(shoe.id) ? 'bg-red-500' : 'bg-black/30'
               }`}>
-                <FaHeart className={`text-xl ${isFavorite(shoe.id) ? 'text-white' : 'text-white'}`} />
+                <FaHeart className={`text-xl ${isFavorite(shoe.id) ? 'text-white' : 'text-white'}`} aria-hidden="true" />
               </div>
-              <span className="text-xs font-bold text-white drop-shadow">
+              <span className="text-xs font-bold text-white drop-shadow" aria-hidden="true">
                 {isFavorite(shoe.id) ? 'Liked' : shoe.favorite_count}
               </span>
             </button>
 
             <button
               onClick={() => handleFavorite(shoe)}
+              aria-label={isFavorite(shoe.id) ? `${shoe.name} saved to closet` : `Save ${shoe.name} to closet`}
+              aria-pressed={isFavorite(shoe.id)}
               className="flex flex-col items-center gap-1"
             >
               <div className={`w-11 h-11 backdrop-blur-sm rounded-full flex items-center justify-center active:scale-90 transition-all ${
                 isFavorite(shoe.id) ? 'bg-orange-500' : 'bg-black/30'
               }`}>
-                <FaBookmark className="text-xl text-white" />
+                <FaBookmark className="text-xl text-white" aria-hidden="true" />
               </div>
-              <span className="text-xs font-bold text-white drop-shadow">
+              <span className="text-xs font-bold text-white drop-shadow" aria-hidden="true">
                 {isFavorite(shoe.id) ? 'Saved' : 'Save'}
               </span>
             </button>
 
             <button
               onClick={() => handleShare(shoe)}
+              aria-label={`Share ${shoe.name}`}
               className="flex flex-col items-center gap-1"
             >
               <div className="w-11 h-11 bg-black/30 backdrop-blur-sm rounded-full flex items-center justify-center active:scale-90 transition-transform">
-                <FaShare className="text-xl text-white" />
+                <FaShare className="text-xl text-white" aria-hidden="true" />
               </div>
-              <span className="text-xs font-bold text-white drop-shadow">Share</span>
+              <span className="text-xs font-bold text-white drop-shadow" aria-hidden="true">Share</span>
             </button>
           </div>
 
@@ -363,10 +375,11 @@ const FeedPage: React.FC = () => {
           {shoe.music && (
             <button
               onClick={handleOpenMusicPanel}
+              aria-label={`Now playing: ${shoe.music.song} by ${shoe.music.artist}. Tap for music links`}
               className="absolute bottom-20 left-4 right-4 flex items-center gap-3 bg-black/40 backdrop-blur-sm rounded-full px-3 py-2 z-10"
             >
               {/* Spinning Disc */}
-              <div className="w-10 h-10 rounded-full bg-gradient-to-br from-zinc-700 to-zinc-900 flex items-center justify-center animate-spin-slow flex-shrink-0 border border-zinc-600">
+              <div className="w-10 h-10 rounded-full bg-gradient-to-br from-zinc-700 to-zinc-900 flex items-center justify-center animate-spin-slow flex-shrink-0 border border-zinc-600" aria-hidden="true">
                 <div className="w-4 h-4 rounded-full bg-orange-500 flex items-center justify-center">
                   <div className="w-1.5 h-1.5 rounded-full bg-black" />
                 </div>
@@ -375,7 +388,7 @@ const FeedPage: React.FC = () => {
               {/* Song Info with Marquee */}
               <div className="flex-1 overflow-hidden">
                 <div className="flex items-center gap-2">
-                  <FaMusic className="text-orange-500 text-xs flex-shrink-0" />
+                  <FaMusic className="text-orange-500 text-xs flex-shrink-0" aria-hidden="true" />
                   <div className="overflow-hidden whitespace-nowrap">
                     <span className="inline-block animate-marquee text-white text-sm font-medium">
                       {shoe.music.song} • {shoe.music.artist}
@@ -385,10 +398,10 @@ const FeedPage: React.FC = () => {
               </div>
 
               {/* Tap hint */}
-              <span className="text-zinc-400 text-xs flex-shrink-0">Tap for links</span>
+              <span className="text-zinc-400 text-xs flex-shrink-0" aria-hidden="true">Tap for links</span>
             </button>
           )}
-        </div>
+        </article>
       ))}
 
       {/* Shoe Panel - Opens on Left Arrow */}
@@ -417,12 +430,14 @@ const FeedPage: React.FC = () => {
 
       {/* Share Success Toast */}
       <div
+        role="status"
+        aria-live="polite"
         className={`fixed bottom-24 left-1/2 -translate-x-1/2 bg-zinc-800 text-white px-4 py-3 rounded-xl flex items-center gap-2 shadow-lg z-50 transition-all duration-300 ${
           showShareToast ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4 pointer-events-none'
         }`}
       >
         <div className="w-6 h-6 bg-green-500 rounded-full flex items-center justify-center">
-          <FaCheck className="text-xs text-white" />
+          <FaCheck className="text-xs text-white" aria-hidden="true" />
         </div>
         <span className="font-medium">Link copied with affiliate tracking!</span>
       </div>

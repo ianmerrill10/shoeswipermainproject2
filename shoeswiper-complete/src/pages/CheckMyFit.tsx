@@ -26,14 +26,14 @@ export const CheckMyFit: React.FC = () => {
   return (
     <div className="min-h-screen bg-black text-white pb-24 overflow-y-auto">
       {/* Header */}
-      <div className="p-4 flex justify-between items-center bg-zinc-900/80 backdrop-blur-md sticky top-0 z-20 border-b border-zinc-800">
+      <header className="p-4 flex justify-between items-center bg-zinc-900/80 backdrop-blur-md sticky top-0 z-20 border-b border-zinc-800">
         <h1 className="font-black text-xl italic tracking-tighter">CHECK MY FIT <span className="text-orange-500">AI</span></h1>
         {imagePreview && (
           <button onClick={reset} className="text-zinc-400 text-sm">Reset</button>
         )}
-      </div>
+      </header>
 
-      <div className="p-4 max-w-md mx-auto">
+      <main className="p-4 max-w-md mx-auto">
         
         {/* State 1: Upload / Capture */}
         {!imagePreview && (
@@ -44,7 +44,7 @@ export const CheckMyFit: React.FC = () => {
               transition={{ repeat: Infinity, repeatType: "reverse", duration: 1.5 }}
               className="text-center space-y-6"
             >
-              <div className="bg-gradient-to-br from-orange-500 to-pink-500 w-24 h-24 rounded-full flex items-center justify-center mx-auto shadow-2xl shadow-orange-500/20">
+              <div className="bg-gradient-to-br from-orange-500 to-pink-500 w-24 h-24 rounded-full flex items-center justify-center mx-auto shadow-2xl shadow-orange-500/20" aria-hidden="true">
                 <FaMagic className="text-4xl text-white" />
               </div>
               <h2 className="text-2xl font-bold">Rate My Outfit</h2>
@@ -53,21 +53,31 @@ export const CheckMyFit: React.FC = () => {
               <div className="flex gap-4 justify-center mt-8">
                 <button 
                   onClick={() => fileInputRef.current?.click()}
+                  aria-label="Upload an image"
                   className="bg-zinc-800 hover:bg-zinc-700 px-6 py-3 rounded-xl font-bold flex items-center gap-2 transition-all"
                 >
-                  <FaUpload /> Upload
+                  <FaUpload aria-hidden="true" /> Upload
                 </button>
                 <div className="relative">
+                  <label htmlFor="camera-input" className="sr-only">Take a photo</label>
                   <input 
+                    id="camera-input"
                     type="file" 
                     accept="image/*" 
                     capture="environment"
                     ref={fileInputRef}
                     onChange={handleFileSelect}
                     className="absolute inset-0 opacity-0 cursor-pointer w-full"
+                    aria-describedby="camera-description"
                   />
-                  <button className="bg-orange-500 hover:bg-orange-600 px-6 py-3 rounded-xl font-bold flex items-center gap-2 transition-all shadow-lg shadow-orange-500/30">
-                    <FaCamera /> Take Photo
+                  <span id="camera-description" className="sr-only">Take a photo of your outfit for AI analysis</span>
+                  <button 
+                    type="button"
+                    aria-label="Take photo of your outfit"
+                    onClick={() => fileInputRef.current?.click()}
+                    className="bg-orange-500 hover:bg-orange-600 px-6 py-3 rounded-xl font-bold flex items-center gap-2 transition-all shadow-lg shadow-orange-500/30"
+                  >
+                    <FaCamera aria-hidden="true" /> Take Photo
                   </button>
                 </div>
               </div>
@@ -78,20 +88,22 @@ export const CheckMyFit: React.FC = () => {
         {/* State 2: Preview & Analyzing */}
         {imagePreview && (
           <div className="relative rounded-3xl overflow-hidden shadow-2xl border border-zinc-800">
-            <img src={imagePreview} alt="Outfit" className="w-full h-auto object-cover max-h-[60vh]" />
+            <img src={imagePreview} alt="Your uploaded outfit for analysis" className="w-full h-auto object-cover max-h-[60vh]" />
             
             {/* Scanning Overlay */}
             {isAnalyzing && (
-              <div className="absolute inset-0 bg-black/50 backdrop-blur-sm flex flex-col items-center justify-center">
+              <div className="absolute inset-0 bg-black/50 backdrop-blur-sm flex flex-col items-center justify-center" role="status" aria-live="polite">
                 <motion.div 
                   className="absolute top-0 left-0 w-full h-1 bg-orange-500 shadow-[0_0_20px_rgba(249,115,22,0.8)]"
                   animate={{ top: ['0%', '100%', '0%'] }}
                   transition={{ duration: 2, ease: "linear", repeat: Infinity }}
+                  aria-hidden="true"
                 />
                 <motion.div
                   animate={{ rotate: 360 }}
                   transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
                   className="w-16 h-16 border-4 border-orange-500 border-t-transparent rounded-full"
+                  aria-hidden="true"
                 />
                 <p className="mt-4 font-bold text-lg">Analyzing your fit...</p>
                 <p className="text-zinc-400 text-sm">AI magic in progress</p>
@@ -139,14 +151,14 @@ export const CheckMyFit: React.FC = () => {
         
         {error && (
           <div className="mt-4 space-y-4">
-            <div className="bg-red-500/10 border border-red-500 text-red-500 p-3 rounded-xl text-center text-sm">
+            <div className="bg-red-500/10 border border-red-500 text-red-500 p-3 rounded-xl text-center text-sm" role="alert">
               {error}
             </div>
             {/* Show Manual Selector if AI fails */}
             <ManualStyleSelector onSelect={manualAnalyze} />
           </div>
         )}
-      </div>
+      </main>
     </div>
   );
 };

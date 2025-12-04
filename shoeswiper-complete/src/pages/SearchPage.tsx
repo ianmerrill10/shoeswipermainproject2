@@ -53,11 +53,13 @@ const SearchPage: React.FC = () => {
   return (
     <div className="min-h-screen bg-zinc-950 pb-24">
       {/* Header */}
-      <div className="sticky top-0 z-20 bg-zinc-950/95 backdrop-blur-lg border-b border-zinc-800 p-4">
-        <form onSubmit={handleSearch} className="flex gap-2">
+      <header className="sticky top-0 z-20 bg-zinc-950/95 backdrop-blur-lg border-b border-zinc-800 p-4">
+        <form onSubmit={handleSearch} role="search" className="flex gap-2">
           <div className="flex-1 relative">
-            <FaSearch className="absolute left-4 top-1/2 -translate-y-1/2 text-zinc-500" />
+            <FaSearch className="absolute left-4 top-1/2 -translate-y-1/2 text-zinc-500" aria-hidden="true" />
+            <label htmlFor="sneaker-search" className="sr-only">Search sneakers</label>
             <input
+              id="sneaker-search"
               type="text"
               value={query}
               onChange={(e) => setQuery(e.target.value)}
@@ -68,29 +70,30 @@ const SearchPage: React.FC = () => {
           <button
             type="button"
             onClick={() => setShowFilters(true)}
+            aria-label="Open filters"
             className="p-3 bg-zinc-900 border border-zinc-800 rounded-xl text-zinc-400 hover:text-white hover:border-orange-500 transition-colors"
           >
-            <FaFilter />
+            <FaFilter aria-hidden="true" />
           </button>
         </form>
 
         {/* Active Filters */}
         {(filters.brands?.length || filters.styleTags?.length || filters.gender) && (
-          <div className="flex flex-wrap gap-2 mt-3">
+          <div className="flex flex-wrap gap-2 mt-3" role="list" aria-label="Active filters">
             {filters.brands?.map(brand => (
-              <span key={brand} className="bg-orange-500/20 text-orange-400 text-xs px-2 py-1 rounded-full flex items-center gap-1">
+              <span key={brand} className="bg-orange-500/20 text-orange-400 text-xs px-2 py-1 rounded-full flex items-center gap-1" role="listitem">
                 {brand}
-                <button onClick={() => toggleBrand(brand)}><FaTimes className="text-[10px]" /></button>
+                <button onClick={() => toggleBrand(brand)} aria-label={`Remove ${brand} filter`}><FaTimes className="text-[10px]" aria-hidden="true" /></button>
               </span>
             ))}
             {filters.styleTags?.map(style => (
-              <span key={style} className="bg-blue-500/20 text-blue-400 text-xs px-2 py-1 rounded-full flex items-center gap-1">
+              <span key={style} className="bg-blue-500/20 text-blue-400 text-xs px-2 py-1 rounded-full flex items-center gap-1" role="listitem">
                 #{style}
-                <button onClick={() => toggleStyle(style)}><FaTimes className="text-[10px]" /></button>
+                <button onClick={() => toggleStyle(style)} aria-label={`Remove ${style} filter`}><FaTimes className="text-[10px]" aria-hidden="true" /></button>
               </span>
             ))}
             {filters.gender && (
-              <span className="bg-purple-500/20 text-purple-400 text-xs px-2 py-1 rounded-full">
+              <span className="bg-purple-500/20 text-purple-400 text-xs px-2 py-1 rounded-full" role="listitem">
                 {filters.gender}
               </span>
             )}
@@ -99,51 +102,57 @@ const SearchPage: React.FC = () => {
             </button>
           </div>
         )}
-      </div>
+      </header>
 
       {/* Results */}
-      <div className="p-4">
+      <section className="p-4" aria-label="Search results">
         {isSearching ? (
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-2 gap-3" aria-busy="true" aria-label="Loading results">
             {[...Array(6)].map((_, i) => (
-              <div key={i} className="aspect-square bg-zinc-900 rounded-xl animate-pulse" />
+              <div key={i} className="aspect-square bg-zinc-900 rounded-xl animate-pulse" role="presentation" />
             ))}
           </div>
         ) : results.length === 0 ? (
-          <div className="text-center py-16">
-            <p className="text-4xl mb-4">🔍</p>
+          <div className="text-center py-16" role="status">
+            <p className="text-4xl mb-4" aria-hidden="true">🔍</p>
             <p className="text-zinc-400">No sneakers found</p>
             <p className="text-zinc-500 text-sm mt-1">Try different keywords or filters</p>
           </div>
         ) : (
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-2 gap-3" role="list" aria-label={`${results.length} sneakers found`}>
             {results.map(shoe => (
               <SneakerCard key={shoe.id} shoe={shoe} variant="grid" />
             ))}
           </div>
         )}
-      </div>
+      </section>
 
       {/* Filter Modal */}
       {showFilters && (
-        <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-end">
+        <div 
+          className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-end"
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="filter-modal-title"
+        >
           <div className="bg-zinc-900 w-full max-h-[80vh] rounded-t-3xl overflow-y-auto">
             <div className="sticky top-0 bg-zinc-900 p-4 border-b border-zinc-800 flex justify-between items-center">
-              <h2 className="text-lg font-bold text-white">Filters</h2>
-              <button onClick={() => setShowFilters(false)} className="text-zinc-400 hover:text-white">
-                <FaTimes />
+              <h2 id="filter-modal-title" className="text-lg font-bold text-white">Filters</h2>
+              <button onClick={() => setShowFilters(false)} aria-label="Close filters" className="text-zinc-400 hover:text-white">
+                <FaTimes aria-hidden="true" />
               </button>
             </div>
 
             <div className="p-4 space-y-6">
               {/* Brands */}
-              <div>
-                <h3 className="text-sm font-bold text-zinc-400 uppercase mb-3">Brands</h3>
-                <div className="flex flex-wrap gap-2">
+              <fieldset>
+                <legend className="text-sm font-bold text-zinc-400 uppercase mb-3">Brands</legend>
+                <div className="flex flex-wrap gap-2" role="group">
                   {BRANDS.map(brand => (
                     <button
                       key={brand}
                       onClick={() => toggleBrand(brand)}
+                      aria-pressed={filters.brands?.includes(brand)}
                       className={`px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
                         filters.brands?.includes(brand)
                           ? 'bg-orange-500 text-white'
@@ -154,16 +163,17 @@ const SearchPage: React.FC = () => {
                     </button>
                   ))}
                 </div>
-              </div>
+              </fieldset>
 
               {/* Gender */}
-              <div>
-                <h3 className="text-sm font-bold text-zinc-400 uppercase mb-3">Gender</h3>
-                <div className="flex flex-wrap gap-2">
+              <fieldset>
+                <legend className="text-sm font-bold text-zinc-400 uppercase mb-3">Gender</legend>
+                <div className="flex flex-wrap gap-2" role="group">
                   {GENDERS.map(gender => (
                     <button
                       key={gender}
                       onClick={() => setFilters({ ...filters, gender: filters.gender === gender ? undefined : gender })}
+                      aria-pressed={filters.gender === gender}
                       className={`px-3 py-2 rounded-lg text-sm font-medium capitalize transition-colors ${
                         filters.gender === gender
                           ? 'bg-orange-500 text-white'
@@ -174,16 +184,17 @@ const SearchPage: React.FC = () => {
                     </button>
                   ))}
                 </div>
-              </div>
+              </fieldset>
 
               {/* Styles */}
-              <div>
-                <h3 className="text-sm font-bold text-zinc-400 uppercase mb-3">Style</h3>
-                <div className="flex flex-wrap gap-2">
+              <fieldset>
+                <legend className="text-sm font-bold text-zinc-400 uppercase mb-3">Style</legend>
+                <div className="flex flex-wrap gap-2" role="group">
                   {STYLES.map(style => (
                     <button
                       key={style}
                       onClick={() => toggleStyle(style)}
+                      aria-pressed={filters.styleTags?.includes(style)}
                       className={`px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
                         filters.styleTags?.includes(style)
                           ? 'bg-orange-500 text-white'
@@ -194,33 +205,42 @@ const SearchPage: React.FC = () => {
                     </button>
                   ))}
                 </div>
-              </div>
+              </fieldset>
 
               {/* Price Range */}
-              <div>
-                <h3 className="text-sm font-bold text-zinc-400 uppercase mb-3">Price Range</h3>
+              <fieldset>
+                <legend className="text-sm font-bold text-zinc-400 uppercase mb-3">Price Range</legend>
                 <div className="flex gap-3">
-                  <input
-                    type="number"
-                    placeholder="Min"
-                    value={filters.minPrice || ''}
-                    onChange={(e) => setFilters({ ...filters, minPrice: e.target.value ? Number(e.target.value) : undefined })}
-                    className="flex-1 bg-zinc-800 border border-zinc-700 rounded-lg px-3 py-2 text-white placeholder-zinc-500"
-                  />
-                  <input
-                    type="number"
-                    placeholder="Max"
-                    value={filters.maxPrice || ''}
-                    onChange={(e) => setFilters({ ...filters, maxPrice: e.target.value ? Number(e.target.value) : undefined })}
-                    className="flex-1 bg-zinc-800 border border-zinc-700 rounded-lg px-3 py-2 text-white placeholder-zinc-500"
-                  />
+                  <div>
+                    <label htmlFor="min-price" className="sr-only">Minimum price</label>
+                    <input
+                      id="min-price"
+                      type="number"
+                      placeholder="Min"
+                      value={filters.minPrice || ''}
+                      onChange={(e) => setFilters({ ...filters, minPrice: e.target.value ? Number(e.target.value) : undefined })}
+                      className="flex-1 bg-zinc-800 border border-zinc-700 rounded-lg px-3 py-2 text-white placeholder-zinc-500"
+                    />
+                  </div>
+                  <div>
+                    <label htmlFor="max-price" className="sr-only">Maximum price</label>
+                    <input
+                      id="max-price"
+                      type="number"
+                      placeholder="Max"
+                      value={filters.maxPrice || ''}
+                      onChange={(e) => setFilters({ ...filters, maxPrice: e.target.value ? Number(e.target.value) : undefined })}
+                      className="flex-1 bg-zinc-800 border border-zinc-700 rounded-lg px-3 py-2 text-white placeholder-zinc-500"
+                    />
+                  </div>
                 </div>
-              </div>
+              </fieldset>
 
               {/* Sort */}
               <div>
-                <h3 className="text-sm font-bold text-zinc-400 uppercase mb-3">Sort By</h3>
+                <label htmlFor="sort-by" className="text-sm font-bold text-zinc-400 uppercase mb-3 block">Sort By</label>
                 <select
+                  id="sort-by"
                   value={filters.sortBy || ''}
                   onChange={(e) => setFilters({ ...filters, sortBy: (e.target.value || undefined) as SearchFilters['sortBy'] })}
                   className="w-full bg-zinc-800 border border-zinc-700 rounded-lg px-3 py-2 text-white"

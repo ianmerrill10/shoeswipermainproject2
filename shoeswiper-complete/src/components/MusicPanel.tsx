@@ -46,22 +46,27 @@ const MusicPanel: React.FC<MusicPanelProps> = ({ shoe, isOpen, onClose }) => {
           isOpen ? 'opacity-100' : 'opacity-0 pointer-events-none'
         }`}
         onClick={onClose}
+        aria-hidden="true"
       />
 
       {/* Panel */}
       <div
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="music-panel-title"
         className={`fixed top-0 right-0 h-full w-full max-w-md bg-zinc-950 z-50 transform transition-transform duration-300 ease-out overflow-y-auto ${
           isOpen ? 'translate-x-0' : 'translate-x-full'
         }`}
       >
         {/* Header */}
         <div className="sticky top-0 bg-zinc-950/95 backdrop-blur-sm border-b border-zinc-800 p-4 flex items-center justify-between z-10">
-          <h2 className="text-lg font-bold text-white">Now Playing</h2>
+          <h2 id="music-panel-title" className="text-lg font-bold text-white">Now Playing</h2>
           <button
             onClick={onClose}
+            aria-label="Close music panel"
             className="w-10 h-10 bg-zinc-800 rounded-full flex items-center justify-center text-white hover:bg-zinc-700 transition-colors"
           >
-            <FaTimes />
+            <FaTimes aria-hidden="true" />
           </button>
         </div>
 
@@ -105,9 +110,10 @@ const MusicPanel: React.FC<MusicPanelProps> = ({ shoe, isOpen, onClose }) => {
           {music.spotifyUrl && (
             <button
               onClick={() => handleMusicClick('spotify', music.spotifyUrl!)}
+              aria-label={`Play ${music.song} by ${music.artist} on Spotify`}
               className="w-full flex items-center gap-4 bg-[#1DB954] hover:bg-[#1ed760] text-white font-bold py-4 px-6 rounded-xl transition-colors"
             >
-              <FaSpotify className="text-2xl" />
+              <FaSpotify className="text-2xl" aria-hidden="true" />
               <span className="flex-1 text-left">Play on Spotify</span>
               <span className="text-sm opacity-75">Free</span>
             </button>
@@ -117,9 +123,10 @@ const MusicPanel: React.FC<MusicPanelProps> = ({ shoe, isOpen, onClose }) => {
           {music.appleMusicUrl && (
             <button
               onClick={() => handleMusicClick('apple_music', music.appleMusicUrl!)}
+              aria-label={`Play ${music.song} by ${music.artist} on Apple Music`}
               className="w-full flex items-center gap-4 bg-gradient-to-r from-[#FA57C1] to-[#FC5C7D] hover:opacity-90 text-white font-bold py-4 px-6 rounded-xl transition-opacity"
             >
-              <FaApple className="text-2xl" />
+              <FaApple className="text-2xl" aria-hidden="true" />
               <span className="flex-1 text-left">Play on Apple Music</span>
               <span className="text-xs bg-white/20 px-2 py-0.5 rounded">Affiliate</span>
             </button>
@@ -129,9 +136,10 @@ const MusicPanel: React.FC<MusicPanelProps> = ({ shoe, isOpen, onClose }) => {
           {music.amazonMusicUrl && (
             <button
               onClick={() => handleMusicClick('amazon_music', music.amazonMusicUrl!)}
+              aria-label={`Play ${music.song} by ${music.artist} on Amazon Music`}
               className="w-full flex items-center gap-4 bg-[#00A8E1] hover:bg-[#00bfff] text-white font-bold py-4 px-6 rounded-xl transition-colors"
             >
-              <FaAmazon className="text-2xl" />
+              <FaAmazon className="text-2xl" aria-hidden="true" />
               <span className="flex-1 text-left">Play on Amazon Music</span>
               <span className="text-xs bg-white/20 px-2 py-0.5 rounded">Affiliate</span>
             </button>
