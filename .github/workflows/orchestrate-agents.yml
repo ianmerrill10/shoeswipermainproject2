@@ -14,6 +14,7 @@ on:
           - revenue
           - features
           - quick
+          - completion12
   schedule:
     # Run every Monday at 6 AM UTC
     - cron: '0 6 * * 1'
@@ -81,7 +82,7 @@ jobs:
     name: Create Security Guardian Issue
     needs: analyze-project
     runs-on: ubuntu-latest
-    if: ${{ github.event.inputs.mode == 'full' || github.event.inputs.mode == 'security' || github.event.inputs.mode == 'quick' || github.event_name == 'schedule' }}
+    if: ${{ github.event.inputs.mode == 'full' || github.event.inputs.mode == 'security' || github.event.inputs.mode == 'quick' || github.event.inputs.mode == 'completion12' || github.event_name == 'schedule' }}
     steps:
       - name: Create Issue
         uses: actions/github-script@v7
@@ -130,7 +131,7 @@ jobs:
     name: Create Revenue Optimizer Issue
     needs: analyze-project
     runs-on: ubuntu-latest
-    if: ${{ github.event.inputs.mode == 'full' || github.event.inputs.mode == 'revenue' || github.event.inputs.mode == 'quick' || github.event_name == 'schedule' }}
+    if: ${{ github.event.inputs.mode == 'full' || github.event.inputs.mode == 'revenue' || github.event.inputs.mode == 'quick' || github.event.inputs.mode == 'completion12' || github.event_name == 'schedule' }}
     steps:
       - name: Create Issue
         uses: actions/github-script@v7
@@ -181,7 +182,7 @@ jobs:
     name: Create Code Builder Issue
     needs: analyze-project
     runs-on: ubuntu-latest
-    if: ${{ github.event.inputs.mode == 'full' || github.event.inputs.mode == 'features' || github.event_name == 'schedule' }}
+    if: ${{ github.event.inputs.mode == 'full' || github.event.inputs.mode == 'features' || github.event.inputs.mode == 'completion12' || github.event_name == 'schedule' }}
     steps:
       - name: Create Issue
         uses: actions/github-script@v7
@@ -230,7 +231,7 @@ jobs:
     name: Create React Specialist Issue
     needs: analyze-project
     runs-on: ubuntu-latest
-    if: ${{ github.event.inputs.mode == 'full' || github.event.inputs.mode == 'features' || github.event_name == 'schedule' }}
+    if: ${{ github.event.inputs.mode == 'full' || github.event.inputs.mode == 'features' || github.event.inputs.mode == 'completion12' || github.event_name == 'schedule' }}
     steps:
       - name: Create Issue
         uses: actions/github-script@v7
@@ -280,7 +281,7 @@ jobs:
     name: Create Supabase Expert Issue
     needs: analyze-project
     runs-on: ubuntu-latest
-    if: ${{ github.event.inputs.mode == 'full' || github.event.inputs.mode == 'features' || github.event.inputs.mode == 'security' || github.event_name == 'schedule' }}
+    if: ${{ github.event.inputs.mode == 'full' || github.event.inputs.mode == 'features' || github.event.inputs.mode == 'security' || github.event.inputs.mode == 'completion12' || github.event_name == 'schedule' }}
     steps:
       - name: Create Issue
         uses: actions/github-script@v7
@@ -374,7 +375,7 @@ jobs:
     name: Create DevOps Engineer Issue
     needs: analyze-project
     runs-on: ubuntu-latest
-    if: ${{ github.event.inputs.mode == 'full' || github.event.inputs.mode == 'security' || github.event_name == 'schedule' }}
+    if: ${{ github.event.inputs.mode == 'full' || github.event.inputs.mode == 'security' || github.event.inputs.mode == 'completion12' || github.event_name == 'schedule' }}
     steps:
       - name: Create Issue
         uses: actions/github-script@v7
@@ -421,7 +422,7 @@ jobs:
     name: Create SEO Specialist Issue
     needs: analyze-project
     runs-on: ubuntu-latest
-    if: ${{ github.event.inputs.mode == 'full' || github.event_name == 'schedule' }}
+    if: ${{ github.event.inputs.mode == 'full' || github.event.inputs.mode == 'completion12' || github.event_name == 'schedule' }}
     steps:
       - name: Create Issue
         uses: actions/github-script@v7
@@ -468,7 +469,7 @@ jobs:
     name: Create Mobile Specialist Issue
     needs: analyze-project
     runs-on: ubuntu-latest
-    if: ${{ github.event.inputs.mode == 'full' || github.event_name == 'schedule' }}
+    if: ${{ github.event.inputs.mode == 'full' || github.event.inputs.mode == 'completion12' || github.event_name == 'schedule' }}
     steps:
       - name: Create Issue
         uses: actions/github-script@v7
@@ -508,7 +509,207 @@ jobs:
               title: '📱 [Agent] Mobile Specialist Review',
               body: body,
               labels: ['mobile', 'pwa', 'agent-task'],
-              
+
+            });
+
+  create-frontend-architect-shoeswiper-issue:
+    name: Create Frontend Architect Issue
+    needs: analyze-project
+    runs-on: ubuntu-latest
+    if: ${{ github.event.inputs.mode == 'full' || github.event.inputs.mode == 'completion12' || github.event_name == 'schedule' }}
+    steps:
+      - name: Create Issue
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const body = `## 🧩 Frontend Architect Tasks
+
+            ${{ needs.analyze-project.outputs.summary }}
+
+            ### Priority: P2
+
+            ### Task Checklist
+            - [ ] Map upcoming UI flows and component contracts
+            - [ ] Align data needs with backend-engineer-shoeswiper
+            - [ ] Implement React Query hooks with full TypeScript types
+            - [ ] Ensure responsive layouts and dark mode parity
+            - [ ] Request test coverage from test-automation-shoeswiper
+
+            ### Focus Files
+            - \`shoeswiper-complete/src/components/\`
+            - \`shoeswiper-complete/src/pages/\`
+            - Any new React Query hooks or layouts
+
+            ---
+            *Auto-generated by Agent Orchestration - Mode: ${{ github.event.inputs.mode || 'scheduled' }}*`;
+
+            await github.rest.issues.create({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              title: '🧩 [Agent] Frontend Architect Plan',
+              body: body,
+              labels: ['frontend', 'architecture', 'agent-task'],
+
+            });
+
+  create-backend-engineer-shoeswiper-issue:
+    name: Create Backend Engineer Issue
+    needs: analyze-project
+    runs-on: ubuntu-latest
+    if: ${{ github.event.inputs.mode == 'full' || github.event.inputs.mode == 'completion12' || github.event_name == 'schedule' }}
+    steps:
+      - name: Create Issue
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const body = `## 🛠️ Backend Engineer Tasks
+
+            ${{ needs.analyze-project.outputs.summary }}
+
+            ### Priority: P2 (blocks if insecure)
+
+            ### Task Checklist
+            - [ ] Define API contracts with frontend-architect-shoeswiper
+            - [ ] Implement Supabase Edge Functions or RPCs with RLS
+            - [ ] Audit Stripe/payment and webhook handlers
+            - [ ] Coordinate migrations with supabase-expert-shoeswiper
+            - [ ] Notify test-automation-shoeswiper for integration tests
+
+            ### Focus Files
+            - \`shoeswiper-complete/supabase/functions/\`
+            - \`shoeswiper-complete/database/\`
+            - \`shoeswiper-complete/src/lib/\`
+
+            ---
+            *Auto-generated by Agent Orchestration - Mode: ${{ github.event.inputs.mode || 'scheduled' }}*`;
+
+            await github.rest.issues.create({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              title: '🛠️ [Agent] Backend Engineer Delivery',
+              body: body,
+              labels: ['backend', 'api', 'agent-task'],
+
+            });
+
+  create-accessibility-expert-shoeswiper-issue:
+    name: Create Accessibility Expert Issue
+    needs: analyze-project
+    runs-on: ubuntu-latest
+    if: ${{ github.event.inputs.mode == 'full' || github.event.inputs.mode == 'completion12' || github.event_name == 'schedule' }}
+    steps:
+      - name: Create Issue
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const body = `## ♿ Accessibility Expert Tasks
+
+            ${{ needs.analyze-project.outputs.summary }}
+
+            ### Priority: P3
+
+            ### Task Checklist
+            - [ ] Audit WCAG 2.1 AA compliance and color contrast
+            - [ ] Add ARIA labels and landmarks for interactive elements
+            - [ ] Verify keyboard navigation and focus management
+            - [ ] Ensure images and icons have descriptive alt text
+            - [ ] Flag high-risk components for follow-up with ui-designer-shoeswiper
+
+            ### Focus Files
+            - \`shoeswiper-complete/src/components/\`
+            - \`shoeswiper-complete/src/pages/\`
+            - Any modal/dialog implementations
+
+            ---
+            *Auto-generated by Agent Orchestration - Mode: ${{ github.event.inputs.mode || 'scheduled' }}*`;
+
+            await github.rest.issues.create({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              title: '♿ [Agent] Accessibility Review',
+              body: body,
+              labels: ['accessibility', 'a11y', 'agent-task'],
+
+            });
+
+  create-performance-optimizer-shoeswiper-issue:
+    name: Create Performance Optimizer Issue
+    needs: analyze-project
+    runs-on: ubuntu-latest
+    if: ${{ github.event.inputs.mode == 'full' || github.event.inputs.mode == 'completion12' || github.event_name == 'schedule' }}
+    steps:
+      - name: Create Issue
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const body = `## ⚡ Performance Optimizer Tasks
+
+            ${{ needs.analyze-project.outputs.summary }}
+
+            ### Priority: P4
+
+            ### Task Checklist
+            - [ ] Profile Core Web Vitals and React render performance
+            - [ ] Apply code splitting/lazy loading to heavy routes
+            - [ ] Optimize images and caching strategy
+            - [ ] Reduce console noise and expensive computations
+            - [ ] Suggest build-level tweaks with devops-engineer-shoeswiper
+
+            ### Focus Files
+            - \`shoeswiper-complete/src/pages/\`
+            - \`shoeswiper-complete/src/components/\`
+            - \`shoeswiper-complete/vite.config.ts\`
+
+            ---
+            *Auto-generated by Agent Orchestration - Mode: ${{ github.event.inputs.mode || 'scheduled' }}*`;
+
+            await github.rest.issues.create({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              title: '⚡ [Agent] Performance Optimization',
+              body: body,
+              labels: ['performance', 'optimization', 'agent-task'],
+
+            });
+
+  create-test-automation-shoeswiper-issue:
+    name: Create Test Automation Issue
+    needs: analyze-project
+    runs-on: ubuntu-latest
+    if: ${{ github.event.inputs.mode == 'full' || github.event.inputs.mode == 'completion12' || github.event_name == 'schedule' }}
+    steps:
+      - name: Create Issue
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const body = `## 🧪 Test Automation Tasks
+
+            ${{ needs.analyze-project.outputs.summary }}
+
+            ### Priority: P4
+
+            ### Task Checklist
+            - [ ] Add Vitest coverage for new hooks and utilities
+            - [ ] Create integration tests for Supabase/Edge Functions
+            - [ ] Draft E2E scenarios for core swipe and purchase flows
+            - [ ] Stabilize mocks/fixtures for repeatability
+            - [ ] Report coverage progress to qa-deploy-commander-shoeswiper
+
+            ### Focus Files
+            - \`shoeswiper-complete/src/__tests__/\`
+            - \`shoeswiper-complete/supabase/functions/\`
+            - Critical UI flows in \`shoeswiper-complete/src/pages/\`
+
+            ---
+            *Auto-generated by Agent Orchestration - Mode: ${{ github.event.inputs.mode || 'scheduled' }}*`;
+
+            await github.rest.issues.create({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              title: '🧪 [Agent] Test Automation Coverage',
+              body: body,
+              labels: ['testing', 'quality', 'agent-task'],
+
             });
 
   summary:
@@ -522,6 +723,11 @@ jobs:
       create-supabase-expert-shoeswiper-issue,
       create-ui-designer-shoeswiper-issue,
       create-devops-engineer-shoeswiper-issue,
+      create-frontend-architect-shoeswiper-issue,
+      create-backend-engineer-shoeswiper-issue,
+      create-accessibility-expert-shoeswiper-issue,
+      create-performance-optimizer-shoeswiper-issue,
+      create-test-automation-shoeswiper-issue,
       create-seo-specialist-shoeswiper-issue,
       create-mobile-specialist-shoeswiper-issue
     ]

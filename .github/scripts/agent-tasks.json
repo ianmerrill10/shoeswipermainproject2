@@ -1,7 +1,7 @@
 {
   "version": "1.0.0",
   "description": "ShoeSwiper Multi-Agent Orchestration Configuration",
-  "lastUpdated": "2024-12-03",
+  "lastUpdated": "2025-01-04",
   
   "agents": [
     {
@@ -35,6 +35,36 @@
       "issueLabels": ["revenue", "priority-high"]
     },
     {
+      "name": "frontend-architect-shoeswiper",
+      "priority": 2,
+      "emoji": "🧩",
+      "focusAreas": [
+        "React component architecture",
+        "Data contracts with backend",
+        "React Query integration",
+        "Animations and interactions",
+        "Responsive layouts"
+      ],
+      "collaboratesWith": ["backend-engineer-shoeswiper", "test-automation-shoeswiper", "ui-designer-shoeswiper"],
+      "blocksDeployment": false,
+      "issueLabels": ["frontend", "architecture"]
+    },
+    {
+      "name": "backend-engineer-shoeswiper",
+      "priority": 2,
+      "emoji": "🛠️",
+      "focusAreas": [
+        "Supabase Edge Functions",
+        "Database migrations",
+        "API contracts",
+        "Stripe/payment flows",
+        "Secure data handling"
+      ],
+      "collaboratesWith": ["frontend-architect-shoeswiper", "supabase-expert-shoeswiper", "security-guardian-shoeswiper"],
+      "blocksDeployment": true,
+      "issueLabels": ["backend", "api"]
+    },
+    {
       "name": "code-builder-shoeswiper",
       "priority": 3,
       "emoji": "🏗️",
@@ -63,6 +93,21 @@
       "collaboratesWith": ["code-builder-shoeswiper", "ui-designer-shoeswiper"],
       "blocksDeployment": false,
       "issueLabels": ["react", "typescript"]
+    },
+    {
+      "name": "accessibility-expert-shoeswiper",
+      "priority": 3,
+      "emoji": "♿",
+      "focusAreas": [
+        "WCAG 2.1 AA compliance",
+        "Screen reader support",
+        "Keyboard navigation",
+        "Color contrast",
+        "ARIA patterns"
+      ],
+      "collaboratesWith": ["ui-designer-shoeswiper", "frontend-architect-shoeswiper"],
+      "blocksDeployment": false,
+      "issueLabels": ["accessibility", "a11y"]
     },
     {
       "name": "supabase-expert-shoeswiper",
@@ -108,6 +153,36 @@
       "collaboratesWith": ["security-guardian-shoeswiper"],
       "blocksDeployment": false,
       "issueLabels": ["devops", "infrastructure"]
+    },
+    {
+      "name": "performance-optimizer-shoeswiper",
+      "priority": 4,
+      "emoji": "⚡",
+      "focusAreas": [
+        "Core Web Vitals",
+        "Bundle size and code splitting",
+        "Lazy loading",
+        "Caching strategies",
+        "Profiler-driven fixes"
+      ],
+      "collaboratesWith": ["frontend-architect-shoeswiper", "devops-engineer-shoeswiper"],
+      "blocksDeployment": false,
+      "issueLabels": ["performance", "optimization"]
+    },
+    {
+      "name": "test-automation-shoeswiper",
+      "priority": 4,
+      "emoji": "🧪",
+      "focusAreas": [
+        "Vitest unit coverage",
+        "Integration tests",
+        "E2E flows",
+        "Mocks and fixtures",
+        "Coverage reporting"
+      ],
+      "collaboratesWith": ["frontend-architect-shoeswiper", "backend-engineer-shoeswiper", "qa-deploy-commander-shoeswiper"],
+      "blocksDeployment": false,
+      "issueLabels": ["testing", "quality"]
     },
     {
       "name": "seo-specialist-shoeswiper",
@@ -169,11 +244,16 @@
   "priorityOrder": [
     "security-guardian-shoeswiper",
     "revenue-optimizer-shoeswiper",
+    "backend-engineer-shoeswiper",
+    "frontend-architect-shoeswiper",
     "code-builder-shoeswiper",
     "react-specialist-shoeswiper",
+    "accessibility-expert-shoeswiper",
     "supabase-expert-shoeswiper",
     "ui-designer-shoeswiper",
     "devops-engineer-shoeswiper",
+    "performance-optimizer-shoeswiper",
+    "test-automation-shoeswiper",
     "seo-specialist-shoeswiper",
     "mobile-specialist-shoeswiper"
   ],
@@ -198,6 +278,23 @@
     "quick": {
       "description": "Quick check - security and revenue only",
       "agents": ["security-guardian-shoeswiper", "revenue-optimizer-shoeswiper"]
+    },
+    "completion12": {
+      "description": "Launch 12 priority agents for completion push",
+      "agents": [
+        "security-guardian-shoeswiper",
+        "revenue-optimizer-shoeswiper",
+        "backend-engineer-shoeswiper",
+        "frontend-architect-shoeswiper",
+        "code-builder-shoeswiper",
+        "react-specialist-shoeswiper",
+        "supabase-expert-shoeswiper",
+        "ui-designer-shoeswiper",
+        "accessibility-expert-shoeswiper",
+        "devops-engineer-shoeswiper",
+        "performance-optimizer-shoeswiper",
+        "test-automation-shoeswiper"
+      ]
     }
   },
 
