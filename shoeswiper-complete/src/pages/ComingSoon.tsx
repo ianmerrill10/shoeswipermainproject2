@@ -1,8 +1,8 @@
 const ComingSoon = () => {
   return (
-    <div className="min-h-screen bg-gradient-to-br from-purple-900 via-black to-purple-900 flex flex-col items-center justify-center text-white p-4">
+    <main className="min-h-screen bg-gradient-to-br from-purple-900 via-black to-purple-900 flex flex-col items-center justify-center text-white p-4">
       {/* Logo */}
-      <div className="text-6xl mb-4">👟</div>
+      <div className="text-6xl mb-4" aria-hidden="true">👟</div>
       
       {/* Title */}
       <h1 className="text-5xl md:text-7xl font-bold mb-4 text-center">
@@ -15,7 +15,7 @@ const ComingSoon = () => {
       </p>
       
       {/* Coming Soon Badge */}
-      <div className="bg-purple-600 px-8 py-4 rounded-full mb-8">
+      <div className="bg-purple-600 px-8 py-4 rounded-full mb-8" role="status">
         <span className="text-2xl font-bold">Coming Soon</span>
       </div>
       
@@ -25,7 +25,7 @@ const ComingSoon = () => {
       </p>
       
       {/* Social Links */}
-      <div className="flex gap-4 mb-8">
+      <nav className="flex gap-4 mb-8" aria-label="Social media links">
         <a 
           href="https://tiktok.com/@shoeswiper" 
           target="_blank" 
@@ -34,7 +34,7 @@ const ComingSoon = () => {
         >
           Follow on TikTok
         </a>
-      </div>
+      </nav>
       
       {/* Admin Login (subtle) */}
       <a 
@@ -43,7 +43,7 @@ const ComingSoon = () => {
       >
         Admin Login
       </a>
-    </div>
+    </main>
   );
 };
 

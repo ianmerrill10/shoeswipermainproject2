@@ -82,9 +82,12 @@ const AuthPage: React.FC = () => {
       {/* Auth Card */}
       <div className="w-full max-w-md bg-zinc-900 rounded-2xl border border-zinc-800 p-6">
         {/* Tabs */}
-        <div className="flex mb-6 bg-zinc-800 rounded-xl p-1">
+        <div className="flex mb-6 bg-zinc-800 rounded-xl p-1" role="tablist" aria-label="Authentication options">
           <button
             onClick={() => setMode('signin')}
+            role="tab"
+            aria-selected={mode === 'signin'}
+            id="signin-tab"
             className={`flex-1 py-2 rounded-lg text-sm font-medium transition-colors ${
               mode === 'signin' ? 'bg-orange-500 text-white' : 'text-zinc-400'
             }`}
@@ -93,6 +96,9 @@ const AuthPage: React.FC = () => {
           </button>
           <button
             onClick={() => setMode('signup')}
+            role="tab"
+            aria-selected={mode === 'signup'}
+            id="signup-tab"
             className={`flex-1 py-2 rounded-lg text-sm font-medium transition-colors ${
               mode === 'signup' ? 'bg-orange-500 text-white' : 'text-zinc-400'
             }`}
@@ -103,7 +109,7 @@ const AuthPage: React.FC = () => {
 
         {/* Error */}
         {error && (
-          <div className="mb-4 p-3 bg-red-500/10 border border-red-500/30 rounded-lg text-red-400 text-sm">
+          <div className="mb-4 p-3 bg-red-500/10 border border-red-500/30 rounded-lg text-red-400 text-sm" role="alert">
             {error}
           </div>
         )}
@@ -113,16 +119,18 @@ const AuthPage: React.FC = () => {
           <button
             onClick={() => handleOAuth('google')}
             disabled={loading}
+            aria-label="Continue with Google"
             className="w-full flex items-center justify-center gap-3 py-3 bg-white text-black rounded-xl font-medium hover:bg-zinc-100 disabled:opacity-50"
           >
-            <FaGoogle /> Continue with Google
+            <FaGoogle aria-hidden="true" /> Continue with Google
           </button>
           <button
             onClick={() => handleOAuth('apple')}
             disabled={loading}
+            aria-label="Continue with Apple"
             className="w-full flex items-center justify-center gap-3 py-3 bg-zinc-800 text-white rounded-xl font-medium hover:bg-zinc-700 disabled:opacity-50"
           >
-            <FaApple /> Continue with Apple
+            <FaApple aria-hidden="true" /> Continue with Apple
           </button>
         </div>
 
@@ -137,39 +145,48 @@ const AuthPage: React.FC = () => {
         <form onSubmit={handleEmailAuth} className="space-y-4">
           {mode === 'signup' && (
             <div className="relative">
-              <FaUser className="absolute left-4 top-1/2 -translate-y-1/2 text-zinc-500" />
+              <FaUser className="absolute left-4 top-1/2 -translate-y-1/2 text-zinc-500" aria-hidden="true" />
+              <label htmlFor="username" className="sr-only">Username</label>
               <input
+                id="username"
                 type="text"
                 value={username}
                 onChange={(e) => setUsername(e.target.value)}
                 placeholder="Username"
                 required
+                autoComplete="username"
                 className="w-full bg-zinc-800 border border-zinc-700 rounded-xl pl-12 pr-4 py-3 text-white placeholder-zinc-500 focus:border-orange-500 outline-none"
               />
             </div>
           )}
           
           <div className="relative">
-            <FaEnvelope className="absolute left-4 top-1/2 -translate-y-1/2 text-zinc-500" />
+            <FaEnvelope className="absolute left-4 top-1/2 -translate-y-1/2 text-zinc-500" aria-hidden="true" />
+            <label htmlFor="email" className="sr-only">Email</label>
             <input
+              id="email"
               type="email"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               placeholder="Email"
               required
+              autoComplete="email"
               className="w-full bg-zinc-800 border border-zinc-700 rounded-xl pl-12 pr-4 py-3 text-white placeholder-zinc-500 focus:border-orange-500 outline-none"
             />
           </div>
 
           <div className="relative">
-            <FaLock className="absolute left-4 top-1/2 -translate-y-1/2 text-zinc-500" />
+            <FaLock className="absolute left-4 top-1/2 -translate-y-1/2 text-zinc-500" aria-hidden="true" />
+            <label htmlFor="password" className="sr-only">Password</label>
             <input
+              id="password"
               type="password"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               placeholder="Password"
               required
               minLength={6}
+              autoComplete={mode === 'signin' ? 'current-password' : 'new-password'}
               className="w-full bg-zinc-800 border border-zinc-700 rounded-xl pl-12 pr-4 py-3 text-white placeholder-zinc-500 focus:border-orange-500 outline-none"
             />
           </div>

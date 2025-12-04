@@ -87,22 +87,27 @@ const ShoePanel: React.FC<ShoePanelProps> = ({ shoe, isOpen, onClose }) => {
           isOpen ? 'opacity-100' : 'opacity-0 pointer-events-none'
         }`}
         onClick={onClose}
+        aria-hidden="true"
       />
 
       {/* Panel */}
       <div
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="shoe-panel-title"
         className={`fixed top-0 left-0 h-full w-full max-w-md bg-zinc-950 z-50 transform transition-transform duration-300 ease-out overflow-y-auto ${
           isOpen ? 'translate-x-0' : '-translate-x-full'
         }`}
       >
         {/* Header */}
         <div className="sticky top-0 bg-zinc-950/95 backdrop-blur-sm border-b border-zinc-800 p-4 flex items-center justify-between z-10">
-          <h2 className="text-lg font-bold text-white">3D View</h2>
+          <h2 id="shoe-panel-title" className="text-lg font-bold text-white">3D View</h2>
           <button
             onClick={onClose}
+            aria-label="Close panel"
             className="w-10 h-10 bg-zinc-800 rounded-full flex items-center justify-center text-white hover:bg-zinc-700 transition-colors"
           >
-            <FaTimes />
+            <FaTimes aria-hidden="true" />
           </button>
         </div>
 
@@ -110,22 +115,24 @@ const ShoePanel: React.FC<ShoePanelProps> = ({ shoe, isOpen, onClose }) => {
         <div className="relative bg-gradient-to-b from-zinc-900 to-zinc-950 aspect-square flex items-center justify-center">
           <img
             src={viewAngles[currentImageIndex].url}
-            alt={`${shoe.name} - ${viewAngles[currentImageIndex].label}`}
+            alt={`${shoe.name} - ${viewAngles[currentImageIndex].label} view`}
             className="max-w-[80%] max-h-[80%] object-contain drop-shadow-2xl"
           />
 
           {/* Navigation arrows */}
           <button
             onClick={prevImage}
+            aria-label="Previous view angle"
             className="absolute left-3 top-1/2 -translate-y-1/2 w-10 h-10 bg-black/50 backdrop-blur-sm rounded-full flex items-center justify-center text-white hover:bg-black/70 transition-colors"
           >
-            <FaChevronLeft />
+            <FaChevronLeft aria-hidden="true" />
           </button>
           <button
             onClick={nextImage}
+            aria-label="Next view angle"
             className="absolute right-3 top-1/2 -translate-y-1/2 w-10 h-10 bg-black/50 backdrop-blur-sm rounded-full flex items-center justify-center text-white hover:bg-black/70 transition-colors"
           >
-            <FaChevronRight />
+            <FaChevronRight aria-hidden="true" />
           </button>
 
           {/* 3D badge placeholder */}
@@ -136,12 +143,14 @@ const ShoePanel: React.FC<ShoePanelProps> = ({ shoe, isOpen, onClose }) => {
 
         {/* View Angles Gallery */}
         <div className="p-4 border-b border-zinc-800">
-          <p className="text-zinc-400 text-sm mb-3">View Angles</p>
-          <div className="flex gap-2 overflow-x-auto pb-2">
+          <p className="text-zinc-400 text-sm mb-3" id="view-angles-label">View Angles</p>
+          <div className="flex gap-2 overflow-x-auto pb-2" role="group" aria-labelledby="view-angles-label">
             {viewAngles.map((angle, index) => (
               <button
                 key={angle.label}
                 onClick={() => setCurrentImageIndex(index)}
+                aria-label={`View ${angle.label} angle`}
+                aria-pressed={currentImageIndex === index}
                 className={`flex-shrink-0 w-16 h-16 rounded-lg overflow-hidden border-2 transition-colors ${
                   currentImageIndex === index
                     ? 'border-orange-500'
@@ -150,7 +159,7 @@ const ShoePanel: React.FC<ShoePanelProps> = ({ shoe, isOpen, onClose }) => {
               >
                 <img
                   src={angle.url}
-                  alt={angle.label}
+                  alt={`${shoe.name} ${angle.label} thumbnail`}
                   className="w-full h-full object-cover"
                 />
               </button>
@@ -171,12 +180,14 @@ const ShoePanel: React.FC<ShoePanelProps> = ({ shoe, isOpen, onClose }) => {
 
         {/* Size Selector */}
         <div className="p-4 border-b border-zinc-800">
-          <p className="text-zinc-400 text-sm mb-3">Select Size (US)</p>
-          <div className="grid grid-cols-4 gap-2">
+          <p className="text-zinc-400 text-sm mb-3" id="size-selector-label">Select Size (US)</p>
+          <div className="grid grid-cols-4 gap-2" role="group" aria-labelledby="size-selector-label">
             {sizes.map((size) => (
               <button
                 key={size}
                 onClick={() => setSelectedSize(size)}
+                aria-label={`Size ${size}`}
+                aria-pressed={selectedSize === size}
                 className={`py-3 rounded-lg font-bold text-sm transition-colors ${
                   selectedSize === size
                     ? 'bg-orange-500 text-white'
@@ -238,13 +249,14 @@ const ShoePanel: React.FC<ShoePanelProps> = ({ shoe, isOpen, onClose }) => {
         <div className="p-4 space-y-3 pb-8">
           <button
             onClick={handleBuyClick}
+            aria-label={`Buy ${shoe.name} on Amazon`}
             className="w-full bg-gradient-to-r from-orange-500 to-orange-600 text-white font-black py-4 rounded-xl flex items-center justify-center gap-3 text-base active:scale-95 hover:scale-[1.02] transition-transform"
           >
-            <FaAmazon className="text-2xl" />
+            <FaAmazon className="text-2xl" aria-hidden="true" />
             BUY ON AMAZON
           </button>
           <div className="flex items-center justify-center gap-1 mt-2">
-            <FaCheck className="text-xs text-blue-400" />
+            <FaCheck className="text-xs text-blue-400" aria-hidden="true" />
             <span className="text-xs text-blue-400 font-medium">Prime eligible</span>
           </div>
 
@@ -256,20 +268,23 @@ const ShoePanel: React.FC<ShoePanelProps> = ({ shoe, isOpen, onClose }) => {
           <div className="flex gap-3">
             <button
               onClick={handleAddToCloset}
+              aria-label={isInCloset ? `${shoe.name} is in your closet` : `Add ${shoe.name} to closet`}
+              aria-pressed={isInCloset}
               className={`flex-1 font-bold py-3 rounded-xl flex items-center justify-center gap-2 transition-colors ${
                 isInCloset
                   ? 'bg-orange-500 text-white'
                   : 'bg-zinc-800 text-white hover:bg-zinc-700'
               }`}
             >
-              {isInCloset ? <FaCheck /> : <FaBookmark />}
+              {isInCloset ? <FaCheck aria-hidden="true" /> : <FaBookmark aria-hidden="true" />}
               {isInCloset ? 'In Closet' : 'Add to Closet'}
             </button>
             <button
               onClick={handleShare}
+              aria-label={`Share ${shoe.name}`}
               className="flex-1 bg-zinc-800 text-white font-bold py-3 rounded-xl flex items-center justify-center gap-2 hover:bg-zinc-700 transition-colors"
             >
-              <FaShare />
+              <FaShare aria-hidden="true" />
               Share
             </button>
           </div>
@@ -277,12 +292,14 @@ const ShoePanel: React.FC<ShoePanelProps> = ({ shoe, isOpen, onClose }) => {
 
         {/* Share Success Toast */}
         <div
+          role="status"
+          aria-live="polite"
           className={`fixed bottom-8 left-1/2 -translate-x-1/2 bg-zinc-700 text-white px-4 py-3 rounded-xl flex items-center gap-2 shadow-lg z-[60] transition-all duration-300 ${
             showShareToast ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4 pointer-events-none'
           }`}
         >
           <div className="w-6 h-6 bg-green-500 rounded-full flex items-center justify-center">
-            <FaCheck className="text-xs text-white" />
+            <FaCheck className="text-xs text-white" aria-hidden="true" />
           </div>
           <span className="font-medium text-sm">Copied with affiliate link!</span>
         </div>

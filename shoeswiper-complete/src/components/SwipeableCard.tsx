@@ -154,17 +154,19 @@ const SwipeableCard: React.FC<SwipeableCardProps> = ({
         ...SPRING_CONFIGS.returnToCenter,
       }}
       onClick={() => !isDragging && onCardClick?.(shoe)}
+      role="article"
+      aria-label={`${shoe.brand} ${shoe.name}. Swipe right to like, left to skip.`}
     >
       {/* Background Image */}
       <img
         src={shoe.image_url}
-        alt={shoe.name}
+        alt={`${shoe.brand} ${shoe.name}${shoe.colorway ? ` in ${shoe.colorway}` : ''}`}
         className="absolute inset-0 w-full h-full object-cover pointer-events-none"
         draggable={false}
       />
 
       {/* Gradient Overlay */}
-      <div className="absolute inset-0 bg-gradient-to-b from-black/40 via-transparent to-black/95 pointer-events-none" />
+      <div className="absolute inset-0 bg-gradient-to-b from-black/40 via-transparent to-black/95 pointer-events-none" aria-hidden="true" />
 
       {/* Like Indicator (Right Swipe) */}
       <motion.div
@@ -229,17 +231,18 @@ const SwipeableCard: React.FC<SwipeableCardProps> = ({
         {/* Buy Button */}
         <motion.button
           onClick={handleBuyClick}
+          aria-label={`Buy ${shoe.name} on Amazon`}
           className="w-full bg-white text-black font-black py-4 rounded-xl flex items-center justify-center gap-3 text-base shadow-lg"
           whileTap={prefersReducedMotion ? {} : { scale: 0.95 }}
           transition={{ duration: 0.1 }}
         >
-          <FaAmazon className="text-2xl" />
+          <FaAmazon className="text-2xl" aria-hidden="true" />
           BUY ON AMAZON
         </motion.button>
       </div>
 
       {/* Side Actions */}
-      <div className="absolute right-3 bottom-44 flex flex-col gap-5 z-10">
+      <div className="absolute right-3 bottom-44 flex flex-col gap-5 z-10" role="group" aria-label="Sneaker actions">
         <motion.button
           onClick={(e) => {
             e.stopPropagation();
@@ -247,15 +250,17 @@ const SwipeableCard: React.FC<SwipeableCardProps> = ({
             onSwipeRight?.(shoe);
             setShowCelebration(true);
           }}
+          aria-label={isFavorite ? `Remove ${shoe.name} from favorites` : `Add ${shoe.name} to favorites`}
+          aria-pressed={isFavorite}
           className="flex flex-col items-center gap-1"
           whileTap={prefersReducedMotion ? {} : { scale: 0.9 }}
         >
           <div className={`w-11 h-11 backdrop-blur-sm rounded-full flex items-center justify-center transition-all ${
             isFavorite ? 'bg-red-500' : 'bg-black/30'
           }`}>
-            <FaHeart className="text-xl text-white" />
+            <FaHeart className="text-xl text-white" aria-hidden="true" />
           </div>
-          <span className="text-xs font-bold text-white drop-shadow">
+          <span className="text-xs font-bold text-white drop-shadow" aria-hidden="true">
             {isFavorite ? 'Liked' : shoe.favorite_count}
           </span>
         </motion.button>
@@ -265,28 +270,31 @@ const SwipeableCard: React.FC<SwipeableCardProps> = ({
             e.stopPropagation();
             triggerHaptic('light');
           }}
+          aria-label={isInCloset ? `${shoe.name} is saved to closet` : `Save ${shoe.name} to closet`}
+          aria-pressed={isInCloset}
           className="flex flex-col items-center gap-1"
           whileTap={prefersReducedMotion ? {} : { scale: 0.9 }}
         >
           <div className={`w-11 h-11 backdrop-blur-sm rounded-full flex items-center justify-center transition-all ${
             isInCloset ? 'bg-orange-500' : 'bg-black/30'
           }`}>
-            <FaBookmark className="text-xl text-white" />
+            <FaBookmark className="text-xl text-white" aria-hidden="true" />
           </div>
-          <span className="text-xs font-bold text-white drop-shadow">
+          <span className="text-xs font-bold text-white drop-shadow" aria-hidden="true">
             {isInCloset ? 'Saved' : 'Save'}
           </span>
         </motion.button>
 
         <motion.button
           onClick={handleShareClick}
+          aria-label={`Share ${shoe.name}`}
           className="flex flex-col items-center gap-1"
           whileTap={prefersReducedMotion ? {} : { scale: 0.9 }}
         >
           <div className="w-11 h-11 bg-black/30 backdrop-blur-sm rounded-full flex items-center justify-center">
-            <FaShare className="text-xl text-white" />
+            <FaShare className="text-xl text-white" aria-hidden="true" />
           </div>
-          <span className="text-xs font-bold text-white drop-shadow">Share</span>
+          <span className="text-xs font-bold text-white drop-shadow" aria-hidden="true">Share</span>
         </motion.button>
 
         <motion.button
@@ -295,13 +303,14 @@ const SwipeableCard: React.FC<SwipeableCardProps> = ({
             triggerHaptic('swipe');
             onSwipeLeft?.(shoe);
           }}
+          aria-label={`Skip ${shoe.name}`}
           className="flex flex-col items-center gap-1"
           whileTap={prefersReducedMotion ? {} : { scale: 0.9 }}
         >
           <div className="w-11 h-11 bg-black/30 backdrop-blur-sm rounded-full flex items-center justify-center">
-            <FaTimes className="text-xl text-white" />
+            <FaTimes className="text-xl text-white" aria-hidden="true" />
           </div>
-          <span className="text-xs font-bold text-white drop-shadow">Skip</span>
+          <span className="text-xs font-bold text-white drop-shadow" aria-hidden="true">Skip</span>
         </motion.button>
       </div>
 
@@ -309,11 +318,12 @@ const SwipeableCard: React.FC<SwipeableCardProps> = ({
       {showMusicBar && shoe.music && (
         <motion.button
           onClick={handleMusicClick}
+          aria-label={`Now playing: ${shoe.music.song} by ${shoe.music.artist}. Tap for music links.`}
           className="absolute bottom-20 left-4 right-4 flex items-center gap-3 bg-black/40 backdrop-blur-sm rounded-full px-3 py-2 z-10"
           whileTap={prefersReducedMotion ? {} : { scale: 0.98 }}
         >
           {/* Spinning Disc */}
-          <div className="w-10 h-10 rounded-full bg-gradient-to-br from-zinc-700 to-zinc-900 flex items-center justify-center animate-spin-slow flex-shrink-0 border border-zinc-600">
+          <div className="w-10 h-10 rounded-full bg-gradient-to-br from-zinc-700 to-zinc-900 flex items-center justify-center animate-spin-slow flex-shrink-0 border border-zinc-600" aria-hidden="true">
             <div className="w-4 h-4 rounded-full bg-orange-500 flex items-center justify-center">
               <div className="w-1.5 h-1.5 rounded-full bg-black" />
             </div>
@@ -322,7 +332,7 @@ const SwipeableCard: React.FC<SwipeableCardProps> = ({
           {/* Song Info with Marquee */}
           <div className="flex-1 overflow-hidden">
             <div className="flex items-center gap-2">
-              <FaMusic className="text-orange-500 text-xs flex-shrink-0" />
+              <FaMusic className="text-orange-500 text-xs flex-shrink-0" aria-hidden="true" />
               <div className="overflow-hidden whitespace-nowrap">
                 <span className="inline-block animate-marquee text-white text-sm font-medium">
                   {shoe.music.song} • {shoe.music.artist}
@@ -332,7 +342,7 @@ const SwipeableCard: React.FC<SwipeableCardProps> = ({
           </div>
 
           {/* Tap hint */}
-          <span className="text-zinc-400 text-xs flex-shrink-0">Tap for links</span>
+          <span className="text-zinc-400 text-xs flex-shrink-0" aria-hidden="true">Tap for links</span>
         </motion.button>
       )}
 

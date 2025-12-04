@@ -40,15 +40,16 @@ export const BuyNowButton: React.FC<BuyNowButtonProps> = ({
       target="_blank"
       rel="noopener noreferrer sponsored"
       onClick={handleClick}
+      aria-label="Buy on Amazon"
       className={`inline-flex items-center justify-center gap-2 bg-gradient-to-r from-orange-500 to-orange-600 transition-shadow hover:shadow-lg hover:shadow-orange-500/25 ${variantStyles[variant]} ${className}`}
       whileHover={{ scale: 1.05 }}
       whileTap={{ scale: 0.98 }}
     >
-      <FaAmazon className={variant === 'large' ? 'text-xl' : 'text-base'} />
+      <FaAmazon className={variant === 'large' ? 'text-xl' : 'text-base'} aria-hidden="true" />
       <span>{buttonText}</span>
       {showPrimeBadge && (
         <span className="flex items-center gap-1 ml-1 text-blue-400">
-          <FaCheck className="text-xs" />
+          <FaCheck className="text-xs" aria-hidden="true" />
           <span className={variant === 'compact' ? 'text-xs' : 'text-sm'}>Prime</span>
         </span>
       )}

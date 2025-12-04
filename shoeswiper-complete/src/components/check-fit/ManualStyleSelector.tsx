@@ -22,15 +22,16 @@ export const ManualStyleSelector: React.FC<Props> = ({ onSelect }) => {
       animate={{ opacity: 1 }} 
       className="p-4 bg-zinc-900 rounded-2xl border border-zinc-800"
     >
-      <h3 className="text-white font-bold mb-4 text-center">Select Your Vibe</h3>
-      <div className="grid grid-cols-2 gap-3">
+      <h3 className="text-white font-bold mb-4 text-center" id="style-selector-heading">Select Your Vibe</h3>
+      <div className="grid grid-cols-2 gap-3" role="group" aria-labelledby="style-selector-heading">
         {STYLES.map((style) => (
           <button
             key={style.id}
             onClick={() => onSelect(style.id)}
+            aria-label={`Select ${style.label} style`}
             className={`p-4 rounded-xl border ${style.border} ${style.bg} hover:scale-[1.02] active:scale-95 transition-all flex flex-col items-center justify-center gap-2`}
           >
-            <style.icon className={`text-2xl ${style.color}`} />
+            <style.icon className={`text-2xl ${style.color}`} aria-hidden="true" />
             <span className="text-sm font-bold text-zinc-300">{style.label}</span>
           </button>
         ))}
