@@ -54,11 +54,14 @@ let flushTimeout: ReturnType<typeof setTimeout> | null = null;
  */
 function reportMetrics(metrics: WebVitalMetric[]): void {
   if (import.meta.env.DEV) {
+    // eslint-disable-next-line no-console
     console.group('📊 Web Vitals Report');
     metrics.forEach((metric) => {
       const icon = metric.rating === 'good' ? '✅' : metric.rating === 'needs-improvement' ? '⚠️' : '❌';
+      // eslint-disable-next-line no-console
       console.log(`${icon} ${metric.name}: ${metric.value.toFixed(2)} (${metric.rating})`);
     });
+    // eslint-disable-next-line no-console
     console.groupEnd();
   }
 
@@ -213,6 +216,7 @@ export function initWebVitals(): void {
     }
 
     if (import.meta.env.DEV) {
+      // eslint-disable-next-line no-console
       console.log('📊 Web Vitals monitoring initialized');
     }
   } catch (error) {

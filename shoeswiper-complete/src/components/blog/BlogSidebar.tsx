@@ -1,4 +1,3 @@
-import React from 'react';
 import { Link } from 'react-router-dom';
 import { BlogType, BLOG_CONFIGS, DEFAULT_CATEGORIES } from '../../lib/blogTypes';
 import { useFeaturedPosts } from '../../hooks/useBlog';

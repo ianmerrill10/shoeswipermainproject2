@@ -3,6 +3,12 @@
 // Type-safe definitions for the API layer
 // ============================================
 
+// V8 Error extension for captureStackTrace
+interface ErrorConstructorWithCapture extends ErrorConstructor {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  captureStackTrace?(targetObject: object, constructorOpt?: any): void;
+}
+
 /**
  * HTTP methods supported by the API client
  */
@@ -20,9 +26,10 @@ export class ApiError extends Error {
   ) {
     super(message);
     this.name = 'ApiError';
-    // Maintain proper stack trace for where error was thrown
-    if (Error.captureStackTrace) {
-      Error.captureStackTrace(this, ApiError);
+    // Maintain proper stack trace for where error was thrown (V8 only)
+    const ErrorWithCapture = Error as ErrorConstructorWithCapture;
+    if (ErrorWithCapture.captureStackTrace) {
+      ErrorWithCapture.captureStackTrace(this, ApiError);
     }
   }
 
@@ -87,8 +94,9 @@ export class NetworkError extends Error {
   constructor(message: string = 'Network request failed') {
     super(message);
     this.name = 'NetworkError';
-    if (Error.captureStackTrace) {
-      Error.captureStackTrace(this, NetworkError);
+    const ErrorWithCapture = Error as ErrorConstructorWithCapture;
+    if (ErrorWithCapture.captureStackTrace) {
+      ErrorWithCapture.captureStackTrace(this, NetworkError);
     }
   }
 
@@ -104,8 +112,9 @@ export class TimeoutError extends Error {
   constructor(message: string = 'Request timed out') {
     super(message);
     this.name = 'TimeoutError';
-    if (Error.captureStackTrace) {
-      Error.captureStackTrace(this, TimeoutError);
+    const ErrorWithCapture = Error as ErrorConstructorWithCapture;
+    if (ErrorWithCapture.captureStackTrace) {
+      ErrorWithCapture.captureStackTrace(this, TimeoutError);
     }
   }
 
