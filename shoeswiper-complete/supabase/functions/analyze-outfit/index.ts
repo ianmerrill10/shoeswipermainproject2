@@ -12,7 +12,57 @@ serve(async (req) => {
   }
 
   try {
-    const { image } = await req.json(); // base64 image
+    // Validate request body
+    let body;
+    try {
+      body = await req.json();
+    } catch {
+      return new Response(JSON.stringify({
+        error: "Invalid JSON in request body",
+        fallback: true
+      }), {
+        status: 400,
+        headers: { ...corsHeaders, "Content-Type": "application/json" }
+      });
+    }
+
+    const { image } = body;
+
+    // Input validation: image must be a non-empty base64 string
+    if (!image || typeof image !== "string") {
+      return new Response(JSON.stringify({
+        error: "Missing or invalid 'image' field. Expected base64-encoded image data.",
+        fallback: true
+      }), {
+        status: 400,
+        headers: { ...corsHeaders, "Content-Type": "application/json" }
+      });
+    }
+
+    // Basic base64 validation (should only contain valid base64 characters)
+    // Allows 0-2 padding characters at the end
+    const base64Regex = /^[A-Za-z0-9+/]*={0,2}$/;
+    if (!base64Regex.test(image)) {
+      return new Response(JSON.stringify({
+        error: "Invalid base64 encoding in 'image' field",
+        fallback: true
+      }), {
+        status: 400,
+        headers: { ...corsHeaders, "Content-Type": "application/json" }
+      });
+    }
+
+    // Limit base64 encoded image size (max 10MB encoded = ~7.5MB original image)
+    const MAX_BASE64_SIZE = 10 * 1024 * 1024;
+    if (image.length > MAX_BASE64_SIZE) {
+      return new Response(JSON.stringify({
+        error: "Image too large. Maximum size is 10MB.",
+        fallback: true
+      }), {
+        status: 400,
+        headers: { ...corsHeaders, "Content-Type": "application/json" }
+      });
+    }
 
     // Call Gemini Vision API
     const GEMINI_API_KEY = Deno.env.get("GEMINI_API_KEY");

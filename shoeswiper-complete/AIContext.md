@@ -138,7 +138,7 @@
 ### ⏳ REMAINING WORK
 
 #### HIGH PRIORITY - Security (Priority 1)
-1. **Move Gemini API key server-side** - Currently exposed in client code (CRITICAL)
+1. ~~**Move Gemini API key server-side**~~ - ✅ COMPLETED (uses Edge Function)
 2. Implement JWT authentication with refresh tokens
 3. Add rate limiting on all endpoints
 4. Add input validation and sanitization
@@ -180,7 +180,7 @@
 ## Technical Debt & Issues
 
 ### Security Issues (CRITICAL)
-- [ ] Gemini API key exposed in client code
+- [x] Gemini API key moved to server-side Edge Function
 - [ ] Missing rate limiting
 - [ ] Missing input validation on many endpoints
 - [ ] RLS policies need audit and testing
@@ -203,8 +203,9 @@
 ```
 VITE_SUPABASE_URL=https://your-project.supabase.co
 VITE_SUPABASE_ANON_KEY=your-anon-key
-VITE_GEMINI_API_KEY=your-gemini-key (MUST MOVE SERVER-SIDE)
 VITE_STRIPE_PUBLIC_KEY=your-stripe-key
+# GEMINI_API_KEY - Set via: supabase secrets set GEMINI_API_KEY=your-key
+# (Server-side only - used by analyze-outfit Edge Function)
 SUPABASE_SERVICE_KEY=your-service-key (server only)
 STRIPE_SECRET_KEY=sk_your_key (server only)
 STRIPE_WEBHOOK_SECRET=whsec_your_secret (server only)
