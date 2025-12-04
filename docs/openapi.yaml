@@ -706,7 +706,7 @@ paths:
                     example: "Price alert created successfully"
                   alertId:
                     type: string
-                    nullable: true
+                    description: Unique identifier for the created price alert
                     example: "alert-789"
         '400':
           $ref: '#/components/responses/BadRequest'
@@ -1279,14 +1279,17 @@ components:
 
     PaginatedResponse:
       type: object
+      description: Generic paginated response wrapper
       required:
         - data
         - pagination
       properties:
         data:
           type: array
-          items: {}
-          description: Array of items
+          items:
+            type: object
+            additionalProperties: true
+          description: Array of paginated items
         pagination:
           $ref: '#/components/schemas/Pagination'
 
