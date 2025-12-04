@@ -1,11 +1,22 @@
-import React, { useState } from 'react';
-import { FaTimes, FaAmazon, FaBookmark, FaShare, FaChevronLeft, FaChevronRight, FaCheck } from 'react-icons/fa';
+// ============================================
+// ShoePanel.tsx - 3D View / 360° Viewer Component
+// ============================================
+// Now with full 3D model support and AI generation!
+// ============================================
+
+import React, { useState, Suspense, lazy } from 'react';
+import { FaTimes, FaAmazon, FaBookmark, FaShare, FaCheck, FaCube, FaSpinner } from 'react-icons/fa';
 import { Shoe } from '../lib/types';
 import { getAffiliateUrl, shouldShowPrice, formatPrice } from '../lib/supabaseClient';
 import { createAffiliateShareData } from '../lib/deepLinks';
 import { useFavorites } from '../hooks/useFavorites';
 import { useAnalytics } from '../hooks/useAnalytics';
+import { useShoe3D } from '../hooks/useShoe3D';
 import PriceAlertButton from './PriceAlertButton';
+import { MultiAngleViewer, generateViewAngles } from './3d/MultiAngleViewer';
+
+// Lazy load the 3D viewer to reduce initial bundle size
+const ShoeModel3D = lazy(() => import('./3d/ShoeModel3D').then(m => ({ default: m.ShoeModel3D })));
 
 interface ShoePanelProps {
   shoe: Shoe;
@@ -13,31 +24,44 @@ interface ShoePanelProps {
   onClose: () => void;
 }
 
+type ViewMode = '3d' | 'photos';
+
 const ShoePanel: React.FC<ShoePanelProps> = ({ shoe, isOpen, onClose }) => {
   const [selectedSize, setSelectedSize] = useState<string | null>(null);
-  const [currentImageIndex, setCurrentImageIndex] = useState(0);
   const [showShareToast, setShowShareToast] = useState(false);
+  const [viewMode, setViewMode] = useState<ViewMode>('photos');
   const { toggleFavorite, isFavorite } = useFavorites();
   const { trackFavorite, trackShare } = useAnalytics();
 
-  // Generate view angles (in production these would be real image URLs)
-  const viewAngles = [
-    { label: 'Side', url: shoe.image_url },
-    { label: 'Front', url: shoe.image_url },
-    { label: 'Back', url: shoe.image_url },
-    { label: 'Top', url: shoe.image_url },
-    { label: 'Sole', url: shoe.image_url },
-  ];
+  // 3D model state
+  const {
+    status: model3DStatus,
+    isGenerating,
+    generate3DModel,
+    hasModel,
+    modelUrl,
+  } = useShoe3D(shoe.id, shoe.image_url, shoe.name);
+
+  // Generate view angles from shoe data or create from single image
+  const viewAngles = shoe.media?.thumbnail_angles?.length
+    ? shoe.media.thumbnail_angles.map((url, i) => ({
+        label: ['Side', 'Front', 'Back', 'Top', 'Sole'][i] || `Angle ${i + 1}`,
+        url,
+      }))
+    : generateViewAngles(shoe.image_url, shoe.name);
 
   // Default sizes if none provided
   const sizes = shoe.sizes_available || ['7', '7.5', '8', '8.5', '9', '9.5', '10', '10.5', '11', '11.5', '12', '13'];
+
+  // Check if shoe has 3D model available
+  const has3DModel = hasModel || (shoe.media?.has_3d_model && shoe.media?.model_url);
+  const activeModelUrl = modelUrl || shoe.media?.model_url;
 
   const handleBuyClick = () => {
     window.open(getAffiliateUrl(shoe.amazon_url), '_blank');
   };
 
   const handleShare = async () => {
-    // Generate smart share data with deep links and affiliate tracking
     const shareData = createAffiliateShareData(shoe, 'share_native');
 
     if (navigator.share) {
@@ -52,10 +76,8 @@ const ShoePanel: React.FC<ShoePanelProps> = ({ shoe, isOpen, onClose }) => {
         if (import.meta.env.DEV) console.warn('Share cancelled');
       }
     } else {
-      // Copy rich share text to clipboard
       navigator.clipboard.writeText(shareData.text);
       trackShare(shoe.id, 'clipboard');
-      // Show toast instead of alert
       setShowShareToast(true);
       setTimeout(() => setShowShareToast(false), 2500);
     }
@@ -69,15 +91,14 @@ const ShoePanel: React.FC<ShoePanelProps> = ({ shoe, isOpen, onClose }) => {
     }
   };
 
+  const handleGenerate3D = async () => {
+    await generate3DModel();
+    if (!model3DStatus.error) {
+      setViewMode('3d');
+    }
+  };
+
   const isInCloset = isFavorite(shoe.id);
-
-  const prevImage = () => {
-    setCurrentImageIndex((prev) => (prev === 0 ? viewAngles.length - 1 : prev - 1));
-  };
-
-  const nextImage = () => {
-    setCurrentImageIndex((prev) => (prev === viewAngles.length - 1 ? 0 : prev + 1));
-  };
 
   return (
     <>
@@ -97,75 +118,138 @@ const ShoePanel: React.FC<ShoePanelProps> = ({ shoe, isOpen, onClose }) => {
       >
         {/* Header */}
         <div className="sticky top-0 bg-zinc-950/95 backdrop-blur-sm border-b border-zinc-800 p-4 flex items-center justify-between z-10">
-          <h2 className="text-lg font-bold text-white">3D View</h2>
-          <button
-            onClick={onClose}
-            className="w-10 h-10 bg-zinc-800 rounded-full flex items-center justify-center text-white hover:bg-zinc-700 transition-colors"
-          >
-            <FaTimes />
-          </button>
-        </div>
-
-        {/* Model Viewer / Main Image */}
-        <div className="relative bg-gradient-to-b from-zinc-900 to-zinc-950 aspect-square flex items-center justify-center">
-          <img
-            src={viewAngles[currentImageIndex].url}
-            alt={`${shoe.name} - ${viewAngles[currentImageIndex].label}`}
-            className="max-w-[80%] max-h-[80%] object-contain drop-shadow-2xl"
-          />
-
-          {/* Navigation arrows */}
-          <button
-            onClick={prevImage}
-            className="absolute left-3 top-1/2 -translate-y-1/2 w-10 h-10 bg-black/50 backdrop-blur-sm rounded-full flex items-center justify-center text-white hover:bg-black/70 transition-colors"
-          >
-            <FaChevronLeft />
-          </button>
-          <button
-            onClick={nextImage}
-            className="absolute right-3 top-1/2 -translate-y-1/2 w-10 h-10 bg-black/50 backdrop-blur-sm rounded-full flex items-center justify-center text-white hover:bg-black/70 transition-colors"
-          >
-            <FaChevronRight />
-          </button>
-
-          {/* 3D badge placeholder */}
-          <div className="absolute top-4 left-4 bg-orange-500 text-white text-xs font-bold px-3 py-1 rounded-full">
-            360° VIEW
+          <h2 className="text-lg font-bold text-white">
+            {viewMode === '3d' ? '3D Model' : '360° View'}
+          </h2>
+          <div className="flex items-center gap-2">
+            {/* View Mode Toggle */}
+            {has3DModel && (
+              <div className="flex bg-zinc-800 rounded-full p-1">
+                <button
+                  onClick={() => setViewMode('3d')}
+                  className={`px-3 py-1 text-xs font-medium rounded-full transition-colors ${
+                    viewMode === '3d'
+                      ? 'bg-orange-500 text-white'
+                      : 'text-zinc-400 hover:text-white'
+                  }`}
+                >
+                  3D
+                </button>
+                <button
+                  onClick={() => setViewMode('photos')}
+                  className={`px-3 py-1 text-xs font-medium rounded-full transition-colors ${
+                    viewMode === 'photos'
+                      ? 'bg-orange-500 text-white'
+                      : 'text-zinc-400 hover:text-white'
+                  }`}
+                >
+                  Photos
+                </button>
+              </div>
+            )}
+            <button
+              onClick={onClose}
+              className="w-10 h-10 bg-zinc-800 rounded-full flex items-center justify-center text-white hover:bg-zinc-700 transition-colors"
+            >
+              <FaTimes />
+            </button>
           </div>
         </div>
 
-        {/* View Angles Gallery */}
-        <div className="p-4 border-b border-zinc-800">
-          <p className="text-zinc-400 text-sm mb-3">View Angles</p>
-          <div className="flex gap-2 overflow-x-auto pb-2">
-            {viewAngles.map((angle, index) => (
-              <button
-                key={angle.label}
-                onClick={() => setCurrentImageIndex(index)}
-                className={`flex-shrink-0 w-16 h-16 rounded-lg overflow-hidden border-2 transition-colors ${
-                  currentImageIndex === index
-                    ? 'border-orange-500'
-                    : 'border-zinc-700 hover:border-zinc-600'
-                }`}
-              >
-                <img
-                  src={angle.url}
-                  alt={angle.label}
-                  className="w-full h-full object-cover"
-                />
-              </button>
-            ))}
-          </div>
+        {/* ============================================
+            3D MODEL / MULTI-ANGLE VIEWER
+            ============================================ */}
+        <div className="relative aspect-square">
+          {viewMode === '3d' && has3DModel && activeModelUrl ? (
+            <Suspense
+              fallback={
+                <div className="w-full h-full flex items-center justify-center bg-zinc-900">
+                  <div className="flex flex-col items-center gap-2">
+                    <FaSpinner className="w-8 h-8 text-orange-500 animate-spin" />
+                    <p className="text-zinc-400 text-sm">Loading 3D model...</p>
+                  </div>
+                </div>
+              }
+            >
+              <ShoeModel3D
+                modelUrl={activeModelUrl}
+                autoRotate={true}
+                enableZoom={true}
+                showShadow={true}
+              />
+            </Suspense>
+          ) : (
+            <MultiAngleViewer
+              angles={viewAngles}
+              shoeName={shoe.name}
+              autoPlay={false}
+              showThumbnails={true}
+            />
+          )}
+
+          {/* Generate 3D Button (when no model exists) */}
+          {!has3DModel && viewMode === 'photos' && (
+            <button
+              onClick={handleGenerate3D}
+              disabled={isGenerating}
+              className="absolute bottom-20 right-4 bg-gradient-to-r from-purple-500 to-pink-500 text-white px-4 py-2 rounded-full font-medium text-sm flex items-center gap-2 hover:scale-105 transition-transform disabled:opacity-50 disabled:cursor-not-allowed shadow-lg"
+            >
+              {isGenerating ? (
+                <>
+                  <FaSpinner className="animate-spin" />
+                  Generating... {model3DStatus.progress}%
+                </>
+              ) : (
+                <>
+                  <FaCube />
+                  Generate 3D Model
+                </>
+              )}
+            </button>
+          )}
+
+          {/* Generation Error */}
+          {model3DStatus.error && (
+            <div className="absolute bottom-20 left-4 right-4 bg-red-500/20 border border-red-500/30 rounded-lg p-3">
+              <p className="text-red-400 text-sm">{model3DStatus.error}</p>
+            </div>
+          )}
         </div>
 
         {/* Shoe Details */}
         <div className="p-4 border-b border-zinc-800">
-          <span className="bg-orange-500 text-white text-xs font-bold px-2 py-1 rounded uppercase">
-            {shoe.brand}
-          </span>
-          <h3 className="text-xl font-bold text-white mt-2">{shoe.name}</h3>
-          {shouldShowPrice(shoe.price) && (
-            <p className="text-2xl font-bold text-orange-400 mt-1">{formatPrice(shoe.price)}</p>
+          <div className="flex items-start justify-between">
+            <div>
+              <span className="bg-orange-500 text-white text-xs font-bold px-2 py-1 rounded uppercase">
+                {shoe.brand}
+              </span>
+              <h3 className="text-xl font-bold text-white mt-2">{shoe.name}</h3>
+              {shoe.colorway && (
+                <p className="text-zinc-500 text-sm mt-1">{shoe.colorway}</p>
+              )}
+            </div>
+            {shouldShowPrice(shoe.price) && (
+              <div className="text-right">
+                <p className="text-2xl font-bold text-orange-400">{formatPrice(shoe.price)}</p>
+                {shoe.retail_price && shoe.price && shoe.price < shoe.retail_price && (
+                  <p className="text-sm text-zinc-500 line-through">{formatPrice(shoe.retail_price)}</p>
+                )}
+              </div>
+            )}
+          </div>
+
+          {/* Style Tags */}
+          {shoe.style_tags && shoe.style_tags.length > 0 && (
+            <div className="flex flex-wrap gap-2 mt-3">
+              {shoe.style_tags.slice(0, 4).map((tag) => (
+                <span
+                  key={tag}
+                  className="px-2 py-1 bg-zinc-800 text-zinc-300 text-xs rounded-full"
+                >
+                  {tag}
+                </span>
+              ))}
+            </div>
           )}
         </div>
 
@@ -221,6 +305,14 @@ const ShoePanel: React.FC<ShoePanelProps> = ({ shoe, isOpen, onClose }) => {
               <div className="flex justify-between text-sm">
                 <span className="text-zinc-500">ASIN</span>
                 <span className="text-zinc-400 font-mono">{shoe.amazon_asin}</span>
+              </div>
+            )}
+            {has3DModel && (
+              <div className="flex justify-between text-sm">
+                <span className="text-zinc-500">3D Model</span>
+                <span className="text-green-400 flex items-center gap-1">
+                  <FaCube className="text-xs" /> Available
+                </span>
               </div>
             )}
           </div>

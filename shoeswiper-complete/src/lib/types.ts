@@ -56,6 +56,15 @@ export interface Shoe {
     appleMusicUrl?: string;
     amazonMusicUrl?: string;
   };
+
+  // 3D Model & Multi-Angle Media
+  media?: {
+    has_3d_model: boolean;
+    model_url?: string;           // URL to .glb 3D model file
+    thumbnail_angles?: string[];  // Multi-angle image URLs [side, front, back, top, sole]
+    model_source?: 'manual' | 'ai_generated' | 'brand';
+    model_generated_at?: string;
+  };
 }
 
 // ============================================
