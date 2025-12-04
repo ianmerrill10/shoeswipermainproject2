@@ -230,13 +230,16 @@ analytics_events
 
 ## SECTION 9: SECURITY REQUIREMENTS (CRITICAL)
 
-- [x] Move Gemini API key server-side (COMPLETED - uses Edge Function)
+- [x] Move Gemini API key server-side (Edge Function - COMPLETED)
+- [x] Rate limiting on Edge Function (10 req/min per IP - in-memory)
+- [x] CORS origin allowlist (localhost + shoeswiper.com)
+- [x] Security headers (X-Frame-Options, X-XSS-Protection, Cache-Control)
+- [x] Input validation (10MB max, base64 format check)
+- [x] Output sanitization (XSS prevention on AI responses)
 - [ ] Proper JWT authentication with refresh tokens
-- [ ] Rate limiting on all endpoints
 - [ ] RLS policies on all Supabase tables
 - [ ] Encrypted storage (no sensitive data in localStorage)
 - [ ] HTTPS everywhere
-- [ ] Input validation and sanitization
 - [ ] PCI-DSS compliance for payments
 - [ ] GDPR/CCPA compliance
 - [ ] Content moderation (AI + manual review + community reporting)
@@ -343,14 +346,25 @@ shoeswiper-complete/
 
 | Priority | Feature | Status | Revenue Impact |
 |----------|---------|--------|----------------|
-| 1 | **Security Hardening** | CRITICAL | CRITICAL |
-| 2 | Trending Feed Tab | Ready | MEDIUM |
-| 3 | Exit Intent Popup | Ready | HIGH |
-| 4 | Real Data Integration | Needed | HIGH |
-| 5 | Social Features | Needs Design | MEDIUM |
-| 6 | 3D Model Viewer | Blocked (needs .glb) | MEDIUM |
-| 7 | AR Try-On | Needs WebXR | HIGH |
-| 8 | Onboarding Flow | Ready | MEDIUM |
+| 1 | **Deploy to Production** | Ready | CRITICAL |
+| 2 | Switch DEMO_MODE to false | Ready | CRITICAL |
+| 3 | Configure Supabase + Stripe | Setup needed | CRITICAL |
+| 4 | Trending Feed Tab | Ready | MEDIUM |
+| 5 | Exit Intent Popup | Ready | HIGH |
+| 6 | Onboarding Flow | Hook exists | MEDIUM |
+| 7 | Social Features | Needs Design | MEDIUM |
+| 8 | 3D Model Viewer | Blocked (needs .glb) | MEDIUM |
+| 9 | AR Try-On | Needs WebXR | HIGH |
+
+### RECENTLY COMPLETED (via Copilot PRs):
+- [x] Security Hardening (rate limiting, CORS, validation, sanitization)
+- [x] Amazon PA-API Integration (live prices from Edge Function)
+- [x] Autonomous Blog Generation (ContentGeneratorAgent)
+- [x] Price Drop Monitoring (check-prices Edge Function)
+- [x] Social Media Syndication (useSocialSyndication hook)
+- [x] SEO Structured Data
+- [x] Vercel Deployment Config
+- [x] TypeScript/ESLint Fixes
 
 ---
 
@@ -429,4 +443,5 @@ If starting fresh from this file:
 ---
 
 *This file is the SINGLE SOURCE OF TRUTH for AI agents working on ShoeSwiper.*
-*Last AI: Claude (Opus 4) | Last Human Prompt: Create AIContext file*
+*Last AI: Claude (Opus 4) | Last Task: Merged main + Claude security work*
+*Session: Consolidated ~95 Copilot branches, resolved merge conflicts*
