@@ -1,7 +1,8 @@
 {
   "version": "1.0.0",
   "description": "ShoeSwiper Multi-Agent Orchestration Configuration",
-  "lastUpdated": "2024-12-03",
+  "lastUpdated": "2025-02-07",
+  "agentCount": 9,
   
   "agents": [
     {
@@ -180,8 +181,9 @@
 
   "launchModes": {
     "full": {
-      "description": "Run all agents",
-      "agents": ["all"]
+      "description": "Run all agents (weekly cadence)",
+      "agents": ["all"],
+      "schedule": "0 6 * * 1"
     },
     "security": {
       "description": "Security audit only",
@@ -196,8 +198,9 @@
       "agents": ["code-builder-shoeswiper", "react-specialist-shoeswiper", "supabase-expert-shoeswiper", "ui-designer-shoeswiper"]
     },
     "quick": {
-      "description": "Quick check - security and revenue only",
-      "agents": ["security-guardian-shoeswiper", "revenue-optimizer-shoeswiper"]
+      "description": "Daily quick check - security and revenue only",
+      "agents": ["security-guardian-shoeswiper", "revenue-optimizer-shoeswiper"],
+      "schedule": "0 6 * * 0,2-6"
     }
   },
 
