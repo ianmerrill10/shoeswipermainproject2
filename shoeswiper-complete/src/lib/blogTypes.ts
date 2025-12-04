@@ -94,6 +94,17 @@ export interface BlogSearchParams {
 // Blog type identifiers
 export type BlogType = 'sneaker' | 'shoes' | 'workwear' | 'music';
 
+// Syndication configuration for auto-posting to social media
+export interface SyndicationConfig {
+  enabled: boolean;
+  platforms: ('twitter' | 'instagram' | 'facebook' | 'tiktok')[];
+  autoPost: boolean; // Auto-post when blog is published
+  delayMinutes: number; // Delay after publish before posting
+  hashtagStrategy: 'brand' | 'category' | 'mixed';
+  includeLink: boolean;
+  customHashtags?: string[];
+}
+
 export interface BlogConfig {
   type: BlogType;
   name: string;
@@ -108,6 +119,7 @@ export interface BlogConfig {
     facebook?: string;
     tiktok?: string;
   };
+  syndication?: SyndicationConfig;
 }
 
 // Default blog configurations
@@ -125,6 +137,15 @@ export const BLOG_CONFIGS: Record<BlogType, BlogConfig> = {
       instagram: 'https://instagram.com/shoeswiper',
       tiktok: 'https://tiktok.com/@shoeswiper',
     },
+    syndication: {
+      enabled: true,
+      platforms: ['twitter', 'instagram', 'facebook'],
+      autoPost: true,
+      delayMinutes: 5,
+      hashtagStrategy: 'mixed',
+      includeLink: true,
+      customHashtags: ['ShoeSwiper', 'Sneakers', 'SneakerCulture'],
+    },
   },
   shoes: {
     type: 'shoes',
@@ -137,6 +158,15 @@ export const BLOG_CONFIGS: Record<BlogType, BlogConfig> = {
     socialLinks: {
       instagram: 'https://instagram.com/shoeswiperstyle',
     },
+    syndication: {
+      enabled: true,
+      platforms: ['instagram'],
+      autoPost: true,
+      delayMinutes: 10,
+      hashtagStrategy: 'category',
+      includeLink: false,
+      customHashtags: ['ShoeSwiper', 'Fashion', 'Style'],
+    },
   },
   workwear: {
     type: 'workwear',
@@ -148,6 +178,15 @@ export const BLOG_CONFIGS: Record<BlogType, BlogConfig> = {
     logo: '/logos/workwear-blog.svg',
     socialLinks: {
       instagram: 'https://instagram.com/workwearweekly',
+    },
+    syndication: {
+      enabled: true,
+      platforms: ['facebook', 'instagram'],
+      autoPost: true,
+      delayMinutes: 15,
+      hashtagStrategy: 'brand',
+      includeLink: true,
+      customHashtags: ['WorkWear', 'BuiltTough', 'TradesLife'],
     },
   },
   music: {
@@ -162,6 +201,15 @@ export const BLOG_CONFIGS: Record<BlogType, BlogConfig> = {
       twitter: 'https://twitter.com/solesound',
       instagram: 'https://instagram.com/solesoundmusic',
       tiktok: 'https://tiktok.com/@solesound',
+    },
+    syndication: {
+      enabled: true,
+      platforms: ['twitter', 'instagram', 'tiktok'],
+      autoPost: true,
+      delayMinutes: 5,
+      hashtagStrategy: 'mixed',
+      includeLink: true,
+      customHashtags: ['SoleSound', 'SneakersAndBeats', 'MusicCulture'],
     },
   },
 };
