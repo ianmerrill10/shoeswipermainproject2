@@ -18,7 +18,6 @@ const BottomNavigation: React.FC = () => {
     <nav 
       className="fixed bottom-0 left-0 right-0 bg-zinc-900/95 backdrop-blur-lg border-t border-zinc-800 safe-bottom z-40"
       aria-label="Main navigation"
-      role="navigation"
     >
       <div className="flex items-center justify-around py-2">
         {navItems.map((item) => {

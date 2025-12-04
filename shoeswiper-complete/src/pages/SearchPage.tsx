@@ -237,13 +237,14 @@ const SearchPage: React.FC = () => {
               </fieldset>
 
               {/* Sort */}
-              <div>
-                <label htmlFor="sort-by" className="text-sm font-bold text-zinc-400 uppercase mb-3 block">Sort By</label>
+              <fieldset>
+                <legend className="text-sm font-bold text-zinc-400 uppercase mb-3 block">Sort By</legend>
                 <select
                   id="sort-by"
                   value={filters.sortBy || ''}
                   onChange={(e) => setFilters({ ...filters, sortBy: (e.target.value || undefined) as SearchFilters['sortBy'] })}
                   className="w-full bg-zinc-800 border border-zinc-700 rounded-lg px-3 py-2 text-white"
+                  aria-label="Sort results by"
                 >
                   <option value="">Relevance</option>
                   <option value="price_asc">Price: Low to High</option>
@@ -251,7 +252,7 @@ const SearchPage: React.FC = () => {
                   <option value="newest">Newest</option>
                   <option value="trending">Trending</option>
                 </select>
-              </div>
+              </fieldset>
             </div>
 
             <div className="sticky bottom-0 bg-zinc-900 p-4 border-t border-zinc-800 flex gap-3">

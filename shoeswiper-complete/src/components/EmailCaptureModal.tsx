@@ -213,8 +213,8 @@ const EmailCaptureModal: React.FC<EmailCaptureModalProps> = ({
               </div>
               <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center ${
                 preferences.priceAlerts ? 'bg-orange-500 border-orange-500' : 'border-zinc-600'
-              }`} aria-hidden="true">
-                {preferences.priceAlerts && <FaCheck className="text-white text-xs" />}
+              }`}>
+                {preferences.priceAlerts && <FaCheck className="text-white text-xs" aria-hidden="true" />}
               </div>
             </button>
 
@@ -235,8 +235,8 @@ const EmailCaptureModal: React.FC<EmailCaptureModalProps> = ({
               </div>
               <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center ${
                 preferences.newReleases ? 'bg-orange-500 border-orange-500' : 'border-zinc-600'
-              }`} aria-hidden="true">
-                {preferences.newReleases && <FaCheck className="text-white text-xs" />}
+              }`}>
+                {preferences.newReleases && <FaCheck className="text-white text-xs" aria-hidden="true" />}
               </div>
             </button>
 
@@ -257,8 +257,8 @@ const EmailCaptureModal: React.FC<EmailCaptureModalProps> = ({
               </div>
               <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center ${
                 preferences.weeklyDigest ? 'bg-orange-500 border-orange-500' : 'border-zinc-600'
-              }`} aria-hidden="true">
-                {preferences.weeklyDigest && <FaCheck className="text-white text-xs" />}
+              }`}>
+                {preferences.weeklyDigest && <FaCheck className="text-white text-xs" aria-hidden="true" />}
               </div>
             </button>
 
@@ -279,8 +279,8 @@ const EmailCaptureModal: React.FC<EmailCaptureModalProps> = ({
               </div>
               <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center ${
                 preferences.promotions ? 'bg-orange-500 border-orange-500' : 'border-zinc-600'
-              }`} aria-hidden="true">
-                {preferences.promotions && <FaCheck className="text-white text-xs" />}
+              }`}>
+                {preferences.promotions && <FaCheck className="text-white text-xs" aria-hidden="true" />}
               </div>
             </button>
           </fieldset>

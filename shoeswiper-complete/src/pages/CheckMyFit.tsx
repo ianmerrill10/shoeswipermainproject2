@@ -59,7 +59,7 @@ export const CheckMyFit: React.FC = () => {
                   <FaUpload aria-hidden="true" /> Upload
                 </button>
                 <div className="relative">
-                  <label htmlFor="camera-input" className="sr-only">Take a photo</label>
+                  <label htmlFor="camera-input" className="sr-only">Take a photo of your outfit for AI analysis</label>
                   <input 
                     id="camera-input"
                     type="file" 
@@ -68,17 +68,10 @@ export const CheckMyFit: React.FC = () => {
                     ref={fileInputRef}
                     onChange={handleFileSelect}
                     className="absolute inset-0 opacity-0 cursor-pointer w-full"
-                    aria-describedby="camera-description"
                   />
-                  <span id="camera-description" className="sr-only">Take a photo of your outfit for AI analysis</span>
-                  <button 
-                    type="button"
-                    aria-label="Take photo of your outfit"
-                    onClick={() => fileInputRef.current?.click()}
-                    className="bg-orange-500 hover:bg-orange-600 px-6 py-3 rounded-xl font-bold flex items-center gap-2 transition-all shadow-lg shadow-orange-500/30"
-                  >
+                  <span aria-hidden="true" className="bg-orange-500 hover:bg-orange-600 px-6 py-3 rounded-xl font-bold flex items-center gap-2 transition-all shadow-lg shadow-orange-500/30 pointer-events-none">
                     <FaCamera aria-hidden="true" /> Take Photo
-                  </button>
+                  </span>
                 </div>
               </div>
             </motion.div>
