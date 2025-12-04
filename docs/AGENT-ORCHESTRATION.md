@@ -20,11 +20,12 @@ The orchestration runs automatically every **Monday at 6 AM UTC**.
 
 | Mode | Description | Agents Activated |
 |------|-------------|------------------|
-| `full` | Complete project audit | All 9 agents |
+| `full` | Complete project audit | All configured agents |
 | `security` | Security-focused audit | security-guardian-shoeswiper, supabase-expert-shoeswiper, devops-engineer-shoeswiper |
 | `revenue` | Revenue optimization | revenue-optimizer-shoeswiper, security-guardian-shoeswiper |
 | `features` | Feature development | code-builder-shoeswiper, react-specialist-shoeswiper, supabase-expert-shoeswiper, ui-designer-shoeswiper |
 | `quick` | Fast essential check | security-guardian-shoeswiper, revenue-optimizer-shoeswiper |
+| `completion12` | Completion push with 12 core agents | security-guardian-shoeswiper, revenue-optimizer-shoeswiper, backend-engineer-shoeswiper, frontend-architect-shoeswiper, code-builder-shoeswiper, react-specialist-shoeswiper, supabase-expert-shoeswiper, ui-designer-shoeswiper, accessibility-expert-shoeswiper, devops-engineer-shoeswiper, performance-optimizer-shoeswiper, test-automation-shoeswiper |
 
 ## What Happens When You Run It
 
