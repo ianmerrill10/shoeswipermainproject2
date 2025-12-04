@@ -12,3 +12,7 @@ export type { BlogPost, BlogCategory, BlogMetadata, AffiliateProduct } from './u
 // Animation hooks
 export { useReducedMotion, useHaptics, useSwipeGesture } from './useAnimations';
 export type { SwipeDirection } from './useAnimations';
+
+// Social sharing hooks
+export { useSocialSharing } from './useSocialSharing';
+export type { ShareResult, SneakerShareData, OutfitShareData } from './useSocialSharing';
