@@ -12,8 +12,8 @@ import {
   validateUUID,
   validateASIN,
   validateAffiliateUrl,
-  encodeForStorage,
-  decodeFromStorage,
+  obfuscateForStorage,
+  deobfuscateFromStorage,
   isSafeStorageKey,
 } from '../validation';
 
@@ -992,39 +992,39 @@ describe('validateAffiliateUrl', () => {
 // STORAGE UTILITY TESTS
 // ============================================
 
-describe('encodeForStorage and decodeFromStorage', () => {
-  it('should encode and decode basic strings', () => {
+describe('obfuscateForStorage and deobfuscateFromStorage', () => {
+  it('should obfuscate and deobfuscate basic strings', () => {
     const original = 'Hello, World!';
-    const encoded = encodeForStorage(original);
-    const decoded = decodeFromStorage(encoded);
+    const encoded = obfuscateForStorage(original);
+    const decoded = deobfuscateFromStorage(encoded);
     expect(decoded).toBe(original);
   });
 
   it('should handle special characters', () => {
     const original = 'Test with émojis 🎉 and ñ characters';
-    const encoded = encodeForStorage(original);
-    const decoded = decodeFromStorage(encoded);
+    const encoded = obfuscateForStorage(original);
+    const decoded = deobfuscateFromStorage(encoded);
     expect(decoded).toBe(original);
   });
 
   it('should handle empty string', () => {
-    const encoded = encodeForStorage('');
-    const decoded = decodeFromStorage(encoded);
+    const encoded = obfuscateForStorage('');
+    const decoded = deobfuscateFromStorage(encoded);
     expect(decoded).toBe('');
   });
 
-  it('should return empty string for non-string input to encode', () => {
-    const result = encodeForStorage(123 as unknown as string);
+  it('should return empty string for non-string input to obfuscate', () => {
+    const result = obfuscateForStorage(123 as unknown as string);
     expect(result).toBe('');
   });
 
-  it('should return empty string for non-string input to decode', () => {
-    const result = decodeFromStorage(123 as unknown as string);
+  it('should return empty string for non-string input to deobfuscate', () => {
+    const result = deobfuscateFromStorage(123 as unknown as string);
     expect(result).toBe('');
   });
 
   it('should return empty string for invalid base64', () => {
-    const result = decodeFromStorage('not-valid-base64!!!');
+    const result = deobfuscateFromStorage('not-valid-base64!!!');
     expect(result).toBe('');
   });
 });

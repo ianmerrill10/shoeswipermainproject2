@@ -179,17 +179,41 @@ serve(async (req) => {
     // Log error server-side only (not exposed to client)
     console.error("Error analyzing outfit:", error);
     
-    // Return sanitized error message (don't leak internal details)
-    const safeErrorMessage = error instanceof Error && error.message.includes("GEMINI_API_KEY")
-      ? "AI service configuration error"
-      : "An error occurred while analyzing the outfit";
+    // Sanitize error message - never expose internal details to client
+    // Use whitelist approach: only return known-safe error messages
+    let safeErrorMessage = "An error occurred while analyzing the outfit";
+    let statusCode = 500;
+    
+    if (error instanceof Error) {
+      const errorMsg = error.message.toLowerCase();
+      
+      // Check for rate limiting from Gemini API
+      if (errorMsg.includes("429") || errorMsg.includes("rate limit") || errorMsg.includes("quota")) {
+        safeErrorMessage = "Service temporarily unavailable. Please try again later.";
+        statusCode = 429;
+      }
+      // Check for configuration issues (don't leak key names)
+      else if (errorMsg.includes("api_key") || errorMsg.includes("apikey") || errorMsg.includes("unauthorized") || errorMsg.includes("authentication")) {
+        safeErrorMessage = "AI service configuration error";
+        statusCode = 503;
+      }
+      // Check for invalid input
+      else if (errorMsg.includes("invalid") && (errorMsg.includes("image") || errorMsg.includes("base64"))) {
+        safeErrorMessage = "Invalid image format. Please try a different image.";
+        statusCode = 400;
+      }
+    }
+    
+    const errorHeaders = statusCode === 429 
+      ? { ...securityHeaders, "Retry-After": String(RATE_LIMIT_CONFIG.retryAfterSeconds) }
+      : securityHeaders;
     
     return new Response(JSON.stringify({
       error: safeErrorMessage,
       fallback: true
     }), {
-      status: 500,
-      headers: securityHeaders
+      status: statusCode,
+      headers: errorHeaders
     });
   }
 });

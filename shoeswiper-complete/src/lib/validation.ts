@@ -578,7 +578,8 @@ export function validateDisplayName(name: string): ValidationResult {
 const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 
 /**
- * Validates a UUID (v4 format)
+ * Validates a UUID v4 format string
+ * Note: Only validates UUID v4 format (version 4, variant 1)
  * @param id - The UUID string to validate
  * @returns Validation result with sanitized UUID (lowercase)
  */
@@ -679,12 +680,14 @@ export function validateAffiliateUrl(url: string): ValidationResult {
 // ============================================
 
 /**
- * Encodes data for safe localStorage storage (obfuscation, not encryption)
- * Note: For truly sensitive data, use server-side storage or proper encryption
- * @param data - The data to encode
+ * Obfuscates data for localStorage storage using Base64 encoding.
+ * WARNING: This is NOT encryption - it only provides basic obfuscation.
+ * Do NOT use for sensitive data (passwords, tokens, PII).
+ * For truly sensitive data, use server-side storage with proper encryption.
+ * @param data - The data to obfuscate
  * @returns Base64 encoded string
  */
-export function encodeForStorage(data: string): string {
+export function obfuscateForStorage(data: string): string {
   if (typeof data !== 'string') {
     return '';
   }
@@ -696,11 +699,12 @@ export function encodeForStorage(data: string): string {
 }
 
 /**
- * Decodes data from localStorage
- * @param encoded - The encoded string to decode
+ * Decodes obfuscated data from localStorage
+ * Companion to obfuscateForStorage()
+ * @param encoded - The obfuscated string to decode
  * @returns Decoded string
  */
-export function decodeFromStorage(encoded: string): string {
+export function deobfuscateFromStorage(encoded: string): string {
   if (typeof encoded !== 'string') {
     return '';
   }
@@ -712,20 +716,22 @@ export function decodeFromStorage(encoded: string): string {
 }
 
 /**
- * List of storage keys that should NOT contain sensitive data
- * Any data stored must be considered potentially visible to users
+ * List of approved storage keys for non-sensitive UI state only.
+ * WARNING: Do NOT store PII, passwords, tokens, or sensitive data in localStorage.
+ * Email addresses should be stored server-side with proper encryption.
+ * These keys are for UI preferences and non-sensitive feature states only.
  */
 export const SAFE_STORAGE_KEYS = [
-  'shoeswiper_favorites',
-  'shoeswiper_onboarding',
-  'shoeswiper_preferences',
-  'shoeswiper_price_alerts',
-  'shoeswiper_price_notifications',
-  'shoeswiper_referral',
-  'shoeswiper_my_referral_code',
-  'shoeswiper_referral_stats',
-  'shoeswiper_email_capture',
-  'shoeswiper_email_list',
+  'shoeswiper_favorites',           // Shoe IDs only, no PII
+  'shoeswiper_onboarding',          // UI state (completed steps)
+  'shoeswiper_preferences',         // UI preferences (theme, etc.)
+  'shoeswiper_price_alerts',        // Price thresholds, no PII
+  'shoeswiper_price_notifications', // Notification preferences
+  'shoeswiper_referral',            // Referral code (public)
+  'shoeswiper_my_referral_code',    // User's own referral code
+  'shoeswiper_referral_stats',      // Count statistics only
+  'shoeswiper_email_capture',       // Boolean flag only (captured yes/no)
+  'shoeswiper_email_list',          // DEPRECATED: emails should be server-side
 ] as const;
 
 /**
