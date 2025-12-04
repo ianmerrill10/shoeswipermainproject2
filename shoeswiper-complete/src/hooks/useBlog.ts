@@ -85,7 +85,7 @@ export function generateAffiliateUrl(asin: string): string {
 // Daily Blog Post Data
 // ============================================
 
-const TODAYS_DATE = '2025-12-03';
+const TODAYS_DATE = new Date().toISOString().split('T')[0];
 
 function createDailyBlogPosts(): BlogPost[] {
   return [
@@ -360,7 +360,8 @@ function createDailyBlogPosts(): BlogPost[] {
 export function useBlog() {
   const posts = useMemo(() => createDailyBlogPosts(), []);
 
-  const todaysPosts = useMemo(() => posts.filter(p => p.isPublished), [posts]);
+  const todaysDate = useMemo(() => new Date().toISOString().split('T')[0], []);
+  const todaysPosts = useMemo(() => posts.filter(p => p.metadata.publishDate === todaysDate), [posts, todaysDate]);
   const publishedPosts = useMemo(() => posts.filter(p => p.isPublished), [posts]);
 
   const getTodaysPosts = () => todaysPosts;
