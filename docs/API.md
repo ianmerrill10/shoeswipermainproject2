@@ -7,6 +7,7 @@ This document provides comprehensive documentation for all hooks and components 
 - [Hooks](#hooks)
   - [useAdmin](#useadmin)
   - [useAnalytics](#useanalytics)
+  - [useAnimations](#useanimations)
   - [useAuth](#useauth)
   - [useAuthGuard](#useauthguard)
   - [useBlog](#useblog)
@@ -27,6 +28,12 @@ This document provides comprehensive documentation for all hooks and components 
   - [Check-Fit Components](#check-fit-components)
   - [NFT Components](#nft-components)
   - [Onboarding Components](#onboarding-components)
+- [State Management (Zustand Stores)](#state-management-zustand-stores)
+  - [useAppStore](#useappstore)
+  - [useUIStore](#useuistore)
+- [Type Definitions](#type-definitions)
+- [Configuration Reference](#configuration-reference)
+- [Utility Functions](#utility-functions)
 
 ---
 
@@ -137,6 +144,145 @@ type AnalyticsEvent =
 | `trackShare(shoeId, method)` | Track share actions |
 | `trackFavorite(shoeId, action)` | Track favorite add/remove |
 | `getAnalyticsSummary()` | Get aggregated analytics |
+
+---
+
+### useAnimations
+
+Animation and gesture hooks for accessibility and mobile interactions.
+
+**Location:** `src/hooks/useAnimations.ts`
+
+This module exports three animation-related hooks: `useReducedMotion`, `useHaptics`, and `useSwipeGesture`.
+
+#### useReducedMotion
+
+Detects user's prefers-reduced-motion setting for accessibility.
+
+```typescript
+import { useReducedMotion } from '@/hooks/useAnimations';
+
+const AnimatedComponent = () => {
+  const { prefersReducedMotion, animationsEnabled } = useReducedMotion();
+
+  return (
+    <motion.div
+      animate={animationsEnabled ? { scale: 1.1 } : undefined}
+    >
+      {/* Content */}
+    </motion.div>
+  );
+};
+```
+
+**Returns:**
+
+| Property | Type | Description |
+|----------|------|-------------|
+| `prefersReducedMotion` | `boolean` | Whether user prefers reduced motion |
+| `animationsEnabled` | `boolean` | Inverse of prefersReducedMotion |
+
+#### useHaptics
+
+Manages haptic feedback (vibration) on supported devices.
+
+```typescript
+import { useHaptics } from '@/hooks/useAnimations';
+
+const SwipeableCard = () => {
+  const { isSupported, trigger, triggerCustom } = useHaptics();
+
+  const handleSwipe = () => {
+    trigger('swipe');  // Built-in pattern
+  };
+
+  const handleSuccess = () => {
+    trigger('success');  // Built-in pattern
+  };
+
+  const handleCustom = () => {
+    triggerCustom([50, 100, 50]);  // Custom vibration pattern
+  };
+};
+```
+
+**Haptic Patterns:**
+
+| Pattern | Description |
+|---------|-------------|
+| `light` | Short light vibration (10ms) |
+| `medium` | Medium vibration (20ms) |
+| `heavy` | Strong vibration (30ms) |
+| `success` | Success feedback pattern |
+| `error` | Error feedback pattern |
+| `swipe` | Swipe gesture feedback |
+
+**Returns:**
+
+| Property | Type | Description |
+|----------|------|-------------|
+| `isSupported` | `boolean` | Whether device supports haptics |
+| `trigger` | `(pattern) => void` | Trigger predefined pattern |
+| `triggerCustom` | `(pattern: number[]) => void` | Trigger custom pattern |
+
+#### useSwipeGesture
+
+Manages swipe gesture state for card interactions.
+
+```typescript
+import { useSwipeGesture, SwipeDirection } from '@/hooks/useAnimations';
+
+const SwipeCard = () => {
+  const { state, reset, updateDrag, endDrag } = useSwipeGesture({
+    threshold: 100,
+    onSwipe: (direction: SwipeDirection) => {
+      console.log(`Swiped ${direction}`);
+    },
+    onCancel: () => {
+      console.log('Swipe cancelled');
+    },
+    enabled: true,
+  });
+
+  return (
+    <div
+      onPointerMove={(e) => updateDrag(e.movementX, e.movementY)}
+      onPointerUp={(e) => endDrag(e.movementX, e.movementY)}
+    >
+      {state.thresholdReached && <SwipeIndicator direction={state.direction} />}
+    </div>
+  );
+};
+```
+
+**Config Options:**
+
+| Option | Type | Default | Description |
+|--------|------|---------|-------------|
+| `threshold` | `number` | `100` | Pixels required to trigger swipe |
+| `onSwipe` | `(direction) => void` | - | Callback when swipe completes |
+| `onCancel` | `() => void` | - | Callback when swipe is cancelled |
+| `enabled` | `boolean` | `true` | Whether swipe is enabled |
+
+**Returns:**
+
+| Property | Type | Description |
+|----------|------|-------------|
+| `state` | `SwipeState` | Current swipe state |
+| `reset` | `() => void` | Reset swipe state |
+| `updateDrag` | `(x, y) => void` | Update state based on drag position |
+| `endDrag` | `(velocityX, velocityY) => void` | Complete the swipe gesture |
+
+**SwipeState Interface:**
+
+```typescript
+interface SwipeState {
+  direction: 'left' | 'right' | 'up' | 'down' | null;
+  progress: number;        // -1 to 1
+  isDragging: boolean;
+  thresholdReached: boolean;
+}
+```
 
 ---
 
@@ -917,6 +1063,58 @@ Multi-step onboarding flow component.
 
 **Location:** `src/components/OnboardingFlow.tsx`
 
+#### SwipeableCard
+
+Touch-enabled card with swipe gestures for the feed.
+
+**Location:** `src/components/SwipeableCard.tsx`
+
+```typescript
+<SwipeableCard
+  shoe={shoe}
+  onSwipeLeft={handleReject}
+  onSwipeRight={handleLike}
+/>
+```
+
+#### BuyNowButton
+
+Button that opens Amazon product page with affiliate tag.
+
+**Location:** `src/components/BuyNowButton.tsx`
+
+```typescript
+<BuyNowButton 
+  amazonUrl={shoe.amazon_url}
+  onClickTracking={() => trackClick(shoe.id)}
+/>
+```
+
+**Note:** All Amazon URLs should include the affiliate tag `?tag=shoeswiper-20`. Use the `formatAmazonUrl` utility or the `AFFILIATE_TAG` constant from `src/lib/config.ts` to ensure proper formatting. See [Affiliate Tag Requirement](#affiliate-tag-requirement) for implementation details.
+
+#### LoadingSpinner
+
+Reusable loading indicator component.
+
+**Location:** `src/components/LoadingSpinner.tsx`
+
+```typescript
+<LoadingSpinner size="md" />  // sm, md, lg
+```
+
+#### MatchCelebration
+
+Animated celebration overlay shown when a match is made.
+
+**Location:** `src/components/MatchCelebration.tsx`
+
+```typescript
+<MatchCelebration 
+  shoe={matchedShoe}
+  onDismiss={handleDismiss}
+/>
+```
+
 ---
 
 ### Admin Components
@@ -977,15 +1175,241 @@ Step-by-step onboarding components for new users.
 
 ---
 
+## State Management (Zustand Stores)
+
+ShoeSwiper uses Zustand for global client-side state management.
+
+### useAppStore
+
+Global application state including user authentication and favorites.
+
+**Location:** `src/store/useAppStore.ts`
+
+```typescript
+import { useAppStore } from '@/store/useAppStore';
+
+const MyComponent = () => {
+  const { 
+    user, 
+    isAuthenticated, 
+    favorites,
+    setUser,
+    logout,
+    toggleFavorite,
+    setTheme
+  } = useAppStore();
+
+  // Check auth status
+  if (!isAuthenticated) return <LoginPrompt />;
+
+  // Toggle favorite
+  const handleFavorite = (shoeId: string) => {
+    toggleFavorite(shoeId);
+  };
+};
+```
+
+#### State
+
+| Property | Type | Description |
+|----------|------|-------------|
+| `user` | `Profile \| null` | Current user profile |
+| `isAuthenticated` | `boolean` | Authentication status |
+| `favorites` | `Set<string>` | Set of favorited shoe IDs |
+| `theme` | `string` | Current theme (`'light'` or `'dark'`) |
+
+#### Actions
+
+| Action | Description |
+|--------|-------------|
+| `setUser(user)` | Set current user profile |
+| `logout()` | Clear user and reset auth state |
+| `addFavorite(id)` | Add shoe to favorites |
+| `removeFavorite(id)` | Remove shoe from favorites |
+| `toggleFavorite(id)` | Toggle favorite status |
+| `setTheme(theme)` | Set app theme |
+
+---
+
+### useUIStore
+
+UI state for panels, modals, and notifications.
+
+**Location:** `src/store/useUIStore.ts`
+
+```typescript
+import { useUIStore } from '@/store/useUIStore';
+
+const FeedPage = () => {
+  const {
+    isMusicPanelOpen,
+    isShoePanelOpen,
+    activeShoeId,
+    openShoePanel,
+    closeShoePanel,
+    addNotification
+  } = useUIStore();
+
+  const handleShoeClick = (shoeId: string) => {
+    openShoePanel(shoeId);
+  };
+
+  const showSuccess = () => {
+    addNotification({ 
+      message: 'Added to favorites!', 
+      type: 'success' 
+    });
+  };
+};
+```
+
+#### State
+
+| Property | Type | Description |
+|----------|------|-------------|
+| `isMusicPanelOpen` | `boolean` | Music panel visibility |
+| `isShoePanelOpen` | `boolean` | Shoe details panel visibility |
+| `isNotificationsPanelOpen` | `boolean` | Notifications panel visibility |
+| `activeShoeId` | `string \| null` | Currently selected shoe ID |
+| `notifications` | `Notification[]` | Toast notifications queue |
+
+#### Actions
+
+| Action | Description |
+|--------|-------------|
+| `openMusicPanel()` | Show music panel |
+| `closeMusicPanel()` | Hide music panel |
+| `openShoePanel(shoeId)` | Show shoe panel for specific shoe |
+| `closeShoePanel()` | Hide shoe panel |
+| `openNotificationsPanel()` | Show notifications panel |
+| `closeNotificationsPanel()` | Hide notifications panel |
+| `addNotification(notification)` | Add toast notification |
+| `removeNotification(id)` | Remove specific notification |
+
+---
+
 ## Type Definitions
 
 All TypeScript types are defined in `src/lib/types.ts`. Key types include:
 
-- `Shoe` - Product/sneaker data
-- `Profile` - User profile
+### Product Types
+- `Shoe` - Product/sneaker data with pricing, images, and Amazon affiliate URL
+- `Brand` - Brand information
+- `Category` - Product category
+- `PriceHistory` - Historical pricing data
+
+### User Types
+- `Profile` - User profile data
+- `UserSneaker` - User's sneaker collection item
+
+### NFT Types
 - `NFT` - NFT token data
-- `Rarity` - NFT rarity levels
+- `Rarity` - NFT rarity levels (`'common' | 'rare' | 'legendary' | 'grail'`)
+- `NFTOwnershipHistory` - Transfer history
+
+### Search & Filter Types
 - `SearchFilters` - Search filter options
+- `NFTFilter` - NFT marketplace filters
+- `PaginationOptions` - Pagination configuration
+
+### Analytics Types
 - `AnalyticsData` - Analytics summary
+- `AffiliateClick` - Click tracking data
+- `AuditLog` - Admin action logs
+
+### AI Types
+- `OutfitAnalysis` - AI outfit analysis result
 
 See the [types file](../shoeswiper-complete/src/lib/types.ts) for complete definitions.
+
+---
+
+## Configuration Reference
+
+Key configuration values from `src/lib/config.ts`:
+
+| Constant | Value | Description |
+|----------|-------|-------------|
+| `DEMO_MODE` | `true` | Toggle for local vs production mode |
+| `AFFILIATE_TAG` | `'shoeswiper-20'` | Amazon affiliate tag (required on all Amazon URLs) |
+| `SHOW_PRICES` | `false` | Enable when Amazon PA-API is connected |
+| `ADMIN_EMAIL` | `'dadsellsgadgets@gmail.com'` | Admin dashboard access |
+| `ALLOWED_EMAILS` | `['ianmerrill10@gmail.com', ADMIN_EMAIL]` | Authorized users for production |
+
+### Affiliate Tag Requirement
+
+**Important:** All Amazon URLs MUST include the affiliate tag `?tag=shoeswiper-20`. Use the `AFFILIATE_TAG` constant:
+
+```typescript
+import { AFFILIATE_TAG } from '@/lib/config';
+
+const formatAmazonUrl = (url: string): string => {
+  if (!url.includes('amazon.com')) return url;
+  const urlObj = new URL(url);
+  urlObj.searchParams.set('tag', AFFILIATE_TAG);
+  return urlObj.toString();
+};
+```
+
+---
+
+## Utility Functions
+
+### Validation Utilities
+
+**Location:** `src/lib/validation.ts`
+
+Security-focused input validation functions for ShoeSwiper.
+
+| Function | Description |
+|----------|-------------|
+| `validateEmail(email)` | Validates and sanitizes email addresses |
+| `validateUrl(url)` | Validates URLs, blocks dangerous protocols |
+| `validatePrice(input)` | Validates and converts prices to cents |
+| `validateDisplayName(name)` | Validates display names with profanity filter |
+| `validateImageUpload(file)` | Validates image uploads (type, size, magic bytes) |
+| `sanitizeSearchQuery(query)` | Sanitizes search queries against XSS/SQL injection |
+| `sanitizeText(text)` | Escapes HTML special characters |
+| `sanitizeHtml(html)` | Removes dangerous HTML tags and attributes |
+| `isAllowedAffiliateDomain(url)` | Checks if URL is from allowed affiliate domain |
+
+```typescript
+import { validateEmail, sanitizeSearchQuery } from '@/lib/validation';
+
+// Validate email
+const result = validateEmail('user@example.com');
+if (result.valid) {
+  console.log('Valid email:', result.sanitized);
+}
+
+// Sanitize search query
+const safeQuery = sanitizeSearchQuery(userInput);
+```
+
+### Deep Link Utilities
+
+**Location:** `src/lib/deepLinks.ts`
+
+Smart link generation for app installs and referral tracking.
+
+| Function | Description |
+|----------|-------------|
+| `generateReferralCode(source, userId?)` | Generate unique referral tracking code |
+| `createTrackedWebUrl(shoeId, referralCode)` | Create web URL with UTM parameters |
+| `createDeepLinkUrl(shoeId, referralCode)` | Create app deep link URL |
+| `createSmartShareLink(options)` | Create cross-platform share link |
+| `createAffiliateShareData(shoe, source)` | Create share data with affiliate tracking |
+| `parseDeepLink(url)` | Parse incoming deep link parameters |
+| `trackReferralArrival(code)` | Track user arrival via referral |
+| `generateQRCodeUrl(shoeId)` | Generate QR code URL for sharing |
+
+```typescript
+import { createAffiliateShareData, parseDeepLink } from '@/lib/deepLinks';
+
+// Create share data with affiliate tag
+const shareData = createAffiliateShareData(shoe, 'share_native');
+// Result includes properly tagged Amazon URL
+
+// Parse incoming deep link
+const { shoeId, referralCode } = parseDeepLink(url);
+```

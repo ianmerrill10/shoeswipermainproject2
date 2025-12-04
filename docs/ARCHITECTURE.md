@@ -726,6 +726,8 @@ graph TB
 
 See [DEPLOYMENT.md](./DEPLOYMENT.md) for detailed deployment instructions.
 
+For information about the AI agent automation system, see [AGENT-ORCHESTRATION.md](./AGENT-ORCHESTRATION.md).
+
 ```mermaid
 graph TB
     subgraph "CI/CD Pipeline"
