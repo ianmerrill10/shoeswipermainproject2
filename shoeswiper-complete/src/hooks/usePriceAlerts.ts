@@ -1,6 +1,28 @@
 import { useState, useEffect, useCallback } from 'react';
 import { DEMO_MODE } from '../lib/config';
 
+/**
+ * Price drop alert management hook.
+ * Allows users to set target prices for sneakers and receive
+ * notifications when prices drop to or below their target.
+ * 
+ * In DEMO_MODE, alerts are stored in localStorage.
+ * In production, alerts are stored in Supabase price_alerts table.
+ * 
+ * @returns Object containing alert state and management methods
+ * @example
+ * const { alerts, addAlert, hasAlert, simulatePriceDrop } = usePriceAlerts();
+ * 
+ * // Add a price alert
+ * await addAlert(shoe, 150); // Alert when price drops to $150
+ * 
+ * // Check if alert exists
+ * if (hasAlert(shoe.id)) console.log('Alert already set');
+ * 
+ * // Simulate price drop (DEMO_MODE only)
+ * simulatePriceDrop(shoe.id, 140);
+ */
+
 const PRICE_ALERTS_KEY = 'shoeswiper_price_alerts';
 const PRICE_NOTIFICATIONS_KEY = 'shoeswiper_price_notifications';
 
@@ -31,6 +53,36 @@ export interface PriceNotification {
   savedAmount: number;
   percentOff: number;
   createdAt: string;
+  read: boolean;
+}
+
+interface PriceAlertDbRow {
+  shoe_id: string;
+  shoe_name: string;
+  shoe_brand: string;
+  shoe_image: string;
+  amazon_url: string;
+  target_price: number;
+  current_price?: number;
+  original_price?: number;
+  created_at: string;
+  last_checked?: string;
+  triggered?: boolean;
+  triggered_at?: string;
+}
+
+interface PriceNotificationDbRow {
+  id: string;
+  shoe_id: string;
+  shoe_name: string;
+  shoe_brand: string;
+  shoe_image: string;
+  amazon_url: string;
+  old_price: number;
+  new_price: number;
+  saved_amount: number;
+  percent_off: number;
+  created_at: string;
   read: boolean;
 }
 
@@ -65,7 +117,7 @@ export const usePriceAlerts = () => {
             .order('created_at', { ascending: false });
 
           if (data) {
-            setAlerts(data.map((alert: any) => ({
+            setAlerts(data.map((alert: PriceAlertDbRow) => ({
               shoeId: alert.shoe_id,
               shoeName: alert.shoe_name,
               shoeBrand: alert.shoe_brand,
@@ -109,7 +161,7 @@ export const usePriceAlerts = () => {
             .limit(20);
 
           if (data) {
-            setNotifications(data.map((n: any) => ({
+            setNotifications(data.map((n: PriceNotificationDbRow) => ({
               id: n.id,
               shoeId: n.shoe_id,
               shoeName: n.shoe_name,
@@ -139,7 +191,7 @@ export const usePriceAlerts = () => {
       brand: string;
       image_url: string;
       amazon_url: string;
-      price?: number;
+      price?: number | null;
     },
     targetPrice: number
   ): Promise<boolean> => {
@@ -151,8 +203,8 @@ export const usePriceAlerts = () => {
         shoeImage: shoe.image_url,
         amazonUrl: shoe.amazon_url,
         targetPrice,
-        originalPrice: shoe.price,
-        currentPrice: shoe.price,
+        originalPrice: shoe.price ?? undefined,
+        currentPrice: shoe.price ?? undefined,
         createdAt: new Date().toISOString(),
         triggered: false,
       };
@@ -161,7 +213,7 @@ export const usePriceAlerts = () => {
         const updatedAlerts = [...alerts.filter(a => a.shoeId !== shoe.id), newAlert];
         setAlerts(updatedAlerts);
         localStorage.setItem(PRICE_ALERTS_KEY, JSON.stringify(updatedAlerts));
-        console.log(`[Demo] Price alert set for ${shoe.name} at $${targetPrice}`);
+        if (import.meta.env.DEV) console.warn(`[Demo] Price alert set for ${shoe.name} at $${targetPrice}`);
         return true;
       } else {
         const { supabase } = await import('../lib/supabaseClient');
@@ -206,7 +258,7 @@ export const usePriceAlerts = () => {
         const updatedAlerts = alerts.filter(a => a.shoeId !== shoeId);
         setAlerts(updatedAlerts);
         localStorage.setItem(PRICE_ALERTS_KEY, JSON.stringify(updatedAlerts));
-        console.log(`[Demo] Price alert removed for shoe ${shoeId}`);
+        if (import.meta.env.DEV) console.warn(`[Demo] Price alert removed for shoe ${shoeId}`);
         return true;
       } else {
         const { supabase } = await import('../lib/supabaseClient');
@@ -298,10 +350,10 @@ export const usePriceAlerts = () => {
           }
         }
       } catch (err) {
-        console.log('[PriceAlerts] Push notification not available');
+        if (import.meta.env.DEV) console.warn('[PriceAlerts] Push notification not available');
       }
 
-      console.log(`[Demo] Price drop alert triggered for ${alert.shoeName}! Now $${newPrice}`);
+      if (import.meta.env.DEV) console.warn(`[Demo] Price drop alert triggered for ${alert.shoeName}! Now $${newPrice}`);
     }
   }, [alerts, notifications]);
 

@@ -75,13 +75,19 @@ const EmailCaptureModal: React.FC<EmailCaptureModalProps> = ({
         <div
           className="fixed inset-0 bg-black/70 backdrop-blur-sm z-50"
           onClick={onClose}
+          aria-hidden="true"
         />
-        <div className="fixed inset-x-4 top-1/2 -translate-y-1/2 max-w-md mx-auto bg-zinc-900 rounded-2xl z-50 overflow-hidden">
+        <div 
+          className="fixed inset-x-4 top-1/2 -translate-y-1/2 max-w-md mx-auto bg-zinc-900 rounded-2xl z-50 overflow-hidden"
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="subscribed-title"
+        >
           <div className="p-6 text-center">
             <div className="w-16 h-16 bg-green-500/20 rounded-full flex items-center justify-center mx-auto mb-4">
-              <FaCheck className="text-green-500 text-2xl" />
+              <FaCheck className="text-green-500 text-2xl" aria-hidden="true" />
             </div>
-            <h2 className="text-xl font-bold text-white mb-2">You're Already Subscribed!</h2>
+            <h2 id="subscribed-title" className="text-xl font-bold text-white mb-2">You're Already Subscribed!</h2>
             <p className="text-zinc-400 text-sm mb-4">
               We'll send alerts to <span className="text-orange-400">{savedEmail}</span>
             </p>
@@ -101,13 +107,18 @@ const EmailCaptureModal: React.FC<EmailCaptureModalProps> = ({
   if (success) {
     return (
       <>
-        <div className="fixed inset-0 bg-black/70 backdrop-blur-sm z-50" />
-        <div className="fixed inset-x-4 top-1/2 -translate-y-1/2 max-w-md mx-auto bg-zinc-900 rounded-2xl z-50 overflow-hidden">
+        <div className="fixed inset-0 bg-black/70 backdrop-blur-sm z-50" aria-hidden="true" />
+        <div 
+          className="fixed inset-x-4 top-1/2 -translate-y-1/2 max-w-md mx-auto bg-zinc-900 rounded-2xl z-50 overflow-hidden"
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="success-title"
+        >
           <div className="p-6 text-center">
             <div className="w-16 h-16 bg-green-500/20 rounded-full flex items-center justify-center mx-auto mb-4 animate-pulse">
-              <FaCheck className="text-green-500 text-2xl" />
+              <FaCheck className="text-green-500 text-2xl" aria-hidden="true" />
             </div>
-            <h2 className="text-xl font-bold text-white mb-2">You're All Set!</h2>
+            <h2 id="success-title" className="text-xl font-bold text-white mb-2">You're All Set!</h2>
             <p className="text-zinc-400 text-sm">
               We'll notify you when prices drop
             </p>
@@ -123,22 +134,29 @@ const EmailCaptureModal: React.FC<EmailCaptureModalProps> = ({
       <div
         className="fixed inset-0 bg-black/70 backdrop-blur-sm z-50"
         onClick={onClose}
+        aria-hidden="true"
       />
 
       {/* Modal */}
-      <div className="fixed inset-x-4 top-1/2 -translate-y-1/2 max-w-md mx-auto bg-zinc-900 rounded-2xl z-50 overflow-hidden">
+      <div 
+        className="fixed inset-x-4 top-1/2 -translate-y-1/2 max-w-md mx-auto bg-zinc-900 rounded-2xl z-50 overflow-hidden"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="email-capture-title"
+      >
         {/* Header */}
         <div className="relative bg-gradient-to-r from-orange-500 to-red-500 p-6 text-center">
           <button
             onClick={onClose}
+            aria-label="Close dialog"
             className="absolute top-4 right-4 w-8 h-8 bg-black/20 rounded-full flex items-center justify-center text-white/80 hover:text-white"
           >
-            <FaTimes />
+            <FaTimes aria-hidden="true" />
           </button>
           <div className="w-14 h-14 bg-white/20 rounded-full flex items-center justify-center mx-auto mb-3">
-            <FaEnvelope className="text-white text-2xl" />
+            <FaEnvelope className="text-white text-2xl" aria-hidden="true" />
           </div>
-          <h2 className="text-xl font-bold text-white">{title}</h2>
+          <h2 id="email-capture-title" className="text-xl font-bold text-white">{title}</h2>
           <p className="text-white/80 text-sm mt-1">{subtitle}</p>
         </div>
 
@@ -147,7 +165,7 @@ const EmailCaptureModal: React.FC<EmailCaptureModalProps> = ({
           {/* Shoe Preview */}
           {shoeData && (
             <div className="bg-zinc-800/50 rounded-xl p-3 flex items-center gap-3">
-              <div className="w-12 h-12 bg-zinc-700 rounded-lg flex items-center justify-center">
+              <div className="w-12 h-12 bg-zinc-700 rounded-lg flex items-center justify-center" aria-hidden="true">
                 <span className="text-2xl">👟</span>
               </div>
               <div className="flex-1 min-w-0">
@@ -159,8 +177,9 @@ const EmailCaptureModal: React.FC<EmailCaptureModalProps> = ({
 
           {/* Email Input */}
           <div>
-            <label className="block text-zinc-400 text-sm mb-2">Email Address</label>
+            <label htmlFor="email-capture-input" className="block text-zinc-400 text-sm mb-2">Email Address</label>
             <input
+              id="email-capture-input"
               type="email"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
@@ -169,23 +188,24 @@ const EmailCaptureModal: React.FC<EmailCaptureModalProps> = ({
               autoFocus
             />
             {error && (
-              <p className="text-red-400 text-xs mt-2">{error}</p>
+              <p className="text-red-400 text-xs mt-2" role="alert">{error}</p>
             )}
           </div>
 
           {/* Preferences */}
-          <div className="space-y-2">
-            <p className="text-zinc-400 text-sm">What would you like to receive?</p>
+          <fieldset className="space-y-2">
+            <legend className="text-zinc-400 text-sm">What would you like to receive?</legend>
 
             <button
               type="button"
               onClick={() => togglePreference('priceAlerts')}
+              aria-pressed={preferences.priceAlerts}
               className="w-full bg-zinc-800/50 rounded-xl p-3 flex items-center gap-3 text-left"
             >
               <div className={`w-8 h-8 rounded-full flex items-center justify-center ${
                 preferences.priceAlerts ? 'bg-orange-500/20 text-orange-500' : 'bg-zinc-700 text-zinc-500'
               }`}>
-                <FaBell className="text-sm" />
+                <FaBell className="text-sm" aria-hidden="true" />
               </div>
               <div className="flex-1">
                 <p className="text-white text-sm font-medium">Price Drop Alerts</p>
@@ -194,19 +214,20 @@ const EmailCaptureModal: React.FC<EmailCaptureModalProps> = ({
               <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center ${
                 preferences.priceAlerts ? 'bg-orange-500 border-orange-500' : 'border-zinc-600'
               }`}>
-                {preferences.priceAlerts && <FaCheck className="text-white text-xs" />}
+                {preferences.priceAlerts && <FaCheck className="text-white text-xs" aria-hidden="true" />}
               </div>
             </button>
 
             <button
               type="button"
               onClick={() => togglePreference('newReleases')}
+              aria-pressed={preferences.newReleases}
               className="w-full bg-zinc-800/50 rounded-xl p-3 flex items-center gap-3 text-left"
             >
               <div className={`w-8 h-8 rounded-full flex items-center justify-center ${
                 preferences.newReleases ? 'bg-orange-500/20 text-orange-500' : 'bg-zinc-700 text-zinc-500'
               }`}>
-                <FaRocket className="text-sm" />
+                <FaRocket className="text-sm" aria-hidden="true" />
               </div>
               <div className="flex-1">
                 <p className="text-white text-sm font-medium">New Releases</p>
@@ -215,19 +236,20 @@ const EmailCaptureModal: React.FC<EmailCaptureModalProps> = ({
               <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center ${
                 preferences.newReleases ? 'bg-orange-500 border-orange-500' : 'border-zinc-600'
               }`}>
-                {preferences.newReleases && <FaCheck className="text-white text-xs" />}
+                {preferences.newReleases && <FaCheck className="text-white text-xs" aria-hidden="true" />}
               </div>
             </button>
 
             <button
               type="button"
               onClick={() => togglePreference('weeklyDigest')}
+              aria-pressed={preferences.weeklyDigest}
               className="w-full bg-zinc-800/50 rounded-xl p-3 flex items-center gap-3 text-left"
             >
               <div className={`w-8 h-8 rounded-full flex items-center justify-center ${
                 preferences.weeklyDigest ? 'bg-orange-500/20 text-orange-500' : 'bg-zinc-700 text-zinc-500'
               }`}>
-                <FaNewspaper className="text-sm" />
+                <FaNewspaper className="text-sm" aria-hidden="true" />
               </div>
               <div className="flex-1">
                 <p className="text-white text-sm font-medium">Weekly Digest</p>
@@ -236,19 +258,20 @@ const EmailCaptureModal: React.FC<EmailCaptureModalProps> = ({
               <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center ${
                 preferences.weeklyDigest ? 'bg-orange-500 border-orange-500' : 'border-zinc-600'
               }`}>
-                {preferences.weeklyDigest && <FaCheck className="text-white text-xs" />}
+                {preferences.weeklyDigest && <FaCheck className="text-white text-xs" aria-hidden="true" />}
               </div>
             </button>
 
             <button
               type="button"
               onClick={() => togglePreference('promotions')}
+              aria-pressed={preferences.promotions}
               className="w-full bg-zinc-800/50 rounded-xl p-3 flex items-center gap-3 text-left"
             >
               <div className={`w-8 h-8 rounded-full flex items-center justify-center ${
                 preferences.promotions ? 'bg-orange-500/20 text-orange-500' : 'bg-zinc-700 text-zinc-500'
               }`}>
-                <FaPercent className="text-sm" />
+                <FaPercent className="text-sm" aria-hidden="true" />
               </div>
               <div className="flex-1">
                 <p className="text-white text-sm font-medium">Exclusive Deals</p>
@@ -257,10 +280,10 @@ const EmailCaptureModal: React.FC<EmailCaptureModalProps> = ({
               <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center ${
                 preferences.promotions ? 'bg-orange-500 border-orange-500' : 'border-zinc-600'
               }`}>
-                {preferences.promotions && <FaCheck className="text-white text-xs" />}
+                {preferences.promotions && <FaCheck className="text-white text-xs" aria-hidden="true" />}
               </div>
             </button>
-          </div>
+          </fieldset>
 
           {/* Submit Button */}
           <button
@@ -270,12 +293,12 @@ const EmailCaptureModal: React.FC<EmailCaptureModalProps> = ({
           >
             {loading ? (
               <>
-                <FaSpinner className="animate-spin" />
+                <FaSpinner className="animate-spin" aria-hidden="true" />
                 Subscribing...
               </>
             ) : (
               <>
-                <FaBell />
+                <FaBell aria-hidden="true" />
                 Get Notified
               </>
             )}

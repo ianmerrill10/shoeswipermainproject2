@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from "react";
-import { supabase, AFFILIATE_TAG } from "../../lib/supabaseClient";
-import type { NFT, Profile, NFTOwnershipHistory } from "../../lib/types";
+import { supabase } from "../../lib/supabaseClient";
+import type { NFT, Profile } from "../../lib/types";
 
 interface OwnershipHistoryItem {
   id: string;
@@ -42,7 +42,9 @@ const NFTDetailModal: React.FC<NFTDetailModalProps> = ({
           .order("transferred_at", { ascending: false });
 
         if (error) {
-          console.error(error);
+          if (import.meta.env.DEV) {
+            console.error(error);
+          }
           return;
         }
 
@@ -72,7 +74,9 @@ const NFTDetailModal: React.FC<NFTDetailModalProps> = ({
             .in("id", userIds);
 
           if (profilesError) {
-            console.error(profilesError);
+            if (import.meta.env.DEV) {
+              console.error(profilesError);
+            }
           } else {
             profilesById =
               (profiles as Profile[]).reduce<Record<string, Profile>>(
@@ -111,7 +115,9 @@ const NFTDetailModal: React.FC<NFTDetailModalProps> = ({
     try {
       await onBuy(nft.id);
     } catch (e) {
-      console.error(e);
+      if (import.meta.env.DEV) {
+        console.error(e);
+      }
     } finally {
       setIsBuying(false);
     }

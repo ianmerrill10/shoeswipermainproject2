@@ -1,6 +1,26 @@
 import { useState, useEffect, useCallback } from 'react';
 import { DEMO_MODE } from '../lib/config';
 
+/**
+ * Email subscription and preference management hook.
+ * Captures user emails for marketing, price alerts, and newsletters.
+ * 
+ * In DEMO_MODE, emails are stored in localStorage.
+ * In production, emails are stored in Supabase email_subscriptions table.
+ * 
+ * @returns Object containing email state and capture methods
+ * @example
+ * const { email, captureEmail, updatePreferences } = useEmailCapture();
+ * 
+ * // Capture email for price alert
+ * const result = await captureEmail(
+ *   'user@example.com',
+ *   'price_alert',
+ *   { id: shoe.id, name: shoe.name },
+ *   { priceAlerts: true }
+ * );
+ */
+
 const EMAIL_CAPTURE_KEY = 'shoeswiper_email_capture';
 const EMAIL_LIST_KEY = 'shoeswiper_email_list';
 
@@ -138,7 +158,7 @@ export const useEmailCapture = () => {
           preferences: capturedEmail.preferences,
         });
 
-        console.log(`[Demo] Email captured: ${email} for ${source}`);
+        if (import.meta.env.DEV) console.warn(`[Demo] Email captured: ${email} for ${source}`);
         return { success: true };
       } else {
         const { supabase } = await import('../lib/supabaseClient');
@@ -252,9 +272,16 @@ export const useEmailCapture = () => {
           .eq('is_subscribed', true)
           .order('created_at', { ascending: false });
 
-        return (data || []).map((e: any) => ({
+        return (data || []).map((e: {
+          email: string;
+          source: string;
+          shoe_id?: string;
+          shoe_name?: string;
+          created_at: string;
+          preferences: CapturedEmail['preferences'];
+        }) => ({
           email: e.email,
-          source: e.source,
+          source: e.source as CapturedEmail['source'],
           shoeId: e.shoe_id,
           shoeName: e.shoe_name,
           createdAt: e.created_at,

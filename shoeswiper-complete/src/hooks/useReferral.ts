@@ -1,6 +1,30 @@
 import { useState, useEffect, useCallback } from 'react';
 import { DEMO_MODE } from '../lib/config';
 
+/**
+ * Referral program management hook.
+ * Manages user referral codes, tracking shares and signups,
+ * and calculating reward tiers based on referral performance.
+ * 
+ * Reward tiers: Starter (0) -> Bronze (3) -> Silver (10) -> Gold (25) -> Diamond (50)
+ * 
+ * In DEMO_MODE, referral data is stored in localStorage.
+ * In production, data is stored in Supabase user_referrals table.
+ * 
+ * @returns Object containing referral code, stats, and sharing methods
+ * @example
+ * const { referralCode, referralStats, shareReferralLink, getRewardTier } = useReferral();
+ * 
+ * // Get shareable referral URL
+ * const url = getReferralUrl(); // https://shoeswiper.com/?ref=SS123ABC
+ * 
+ * // Share via native share or clipboard
+ * const result = await shareReferralLink();
+ * 
+ * // Check reward tier
+ * const tier = getRewardTier(); // { tier: 'Bronze', progress: 50, ... }
+ */
+
 const REFERRAL_STORAGE_KEY = 'shoeswiper_referral';
 const USER_REFERRAL_CODE_KEY = 'shoeswiper_my_referral_code';
 const REFERRAL_STATS_KEY = 'shoeswiper_referral_stats';
@@ -114,7 +138,7 @@ export const useReferral = () => {
         };
         setReferralStats(newStats);
         localStorage.setItem(REFERRAL_STATS_KEY, JSON.stringify(newStats));
-        console.log('[Demo] Referral share tracked');
+        if (import.meta.env.DEV) console.warn('[Demo] Referral share tracked');
       } else {
         const { supabase } = await import('../lib/supabaseClient');
         const { data: { user } } = await supabase.auth.getUser();
@@ -136,7 +160,7 @@ export const useReferral = () => {
   const trackClick = useCallback(async (referrerCode: string) => {
     try {
       if (DEMO_MODE) {
-        console.log(`[Demo] Referral click tracked for code: ${referrerCode}`);
+        if (import.meta.env.DEV) console.warn(`[Demo] Referral click tracked for code: ${referrerCode}`);
         // In demo mode, we can simulate tracking
         const storedStats = localStorage.getItem(REFERRAL_STATS_KEY);
         if (storedStats) {
@@ -159,7 +183,7 @@ export const useReferral = () => {
   const processReferralSignup = useCallback(async (referrerCode: string, newUserId: string) => {
     try {
       if (DEMO_MODE) {
-        console.log(`[Demo] Referral signup: ${newUserId} referred by ${referrerCode}`);
+        if (import.meta.env.DEV) console.warn(`[Demo] Referral signup: ${newUserId} referred by ${referrerCode}`);
 
         // Store who referred this user
         localStorage.setItem(REFERRAL_STORAGE_KEY, JSON.stringify({
@@ -223,7 +247,7 @@ export const useReferral = () => {
         });
         return { success: true, method: 'native' };
       } catch (err) {
-        console.log('Share cancelled');
+        if (import.meta.env.DEV) console.warn('Share cancelled');
         return { success: false, method: 'cancelled' };
       }
     } else {

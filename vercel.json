@@ -2,5 +2,8 @@
   "buildCommand": "cd shoeswiper-complete && npm install && npm run build",
   "outputDirectory": "shoeswiper-complete/dist",
   "installCommand": "cd shoeswiper-complete && npm install",
-  "framework": "vite"
+  "framework": "vite",
+  "rewrites": [
+    { "source": "/(.*)", "destination": "/index.html" }
+  ]
 }

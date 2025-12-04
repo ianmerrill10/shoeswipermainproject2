@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { supabase, ADMIN_EMAIL } from '../lib/supabaseClient';
 import { FaCog, FaSignOutAlt, FaHeart, FaShoppingBag, FaShieldAlt, FaGem, FaBell } from 'react-icons/fa';
@@ -15,63 +15,39 @@ const ProfilePage: React.FC = () => {
   const { isEnabled: pushEnabled } = usePushNotifications();
   const [profile, setProfile] = useState<Profile | null>(null);
   const [favorites, setFavorites] = useState<Shoe[]>([]);
-  const [closet, setCloset] = useState<Shoe[]>([]);
+  const [closet, _setCloset] = useState<Shoe[]>([]);
   const [activeTab, setActiveTab] = useState<Tab>('favorites');
   const [loading, setLoading] = useState(true);
   const [showNotificationSettings, setShowNotificationSettings] = useState(false);
 
-  useEffect(() => {
-    loadProfile();
-  }, []);
-
-  const loadProfile = async () => {
+  const loadProfile = useCallback(async () => {
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) {
       navigate('/auth');
       return;
     }
 
-    // Get profile
+    setLoading(true);
     const { data: profileData } = await supabase
       .from('profiles')
       .select('*')
       .eq('id', user.id)
       .single();
 
-    if (profileData) {
-      setProfile(profileData);
-    } else {
-      setProfile({
-        id: user.id,
-        email: user.email,
-        username: user.user_metadata?.username || 'User',
-        avatar_url: user.user_metadata?.avatar_url,
-        created_at: user.created_at,
-      });
-    }
+    setProfile(profileData);
 
-    // Get favorites
-    const { data: favData } = await supabase
-      .from('favorites')
-      .select('shoe:shoes(*)')
-      .eq('user_id', user.id);
-
-    if (favData) {
-      setFavorites(favData.map((f: any) => f.shoe).filter(Boolean));
-    }
-
-    // Get closet
-    const { data: closetData } = await supabase
+    const { data: favoritesData } = await supabase
       .from('user_sneakers')
-      .select('shoe:shoes(*)')
+      .select('*, shoe:shoes(*)')
       .eq('user_id', user.id);
 
-    if (closetData) {
-      setCloset(closetData.map((c: any) => c.shoe).filter(Boolean));
-    }
-
+    setFavorites(favoritesData?.map((f: unknown) => (f as { shoe: Shoe }).shoe) || []);
     setLoading(false);
-  };
+  }, [navigate]);
+
+  useEffect(() => {
+    loadProfile();
+  }, [loadProfile]);
 
   const handleSignOut = async () => {
     await supabase.auth.signOut();
@@ -115,11 +91,11 @@ const ProfilePage: React.FC = () => {
           </div>
           
           <div className="flex gap-2">
-            <button className="p-2 bg-zinc-800 rounded-lg text-zinc-400 hover:text-white">
-              <FaCog />
+            <button className="p-2 bg-zinc-800 rounded-lg text-zinc-400 hover:text-white" aria-label="Settings">
+              <FaCog aria-hidden="true" />
             </button>
-            <button onClick={handleSignOut} className="p-2 bg-zinc-800 rounded-lg text-zinc-400 hover:text-red-400">
-              <FaSignOutAlt />
+            <button onClick={handleSignOut} className="p-2 bg-zinc-800 rounded-lg text-zinc-400 hover:text-red-400" aria-label="Sign out">
+              <FaSignOutAlt aria-hidden="true" />
             </button>
           </div>
         </div>
@@ -189,27 +165,35 @@ const ProfilePage: React.FC = () => {
       </div>
 
       {/* Tabs */}
-      <div className="sticky top-0 bg-zinc-950 border-b border-zinc-800 z-10">
+      <div className="sticky top-0 bg-zinc-950 border-b border-zinc-800 z-10" role="tablist" aria-label="Profile sections">
         <div className="flex px-6">
           <button
             onClick={() => setActiveTab('favorites')}
+            role="tab"
+            aria-selected={activeTab === 'favorites'}
+            aria-controls="favorites-panel"
+            id="favorites-tab"
             className={`flex-1 py-4 text-sm font-medium flex items-center justify-center gap-2 border-b-2 transition-colors ${
               activeTab === 'favorites'
                 ? 'text-orange-500 border-orange-500'
                 : 'text-zinc-400 border-transparent'
             }`}
           >
-            <FaHeart /> Favorites
+            <FaHeart aria-hidden="true" /> Favorites
           </button>
           <button
             onClick={() => setActiveTab('closet')}
+            role="tab"
+            aria-selected={activeTab === 'closet'}
+            aria-controls="closet-panel"
+            id="closet-tab"
             className={`flex-1 py-4 text-sm font-medium flex items-center justify-center gap-2 border-b-2 transition-colors ${
               activeTab === 'closet'
                 ? 'text-orange-500 border-orange-500'
                 : 'text-zinc-400 border-transparent'
             }`}
           >
-            <FaShoppingBag /> My Closet
+            <FaShoppingBag aria-hidden="true" /> My Closet
           </button>
         </div>
       </div>
@@ -217,35 +201,39 @@ const ProfilePage: React.FC = () => {
       {/* Content */}
       <div className="p-4">
         {activeTab === 'favorites' && (
-          favorites.length === 0 ? (
+          <div role="tabpanel" id="favorites-panel" aria-labelledby="favorites-tab">
+          {favorites.length === 0 ? (
             <div className="text-center py-16">
-              <FaHeart className="text-4xl text-zinc-700 mx-auto mb-4" />
+              <FaHeart className="text-4xl text-zinc-700 mx-auto mb-4" aria-hidden="true" />
               <p className="text-zinc-400">No favorites yet</p>
               <p className="text-zinc-500 text-sm mt-1">Like sneakers to save them here</p>
             </div>
           ) : (
-            <div className="grid grid-cols-2 gap-3">
+            <div className="grid grid-cols-2 gap-3" role="list" aria-label="Favorite sneakers">
               {favorites.map(shoe => (
                 <SneakerCard key={shoe.id} shoe={shoe} variant="grid" />
               ))}
             </div>
-          )
+          )}
+          </div>
         )}
 
         {activeTab === 'closet' && (
-          closet.length === 0 ? (
+          <div role="tabpanel" id="closet-panel" aria-labelledby="closet-tab">
+          {closet.length === 0 ? (
             <div className="text-center py-16">
-              <FaShoppingBag className="text-4xl text-zinc-700 mx-auto mb-4" />
+              <FaShoppingBag className="text-4xl text-zinc-700 mx-auto mb-4" aria-hidden="true" />
               <p className="text-zinc-400">No sneakers in your closet</p>
               <p className="text-zinc-500 text-sm mt-1">Add sneakers you own to mint NFTs</p>
             </div>
           ) : (
-            <div className="grid grid-cols-2 gap-3">
+            <div className="grid grid-cols-2 gap-3" role="list" aria-label="Closet sneakers">
               {closet.map(shoe => (
                 <SneakerCard key={shoe.id} shoe={shoe} variant="grid" />
               ))}
             </div>
-          )
+          )}
+          </div>
         )}
       </div>
 

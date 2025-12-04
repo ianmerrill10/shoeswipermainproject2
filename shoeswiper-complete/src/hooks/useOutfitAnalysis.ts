@@ -3,12 +3,46 @@ import { Shoe } from '../lib/types';
 import { DEMO_MODE, MOCK_SHOES } from '../lib/mockData';
 import { supabase } from '../lib/supabaseClient';
 
+/**
+ * AI-powered outfit analysis hook for sneaker recommendations.
+ * Analyzes uploaded outfit images using Google Gemini Vision API
+ * and returns matching sneaker recommendations based on style and color.
+ * 
+ * In DEMO_MODE, returns mock analysis results.
+ * In production, calls Supabase Edge Function 'analyze-outfit'.
+ * 
+ * @returns Object containing analysis methods, results, and recommendations
+ * @example
+ * const { analyzeImage, manualAnalyze, analysis, recommendations } = useOutfitAnalysis();
+ * 
+ * // Analyze an uploaded outfit image
+ * await analyzeImage(file);
+ * 
+ * // Get recommendations after analysis
+ * console.log(analysis?.style_tags, recommendations);
+ * 
+ * // Manual fallback if AI is unavailable
+ * await manualAnalyze('streetwear');
+ */
+
 export interface OutfitAnalysis {
   rating: number;
   style_tags: string[];
   dominant_colors: string[];
   detected_shoe: string;
   feedback: string;
+}
+
+interface OutfitAnalysisShoeResult {
+  id: string;
+  name: string;
+  brand: string;
+  price: number;
+  image_url: string;
+  amazon_url: string;
+  style_tags: string[];
+  color_tags: string[];
+  match_score?: number;
 }
 
 export const useOutfitAnalysis = () => {
@@ -39,7 +73,7 @@ export const useOutfitAnalysis = () => {
       if (error) throw error;
 
       // Ensure affiliate tags exist on returned data
-      const taggedData = (data || []).map((shoe: any) => ({
+      const taggedData = (data || []).map((shoe: OutfitAnalysisShoeResult) => ({
         ...shoe,
         media: { has_3d_model: false },
         amazon_url: shoe.amazon_url.includes('shoeswiper-20')
@@ -49,7 +83,9 @@ export const useOutfitAnalysis = () => {
 
       setRecommendations(taggedData);
     } catch (dbErr) {
-      console.error('Recommendation fetch failed:', dbErr);
+      if (import.meta.env.DEV) {
+        console.error('Recommendation fetch failed:', dbErr);
+      }
       // Fallback: Just get popular shoes if matching fails
       const { data: fallback } = await supabase
         .from('shoes')
@@ -99,9 +135,12 @@ export const useOutfitAnalysis = () => {
       // Perform the smart match
       await fetchRecommendations(result.style_tags, result.dominant_colors);
 
-    } catch (err: any) {
-      console.error(err);
-      setError("AI Analysis unavailable. Select your style manually.");
+    } catch (err: unknown) {
+      if (import.meta.env.DEV) {
+        console.error(err);
+      }
+      const errorMessage = err instanceof Error ? err.message : "AI Analysis unavailable. Select your style manually.";
+      setError(errorMessage);
     } finally {
       setIsAnalyzing(false);
     }

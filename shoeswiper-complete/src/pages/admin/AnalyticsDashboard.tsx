@@ -4,20 +4,39 @@ import { useAnalytics } from '../../hooks/useAnalytics';
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid, PieChart, Pie, Cell } from 'recharts';
 import { FaMousePointer, FaDollarSign, FaBoxOpen, FaUsers, FaMusic, FaSpotify, FaApple, FaAmazon } from 'react-icons/fa';
 
+interface AdminAnalytics {
+  totalUsers: number;
+  totalProducts: number;
+  clicks: Array<{ clicked_at: string }>;
+  chartData?: Array<{ date: string; clicks: number }>;
+}
+
+interface AnalyticsSummary {
+  totalEvents?: number;
+  shoeViews?: number;
+  shoeClicks?: number;
+  musicClicks?: Record<string, number>;
+  panelOpens?: Record<string, number>;
+  shares?: number;
+  favorites?: number;
+  recentEvents?: unknown[];
+  topShoes?: Array<[string, number]>;
+}
+
 export const AnalyticsDashboard: React.FC = () => {
   const { getAnalytics } = useAdmin();
   const { getAnalyticsSummary } = useAnalytics();
-  const [stats, setStats] = useState<any>(null);
-  const [analyticsData, setAnalyticsData] = useState<any>(null);
+  const [stats, setStats] = useState<AdminAnalytics | null>(null);
+  const [analyticsData, setAnalyticsData] = useState<AnalyticsSummary | null>(null);
 
   useEffect(() => {
     // Load basic admin analytics
     getAnalytics().then(data => {
-      const clickMap = data.clicks.reduce((acc: any, curr: any) => {
+      const clickMap = data.clicks.reduce((acc: Record<string, number>, curr: { clicked_at: string }) => {
         const date = curr.clicked_at.split('T')[0];
         acc[date] = (acc[date] || 0) + 1;
         return acc;
-      }, {});
+      }, {} as Record<string, number>);
 
       const chartData = Object.keys(clickMap).map(date => ({
         date: date.slice(5),
@@ -31,6 +50,7 @@ export const AnalyticsDashboard: React.FC = () => {
     getAnalyticsSummary().then(data => {
       setAnalyticsData(data);
     });
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   if (!stats) return <div className="text-zinc-400">Loading Analytics...</div>;

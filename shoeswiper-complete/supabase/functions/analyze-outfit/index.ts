@@ -1,6 +1,15 @@
 // Supabase Edge Function: supabase/functions/analyze-outfit/index.ts
 // Deploy with: supabase functions deploy analyze-outfit
 // Set secret: supabase secrets set GEMINI_API_KEY=your-key-here
+//
+// SECURITY NOTES:
+// - Rate limiting is handled at multiple levels:
+//   1. Supabase Edge Functions have built-in rate limiting
+//   2. Gemini API has its own rate limits (returns 429)
+//   3. This function has in-memory rate limiting as backup
+// - Authentication: Consider requiring auth for production
+// - Input validation: Base64 and size limits enforced
+// - Output sanitization: XSS prevention on all AI responses
 
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
@@ -14,7 +23,6 @@ const MAX_REQUESTS_PER_WINDOW = 10;
 const rateLimitMap = new Map<string, { count: number; resetTime: number }>();
 
 function getRateLimitKey(req: Request): string {
-  // Use user ID if authenticated, otherwise use IP
   const forwarded = req.headers.get("x-forwarded-for");
   const ip = forwarded ? forwarded.split(",")[0].trim() : "unknown";
   return ip;
@@ -55,12 +63,10 @@ function validateImageInput(image: unknown): { valid: boolean; error?: string } 
     return { valid: false, error: "Image is required and must be a string" };
   }
 
-  // Check if it's valid base64
   if (!BASE64_REGEX.test(image)) {
     return { valid: false, error: "Invalid image format - must be base64 encoded" };
   }
 
-  // Check size (base64 is ~4/3 the original size)
   const estimatedBytes = (image.length * 3) / 4;
   if (estimatedBytes > MAX_IMAGE_SIZE_BYTES) {
     return { valid: false, error: `Image too large. Maximum size is ${MAX_IMAGE_SIZE_BYTES / 1024 / 1024}MB` };
@@ -70,7 +76,7 @@ function validateImageInput(image: unknown): { valid: boolean; error?: string } 
 }
 
 // ============================================
-// SECURITY: Output Sanitization
+// SECURITY: Output Sanitization (XSS Prevention)
 // ============================================
 function sanitizeString(str: string): string {
   if (typeof str !== "string") return "";
@@ -90,20 +96,20 @@ function sanitizeAnalysisOutput(data: Record<string, unknown>): Record<string, u
   }
 
   if (typeof data.feedback === "string") {
-    sanitized.feedback = sanitizeString(data.feedback.slice(0, 1000)); // Limit length
+    sanitized.feedback = sanitizeString(data.feedback.slice(0, 1000));
   }
 
   if (Array.isArray(data.style_tags)) {
     sanitized.style_tags = data.style_tags
       .filter((t): t is string => typeof t === "string")
-      .slice(0, 10) // Max 10 tags
-      .map((t) => sanitizeString(t.slice(0, 50))); // Max 50 chars per tag
+      .slice(0, 10)
+      .map((t) => sanitizeString(t.slice(0, 50)));
   }
 
   if (Array.isArray(data.dominant_colors)) {
     sanitized.dominant_colors = data.dominant_colors
       .filter((c): c is string => typeof c === "string")
-      .slice(0, 5) // Max 5 colors
+      .slice(0, 5)
       .map((c) => sanitizeString(c.slice(0, 30)));
   }
 
@@ -125,6 +131,14 @@ serve(async (req) => {
   const origin = req.headers.get("origin");
   const corsHeaders = getCorsHeaders(origin);
 
+  // Security headers
+  const securityHeaders = {
+    ...corsHeaders,
+    "Content-Type": "application/json",
+    "Cache-Control": "no-store, no-cache, must-revalidate",
+    "X-RateLimit-Limit": String(MAX_REQUESTS_PER_WINDOW),
+  };
+
   // Handle CORS preflight
   if (req.method === "OPTIONS") {
     return new Response("ok", { headers: corsHeaders });
@@ -132,9 +146,9 @@ serve(async (req) => {
 
   // Only allow POST
   if (req.method !== "POST") {
-    return new Response(JSON.stringify({ error: "Method not allowed" }), {
+    return new Response(JSON.stringify({ error: "Method not allowed", fallback: true }), {
       status: 405,
-      headers: { ...corsHeaders, "Content-Type": "application/json" },
+      headers: { ...securityHeaders, "Allow": "POST, OPTIONS" },
     });
   }
 
@@ -152,23 +166,21 @@ serve(async (req) => {
       {
         status: 429,
         headers: {
-          ...corsHeaders,
-          "Content-Type": "application/json",
+          ...securityHeaders,
           "Retry-After": String(Math.ceil(rateLimit.resetIn / 1000)),
           "X-RateLimit-Remaining": "0",
-          "X-RateLimit-Reset": String(Math.ceil(rateLimit.resetIn / 1000)),
         },
       }
     );
   }
 
   try {
-    // SECURITY: Validate content type
+    // Validate content type
     const contentType = req.headers.get("content-type");
     if (!contentType?.includes("application/json")) {
-      return new Response(JSON.stringify({ error: "Content-Type must be application/json" }), {
+      return new Response(JSON.stringify({ error: "Content-Type must be application/json", fallback: true }), {
         status: 400,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
+        headers: securityHeaders,
       });
     }
 
@@ -177,48 +189,22 @@ serve(async (req) => {
     try {
       body = await req.json();
     } catch {
-      return new Response(JSON.stringify({ error: "Invalid JSON body" }), {
+      return new Response(JSON.stringify({ error: "Invalid JSON body", fallback: true }), {
         status: 400,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
+        headers: securityHeaders,
       });
     }
 
-    // SECURITY: Validate image input
+    // Validate image input
     const imageValidation = validateImageInput(body.image);
     if (!imageValidation.valid) {
-      return new Response(JSON.stringify({ error: imageValidation.error }), {
+      return new Response(JSON.stringify({ error: imageValidation.error, fallback: true }), {
         status: 400,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
+        headers: securityHeaders,
       });
     }
 
     const image = body.image as string;
-
-    // SECURITY: Optional authentication check
-    // Uncomment below to require authentication
-    /*
-    const authHeader = req.headers.get("authorization");
-    if (!authHeader?.startsWith("Bearer ")) {
-      return new Response(JSON.stringify({ error: "Authentication required" }), {
-        status: 401,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
-    }
-
-    const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
-    const supabaseAnonKey = Deno.env.get("SUPABASE_ANON_KEY")!;
-    const supabase = createClient(supabaseUrl, supabaseAnonKey);
-
-    const token = authHeader.replace("Bearer ", "");
-    const { data: { user }, error: authError } = await supabase.auth.getUser(token);
-
-    if (authError || !user) {
-      return new Response(JSON.stringify({ error: "Invalid authentication token" }), {
-        status: 401,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
-    }
-    */
 
     // Call Gemini Vision API
     const GEMINI_API_KEY = Deno.env.get("GEMINI_API_KEY");
@@ -226,14 +212,8 @@ serve(async (req) => {
     if (!GEMINI_API_KEY) {
       console.error("GEMINI_API_KEY is not configured");
       return new Response(
-        JSON.stringify({
-          error: "Service temporarily unavailable",
-          fallback: true,
-        }),
-        {
-          status: 503,
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
-        }
+        JSON.stringify({ error: "Service temporarily unavailable", fallback: true }),
+        { status: 503, headers: securityHeaders }
       );
     }
 
@@ -276,28 +256,16 @@ serve(async (req) => {
     // Handle Gemini rate limits
     if (response.status === 429) {
       return new Response(
-        JSON.stringify({
-          error: "Service temporarily busy. Please try again in a moment.",
-          fallback: true,
-        }),
-        {
-          status: 429,
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
-        }
+        JSON.stringify({ error: "Service temporarily busy. Please try again.", fallback: true }),
+        { status: 429, headers: { ...securityHeaders, "Retry-After": "60" } }
       );
     }
 
     if (!response.ok) {
       console.error(`Gemini API error: ${response.status}`);
       return new Response(
-        JSON.stringify({
-          error: "Analysis service unavailable",
-          fallback: true,
-        }),
-        {
-          status: 502,
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
-        }
+        JSON.stringify({ error: "Analysis service unavailable", fallback: true }),
+        { status: 502, headers: securityHeaders }
       );
     }
 
@@ -307,14 +275,8 @@ serve(async (req) => {
     if (!text) {
       console.error("No response from Gemini API");
       return new Response(
-        JSON.stringify({
-          error: "No analysis result",
-          fallback: true,
-        }),
-        {
-          status: 500,
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
-        }
+        JSON.stringify({ error: "No analysis result", fallback: true }),
+        { status: 500, headers: securityHeaders }
       );
     }
 
@@ -327,14 +289,8 @@ serve(async (req) => {
     } catch {
       console.error("Failed to parse Gemini response:", jsonStr.slice(0, 200));
       return new Response(
-        JSON.stringify({
-          error: "Failed to parse analysis",
-          fallback: true,
-        }),
-        {
-          status: 500,
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
-        }
+        JSON.stringify({ error: "Failed to parse analysis", fallback: true }),
+        { status: 500, headers: securityHeaders }
       );
     }
 
@@ -343,22 +299,33 @@ serve(async (req) => {
 
     return new Response(JSON.stringify(sanitizedAnalysis), {
       headers: {
-        ...corsHeaders,
-        "Content-Type": "application/json",
+        ...securityHeaders,
         "X-RateLimit-Remaining": String(rateLimit.remaining),
       },
     });
   } catch (error) {
-    // SECURITY: Don't expose internal error details to client
     console.error("Error analyzing outfit:", error);
+
+    // Classify error for appropriate response
+    let safeErrorMessage = "An unexpected error occurred";
+    let statusCode = 500;
+
+    if (error instanceof Error) {
+      const errorMsg = error.message.toLowerCase();
+      if (errorMsg.includes("429") || errorMsg.includes("rate limit") || errorMsg.includes("quota")) {
+        safeErrorMessage = "Service temporarily unavailable. Please try again later.";
+        statusCode = 429;
+      } else if (errorMsg.includes("api_key") || errorMsg.includes("unauthorized")) {
+        safeErrorMessage = "AI service configuration error";
+        statusCode = 503;
+      }
+    }
+
     return new Response(
-      JSON.stringify({
-        error: "An unexpected error occurred",
-        fallback: true,
-      }),
+      JSON.stringify({ error: safeErrorMessage, fallback: true }),
       {
-        status: 500,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
+        status: statusCode,
+        headers: statusCode === 429 ? { ...securityHeaders, "Retry-After": "60" } : securityHeaders,
       }
     );
   }

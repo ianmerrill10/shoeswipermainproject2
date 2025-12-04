@@ -1,6 +1,27 @@
 import { useState, useEffect, useCallback } from 'react';
 import { DEMO_MODE } from '../lib/config';
 
+/**
+ * Push notification permission and delivery management hook.
+ * Handles service worker registration, permission requests,
+ * and sending local/push notifications for price drops, new releases, and restocks.
+ * 
+ * Settings are stored in localStorage and synced to Supabase in production.
+ * 
+ * @returns Object containing notification state and trigger methods
+ * @example
+ * const { isEnabled, requestPermission, notifyPriceDrop } = usePushNotifications();
+ * 
+ * // Request notification permission
+ * const granted = await requestPermission();
+ * 
+ * // Send price drop notification
+ * await notifyPriceDrop('Air Jordan 1', 200, 150, amazonUrl, shoeId);
+ * 
+ * // Update notification preferences
+ * updateSettings({ priceDrops: true, newReleases: false });
+ */
+
 const PUSH_SETTINGS_KEY = 'shoeswiper_push_settings';
 
 export interface PushSettings {
@@ -69,12 +90,12 @@ export const usePushNotifications = () => {
         scope: '/',
       });
 
-      console.log('[Push] Service worker registered:', registration.scope);
+      if (import.meta.env.DEV) console.warn('[Push] Service worker registered:', registration.scope);
       setSwRegistration(registration);
 
       // Wait for the service worker to be ready
       await navigator.serviceWorker.ready;
-      console.log('[Push] Service worker ready');
+      if (import.meta.env.DEV) console.warn('[Push] Service worker ready');
 
       return registration;
     } catch (err) {
@@ -83,10 +104,37 @@ export const usePushNotifications = () => {
     }
   }, [isSupported]);
 
+  // Save subscription to server (for production push from backend)
+  const saveSubscriptionToServer = useCallback(async (registration: ServiceWorkerRegistration) => {
+    try {
+      const subscription = await registration.pushManager.subscribe({
+        userVisibleOnly: true,
+        // In production, you'd use a VAPID key here
+        // applicationServerKey: urlBase64ToUint8Array(VAPID_PUBLIC_KEY)
+      });
+
+      const { supabase } = await import('../lib/supabaseClient');
+      const { data: { user } } = await supabase.auth.getUser();
+
+      if (user) {
+        await supabase.from('push_subscriptions').upsert({
+          user_id: user.id,
+          subscription: JSON.stringify(subscription),
+          created_at: new Date().toISOString(),
+          settings: settings,
+        }, {
+          onConflict: 'user_id',
+        });
+      }
+    } catch (err) {
+      console.error('[Push] Error saving subscription:', err);
+    }
+  }, [settings]);
+
   // Request notification permission
   const requestPermission = useCallback(async (): Promise<boolean> => {
     if (!isSupported) {
-      console.log('[Push] Push notifications not supported');
+      if (import.meta.env.DEV) console.warn('[Push] Push notifications not supported');
       return false;
     }
 
@@ -95,7 +143,7 @@ export const usePushNotifications = () => {
       setPermission(result);
 
       if (result === 'granted') {
-        console.log('[Push] Permission granted');
+        if (import.meta.env.DEV) console.warn('[Push] Permission granted');
 
         // Register service worker if not already registered
         let registration = swRegistration;
@@ -125,34 +173,7 @@ export const usePushNotifications = () => {
       console.error('[Push] Error requesting permission:', err);
       return false;
     }
-  }, [isSupported, swRegistration, settings, registerServiceWorker]);
-
-  // Save subscription to server (for production push from backend)
-  const saveSubscriptionToServer = async (registration: ServiceWorkerRegistration) => {
-    try {
-      const subscription = await registration.pushManager.subscribe({
-        userVisibleOnly: true,
-        // In production, you'd use a VAPID key here
-        // applicationServerKey: urlBase64ToUint8Array(VAPID_PUBLIC_KEY)
-      });
-
-      const { supabase } = await import('../lib/supabaseClient');
-      const { data: { user } } = await supabase.auth.getUser();
-
-      if (user) {
-        await supabase.from('push_subscriptions').upsert({
-          user_id: user.id,
-          subscription: JSON.stringify(subscription),
-          created_at: new Date().toISOString(),
-          settings: settings,
-        }, {
-          onConflict: 'user_id',
-        });
-      }
-    } catch (err) {
-      console.error('[Push] Error saving subscription:', err);
-    }
-  };
+  }, [isSupported, swRegistration, settings, registerServiceWorker, saveSubscriptionToServer]);
 
   // Disable push notifications
   const disablePush = useCallback(async () => {
@@ -167,7 +188,7 @@ export const usePushNotifications = () => {
         const subscription = await swRegistration.pushManager.getSubscription();
         if (subscription) {
           await subscription.unsubscribe();
-          console.log('[Push] Unsubscribed from push notifications');
+          if (import.meta.env.DEV) console.warn('[Push] Unsubscribed from push notifications');
         }
       } catch (err) {
         console.error('[Push] Error unsubscribing:', err);
@@ -220,10 +241,10 @@ export const usePushNotifications = () => {
   const showLocalNotification = useCallback(async (
     title: string,
     body: string,
-    data?: Record<string, any>
+    data?: Record<string, unknown>
   ) => {
     if (permission !== 'granted') {
-      console.log('[Push] No permission for notifications');
+      if (import.meta.env.DEV) console.warn('[Push] No permission for notifications');
       return false;
     }
 

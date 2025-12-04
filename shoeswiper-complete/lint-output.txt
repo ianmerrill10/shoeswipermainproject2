@@ -1,0 +1,117 @@
+
+> shoeswiper@1.0.0 lint
+> eslint . --ext ts,tsx --report-unused-disable-directives --max-warnings 0
+
+
+/workspaces/shoeswipermainproject2/shoeswiper-complete/src/components/ShoePanel.tsx
+  52:9  warning  Unexpected console statement  no-console
+
+/workspaces/shoeswipermainproject2/shoeswiper-complete/src/components/check-fit/ShareResults.tsx
+  24:9  warning  Unexpected console statement  no-console
+
+/workspaces/shoeswipermainproject2/shoeswiper-complete/src/components/nft/NFTMintFlow.tsx
+  127:19  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+/workspaces/shoeswipermainproject2/shoeswiper-complete/src/hooks/useAdmin.ts
+   39:7  warning  Unexpected console statement  no-console
+   71:7  warning  Unexpected console statement  no-console
+  102:7  warning  Unexpected console statement  no-console
+
+/workspaces/shoeswipermainproject2/shoeswiper-complete/src/hooks/useAnalytics.ts
+  93:7  warning  Unexpected console statement  no-console
+
+/workspaces/shoeswipermainproject2/shoeswiper-complete/src/hooks/useAuthGuard.ts
+  25:7  warning  Unexpected console statement  no-console
+
+/workspaces/shoeswipermainproject2/shoeswiper-complete/src/hooks/useEmailCapture.ts
+  141:9  warning  Unexpected console statement  no-console
+
+/workspaces/shoeswipermainproject2/shoeswiper-complete/src/hooks/useFavorites.ts
+   25:9   warning  Unexpected console statement  no-console
+   57:9   warning  Unexpected console statement  no-console
+   78:13  warning  Unexpected console statement  no-console
+  101:9   warning  Unexpected console statement  no-console
+
+/workspaces/shoeswipermainproject2/shoeswiper-complete/src/hooks/useNFTMarketplace.ts
+  235:11  warning  Unexpected console statement  no-console
+
+/workspaces/shoeswipermainproject2/shoeswiper-complete/src/hooks/usePriceAlerts.ts
+  194:9  warning  Unexpected console statement  no-console
+  239:9  warning  Unexpected console statement  no-console
+  331:9  warning  Unexpected console statement  no-console
+  334:7  warning  Unexpected console statement  no-console
+
+/workspaces/shoeswipermainproject2/shoeswiper-complete/src/hooks/usePushNotifications.ts
+   72:7   warning  Unexpected console statement                                                                                                   no-console
+   77:7   warning  Unexpected console statement                                                                                                   no-console
+   89:7   warning  Unexpected console statement                                                                                                   no-console
+   98:9   warning  Unexpected console statement                                                                                                   no-console
+  128:6   warning  React Hook useCallback has a missing dependency: 'saveSubscriptionToServer'. Either include it or remove the dependency array  react-hooks/exhaustive-deps
+  170:11  warning  Unexpected console statement                                                                                                   no-console
+  226:7   warning  Unexpected console statement                                                                                                   no-console
+
+/workspaces/shoeswipermainproject2/shoeswiper-complete/src/hooks/useReferral.ts
+  117:9  warning  Unexpected console statement  no-console
+  139:9  warning  Unexpected console statement  no-console
+  162:9  warning  Unexpected console statement  no-console
+  226:9  warning  Unexpected console statement  no-console
+
+/workspaces/shoeswipermainproject2/shoeswiper-complete/src/hooks/useSneakers.ts
+   93:7  warning  Unexpected console statement  no-console
+  109:7  warning  Unexpected console statement  no-console
+
+/workspaces/shoeswipermainproject2/shoeswiper-complete/src/lib/deepLinks.ts
+  218:3  warning  Unexpected console statement  no-console
+
+/workspaces/shoeswipermainproject2/shoeswiper-complete/src/lib/mockData.ts
+  238:1  warning  Unexpected console statement  no-console
+
+/workspaces/shoeswipermainproject2/shoeswiper-complete/src/pages/AuthPage.tsx
+  49:19  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  66:19  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+/workspaces/shoeswipermainproject2/shoeswiper-complete/src/pages/ClosetPage.tsx
+  62:9  warning  Unexpected console statement  no-console
+
+/workspaces/shoeswipermainproject2/shoeswiper-complete/src/pages/FeedPage.tsx
+   30:6  warning  React Hook useEffect has a missing dependency: 'loadShoes'. Either include it or remove the dependency array                                         react-hooks/exhaustive-deps
+   42:6  warning  React Hook useEffect has a missing dependency: 'trackView'. Either include it or remove the dependency array                                         react-hooks/exhaustive-deps
+   49:6  warning  React Hook useEffect has a missing dependency: 'loadShoes'. Either include it or remove the dependency array                                         react-hooks/exhaustive-deps
+   82:6  warning  React Hook useEffect has missing dependencies: 'handleOpenMusicPanel' and 'handleOpenShoePanel'. Either include them or remove the dependency array  react-hooks/exhaustive-deps
+  122:6  warning  React Hook useEffect has missing dependencies: 'handleOpenMusicPanel' and 'handleOpenShoePanel'. Either include them or remove the dependency array  react-hooks/exhaustive-deps
+  179:9  warning  Unexpected console statement                                                                                                                         no-console
+
+/workspaces/shoeswipermainproject2/shoeswiper-complete/src/pages/ProfilePage.tsx
+  25:6   warning  React Hook useEffect has a missing dependency: 'loadProfile'. Either include it or remove the dependency array  react-hooks/exhaustive-deps
+  60:36  error    Unexpected any. Specify a different type                                                                        @typescript-eslint/no-explicit-any
+  70:36  error    Unexpected any. Specify a different type                                                                        @typescript-eslint/no-explicit-any
+
+/workspaces/shoeswipermainproject2/shoeswiper-complete/src/pages/SearchPage.tsx
+  19:6  warning  React Hook useEffect has a missing dependency: 'searchSneakers'. Either include it or remove the dependency array  react-hooks/exhaustive-deps
+
+/workspaces/shoeswipermainproject2/shoeswiper-complete/src/pages/admin/AnalyticsDashboard.tsx
+  57:6  warning  React Hook useEffect has missing dependencies: 'getAnalytics' and 'getAnalyticsSummary'. Either include them or remove the dependency array  react-hooks/exhaustive-deps
+
+/workspaces/shoeswipermainproject2/shoeswiper-complete/src/pages/admin/ProductManager.tsx
+  14:36  warning  React Hook useEffect has a missing dependency: 'fetchAll'. Either include it or remove the dependency array  react-hooks/exhaustive-deps
+
+/workspaces/shoeswipermainproject2/shoeswiper-complete/src/pages/admin/UserManager.tsx
+   7:38  error    Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  34:7   warning  Unexpected console statement              no-console
+
+/workspaces/shoeswipermainproject2/shoeswiper-complete/src/test/setup.ts
+  27:6  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+/workspaces/shoeswipermainproject2/shoeswiper-complete/src/test/vitest.d.ts
+  7:29  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+/workspaces/shoeswipermainproject2/shoeswiper-complete/vitest.config.ts
+  0:0  error  Parsing error: ESLint was configured to run on `<tsconfigRootDir>/vitest.config.ts` using `parserOptions.project`: <tsconfigRootDir>/tsconfig.json
+However, that TSConfig does not include this file. Either:
+- Change ESLint's list of included files to not include this file
+- Change that TSConfig to include this file
+- Create a new TSConfig that includes this file and include it in your parserOptions.project
+See the typescript-eslint docs for more info: https://typescript-eslint.io/linting/troubleshooting#i-get-errors-telling-me-eslint-was-configured-to-run--however-that-tsconfig-does-not--none-of-those-tsconfigs-include-this-file
+
+✖ 53 problems (9 errors, 44 warnings)
+

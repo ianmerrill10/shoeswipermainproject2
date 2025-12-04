@@ -1,16 +1,97 @@
 <!DOCTYPE html>
 <html lang="en">
   <head>
+    <!-- Basic Meta Tags -->
     <meta charset="UTF-8" />
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
     <meta name="theme-color" content="#18181b" />
+    <title>ShoeSwiper - Swipe. Match. Cop.</title>
+
+    <!-- SEO Meta Tags -->
     <meta name="description" content="ShoeSwiper - TikTok-style sneaker discovery marketplace with AI outfit matching" />
     <meta name="keywords" content="sneakers, shoes, marketplace, AI, outfit, matching, Nike, Jordan, Adidas" />
+    <meta name="robots" content="index, follow" />
+    <meta name="author" content="ShoeSwiper" />
+    <link rel="canonical" href="https://shoeswiper.com/" />
+    <meta name="application-name" content="ShoeSwiper" />
+    <meta name="apple-mobile-web-app-title" content="ShoeSwiper" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+
+    <!-- Open Graph Tags -->
     <meta property="og:title" content="ShoeSwiper - Swipe. Match. Cop." />
-    <meta property="og:description" content="Discover sneakers that match your style with AI-powered outfit analysis" />
+    <meta property="og:description" content="Discover sneakers that match your style with AI-powered outfit analysis. TikTok-style sneaker discovery marketplace." />
     <meta property="og:type" content="website" />
-    <title>ShoeSwiper - Swipe. Match. Cop.</title>
+    <meta property="og:url" content="https://shoeswiper.com/" />
+    <meta property="og:site_name" content="ShoeSwiper" />
+    <meta property="og:locale" content="en_US" />
+    <meta property="og:image" content="https://shoeswiper.com/og-image.png" />
+    <meta property="og:image:width" content="1200" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:image:alt" content="ShoeSwiper - AI-Powered Sneaker Discovery" />
+
+    <!-- Twitter Card Tags -->
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:site" content="@shoeswiper" />
+    <meta name="twitter:creator" content="@shoeswiper" />
+    <meta name="twitter:title" content="ShoeSwiper - Swipe. Match. Cop." />
+    <meta name="twitter:description" content="Discover sneakers that match your style with AI-powered outfit analysis." />
+    <meta name="twitter:image" content="https://shoeswiper.com/og-image.png" />
+    <meta name="twitter:image:alt" content="ShoeSwiper - AI-Powered Sneaker Discovery" />
+
+    <!-- JSON-LD Structured Data -->
+    <script type="application/ld+json">
+      [
+        {
+          "@context": "https://schema.org",
+          "@type": "WebSite",
+          "name": "ShoeSwiper",
+          "alternateName": "Shoe Swiper",
+          "url": "https://shoeswiper.com/",
+          "description": "TikTok-style sneaker discovery marketplace with AI-powered outfit matching",
+          "potentialAction": {
+            "@type": "SearchAction",
+            "target": {
+              "@type": "EntryPoint",
+              "urlTemplate": "https://shoeswiper.com/search?q={search_term_string}"
+            },
+            "query-input": "required name=search_term_string"
+          }
+        },
+        {
+          "@context": "https://schema.org",
+          "@type": "Organization",
+          "name": "ShoeSwiper",
+          "url": "https://shoeswiper.com/",
+          "logo": "https://shoeswiper.com/logo.png",
+          "description": "AI-powered sneaker discovery marketplace. Swipe through sneakers, get outfit recommendations, and find your perfect kicks.",
+          "sameAs": [
+            "https://twitter.com/shoeswiper",
+            "https://instagram.com/shoeswiper",
+            "https://tiktok.com/@shoeswiper"
+          ],
+          "contactPoint": {
+            "@type": "ContactPoint",
+            "contactType": "customer service",
+            "email": "dadsellsgadgets@gmail.com"
+          }
+        },
+        {
+          "@context": "https://schema.org",
+          "@type": "SoftwareApplication",
+          "name": "ShoeSwiper",
+          "applicationCategory": "ShoppingApplication",
+          "operatingSystem": "Web",
+          "description": "Discover sneakers that match your style with AI-powered outfit analysis",
+          "offers": {
+            "@type": "Offer",
+            "price": "0",
+            "priceCurrency": "USD"
+          }
+        }
+      ]
+    </script>
   </head>
   <body class="bg-zinc-950 text-white">
     <div id="root"></div>

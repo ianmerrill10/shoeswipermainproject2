@@ -1,6 +1,27 @@
 import { useCallback } from 'react';
 import { DEMO_MODE } from '../lib/config';
 
+/**
+ * Event tracking hook for user interactions, affiliate clicks, and engagement metrics.
+ * Provides methods to track various user actions for analytics and revenue attribution.
+ * 
+ * In DEMO_MODE, events are stored in memory and logged to console.
+ * In production, events are sent to Supabase analytics tables.
+ * 
+ * @returns Object containing tracking methods and analytics summary
+ * @example
+ * const { trackShoeView, trackShoeClick, trackMusicClick } = useAnalytics();
+ * 
+ * // Track when shoe card becomes visible
+ * trackShoeView(shoe.id);
+ * 
+ * // Track Amazon buy button click
+ * trackShoeClick(shoe.id);
+ * 
+ * // Track music link click
+ * trackMusicClick('spotify', shoe.id, 'Song Name', 'Artist');
+ */
+
 // Analytics event types for type safety
 export type AnalyticsEvent =
   | 'shoe_view'
@@ -21,7 +42,7 @@ interface AnalyticsData {
   song?: string;
   artist?: string;
   direction?: 'left' | 'right' | 'up' | 'down';
-  [key: string]: any;
+  [key: string]: unknown;
 }
 
 // In-memory analytics store for DEMO_MODE
@@ -90,7 +111,7 @@ export const useAnalytics = () => {
           break;
       }
 
-      console.log(`[Analytics] ${event}:`, data);
+      if (import.meta.env.DEV) console.warn(`[Analytics] ${event}:`, data);
       return;
     }
 
@@ -214,7 +235,7 @@ export const useAnalytics = () => {
     ]);
 
     // Aggregate music clicks by platform
-    const musicClicksByPlatform = (musicClicks || []).reduce((acc: Record<string, number>, click: any) => {
+    const musicClicksByPlatform = (musicClicks || []).reduce((acc: Record<string, number>, click: { platform: string }) => {
       acc[click.platform] = (acc[click.platform] || 0) + 1;
       return acc;
     }, { spotify: 0, apple_music: 0, amazon_music: 0 });

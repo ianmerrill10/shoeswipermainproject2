@@ -17,7 +17,6 @@ const ReferralCard: React.FC<ReferralCardProps> = ({ compact = false }) => {
   } = useReferral();
 
   const [copied, setCopied] = useState(false);
-  const [showDetails, setShowDetails] = useState(false);
 
   const handleShare = async () => {
     const result = await shareReferralLink();
@@ -63,7 +62,6 @@ const ReferralCard: React.FC<ReferralCardProps> = ({ compact = false }) => {
   if (compact) {
     return (
       <button
-        onClick={() => setShowDetails(true)}
         className="w-full bg-gradient-to-r from-orange-500/20 to-red-500/20 rounded-xl p-4 border border-orange-500/30 hover:border-orange-400 transition-colors text-left"
       >
         <div className="flex items-center justify-between">

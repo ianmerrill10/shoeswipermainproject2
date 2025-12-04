@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { FaTimes, FaBell, FaTag, FaExternalLinkAlt, FaTrash, FaCheck } from 'react-icons/fa';
-import { usePriceAlerts, PriceNotification, PriceAlert } from '../hooks/usePriceAlerts';
+import { usePriceAlerts, PriceNotification } from '../hooks/usePriceAlerts';
 import { getAffiliateUrl } from '../lib/supabaseClient';
 
 interface NotificationsPanelProps {
@@ -55,10 +55,14 @@ const NotificationsPanel: React.FC<NotificationsPanelProps> = ({ isOpen, onClose
           isOpen ? 'opacity-100' : 'opacity-0 pointer-events-none'
         }`}
         onClick={onClose}
+        aria-hidden="true"
       />
 
       {/* Panel */}
       <div
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="notifications-panel-title"
         className={`fixed top-0 right-0 h-full w-full max-w-md bg-zinc-950 z-50 transform transition-transform duration-300 ease-out overflow-hidden flex flex-col ${
           isOpen ? 'translate-x-0' : 'translate-x-full'
         }`}
@@ -66,26 +70,31 @@ const NotificationsPanel: React.FC<NotificationsPanelProps> = ({ isOpen, onClose
         {/* Header */}
         <div className="sticky top-0 bg-zinc-950/95 backdrop-blur-sm border-b border-zinc-800 p-4 flex items-center justify-between z-10">
           <div className="flex items-center gap-2">
-            <FaBell className="text-orange-500" />
-            <h2 className="text-lg font-bold text-white">Notifications</h2>
+            <FaBell className="text-orange-500" aria-hidden="true" />
+            <h2 id="notifications-panel-title" className="text-lg font-bold text-white">Notifications</h2>
             {unreadCount > 0 && (
-              <span className="bg-red-500 text-white text-xs font-bold px-2 py-0.5 rounded-full">
+              <span className="bg-red-500 text-white text-xs font-bold px-2 py-0.5 rounded-full" aria-label={`${unreadCount} unread notifications`}>
                 {unreadCount}
               </span>
             )}
           </div>
           <button
             onClick={onClose}
+            aria-label="Close notifications"
             className="w-10 h-10 bg-zinc-800 rounded-full flex items-center justify-center text-white hover:bg-zinc-700 transition-colors"
           >
-            <FaTimes />
+            <FaTimes aria-hidden="true" />
           </button>
         </div>
 
         {/* Tabs */}
-        <div className="flex border-b border-zinc-800">
+        <div className="flex border-b border-zinc-800" role="tablist" aria-label="Notification types">
           <button
             onClick={() => setActiveTab('notifications')}
+            role="tab"
+            aria-selected={activeTab === 'notifications'}
+            aria-controls="notifications-tabpanel"
+            id="notifications-tab"
             className={`flex-1 py-3 text-sm font-medium transition-colors ${
               activeTab === 'notifications'
                 ? 'text-orange-500 border-b-2 border-orange-500'
@@ -94,13 +103,17 @@ const NotificationsPanel: React.FC<NotificationsPanelProps> = ({ isOpen, onClose
           >
             Price Drops
             {unreadCount > 0 && (
-              <span className="ml-1 bg-red-500 text-white text-xs px-1.5 rounded-full">
+              <span className="ml-1 bg-red-500 text-white text-xs px-1.5 rounded-full" aria-hidden="true">
                 {unreadCount}
               </span>
             )}
           </button>
           <button
             onClick={() => setActiveTab('alerts')}
+            role="tab"
+            aria-selected={activeTab === 'alerts'}
+            aria-controls="alerts-tabpanel"
+            id="alerts-tab"
             className={`flex-1 py-3 text-sm font-medium transition-colors ${
               activeTab === 'alerts'
                 ? 'text-orange-500 border-b-2 border-orange-500'
@@ -114,10 +127,11 @@ const NotificationsPanel: React.FC<NotificationsPanelProps> = ({ isOpen, onClose
         {/* Content */}
         <div className="flex-1 overflow-y-auto">
           {activeTab === 'notifications' ? (
-            notifications.length === 0 ? (
+            <div role="tabpanel" id="notifications-tabpanel" aria-labelledby="notifications-tab">
+            {notifications.length === 0 ? (
               <div className="flex flex-col items-center justify-center h-64 text-center px-6">
                 <div className="w-16 h-16 bg-zinc-800 rounded-full flex items-center justify-center mb-4">
-                  <FaTag className="text-2xl text-zinc-500" />
+                  <FaTag className="text-2xl text-zinc-500" aria-hidden="true" />
                 </div>
                 <p className="text-white font-bold mb-1">No price drops yet</p>
                 <p className="text-zinc-500 text-sm">
@@ -125,7 +139,7 @@ const NotificationsPanel: React.FC<NotificationsPanelProps> = ({ isOpen, onClose
                 </p>
               </div>
             ) : (
-              <div className="divide-y divide-zinc-800">
+              <div className="divide-y divide-zinc-800" role="list" aria-label="Price drop notifications">
                 {/* Clear All Button */}
                 {notifications.length > 0 && (
                   <div className="p-3 flex justify-end">
@@ -142,6 +156,7 @@ const NotificationsPanel: React.FC<NotificationsPanelProps> = ({ isOpen, onClose
                   <button
                     key={notification.id}
                     onClick={() => handleNotificationClick(notification)}
+                    aria-label={`${notification.shoeBrand} ${notification.shoeName}, price dropped from $${notification.oldPrice} to $${notification.newPrice}, save $${notification.savedAmount.toFixed(2)}`}
                     className={`w-full p-4 flex items-start gap-3 hover:bg-zinc-900/50 transition-colors text-left ${
                       !notification.read ? 'bg-orange-500/5' : ''
                     }`}
@@ -150,11 +165,11 @@ const NotificationsPanel: React.FC<NotificationsPanelProps> = ({ isOpen, onClose
                     <div className="relative flex-shrink-0">
                       <img
                         src={notification.shoeImage}
-                        alt={notification.shoeName}
+                        alt=""
                         className="w-16 h-16 rounded-lg object-cover"
                       />
                       {!notification.read && (
-                        <div className="absolute -top-1 -right-1 w-3 h-3 bg-orange-500 rounded-full border-2 border-zinc-950" />
+                        <div className="absolute -top-1 -right-1 w-3 h-3 bg-orange-500 rounded-full border-2 border-zinc-950" aria-hidden="true" />
                       )}
                     </div>
 
@@ -192,17 +207,19 @@ const NotificationsPanel: React.FC<NotificationsPanelProps> = ({ isOpen, onClose
                       </p>
                     </div>
 
-                    <FaExternalLinkAlt className="text-zinc-500 text-xs flex-shrink-0 mt-1" />
+                    <FaExternalLinkAlt className="text-zinc-500 text-xs flex-shrink-0 mt-1" aria-hidden="true" />
                   </button>
                 ))}
               </div>
-            )
+            )}
+            </div>
           ) : (
             // Active Alerts Tab
-            alerts.length === 0 ? (
+            <div role="tabpanel" id="alerts-tabpanel" aria-labelledby="alerts-tab">
+            {alerts.length === 0 ? (
               <div className="flex flex-col items-center justify-center h-64 text-center px-6">
                 <div className="w-16 h-16 bg-zinc-800 rounded-full flex items-center justify-center mb-4">
-                  <FaBell className="text-2xl text-zinc-500" />
+                  <FaBell className="text-2xl text-zinc-500" aria-hidden="true" />
                 </div>
                 <p className="text-white font-bold mb-1">No active alerts</p>
                 <p className="text-zinc-500 text-sm">
@@ -210,7 +227,7 @@ const NotificationsPanel: React.FC<NotificationsPanelProps> = ({ isOpen, onClose
                 </p>
               </div>
             ) : (
-              <div className="divide-y divide-zinc-800">
+              <div className="divide-y divide-zinc-800" role="list" aria-label="Active price alerts">
                 {alerts.map((alert) => (
                   <div
                     key={alert.shoeId}
@@ -219,7 +236,7 @@ const NotificationsPanel: React.FC<NotificationsPanelProps> = ({ isOpen, onClose
                     {/* Image */}
                     <img
                       src={alert.shoeImage}
-                      alt={alert.shoeName}
+                      alt=""
                       className="w-14 h-14 rounded-lg object-cover flex-shrink-0"
                     />
 
@@ -238,7 +255,7 @@ const NotificationsPanel: React.FC<NotificationsPanelProps> = ({ isOpen, onClose
                         </span>
                         {alert.triggered && (
                           <span className="bg-green-500/20 text-green-400 text-xs px-1.5 py-0.5 rounded flex items-center gap-1">
-                            <FaCheck className="text-[10px]" /> Triggered
+                            <FaCheck className="text-[10px]" aria-hidden="true" /> Triggered
                           </span>
                         )}
                       </div>
@@ -247,14 +264,16 @@ const NotificationsPanel: React.FC<NotificationsPanelProps> = ({ isOpen, onClose
                     {/* Remove Button */}
                     <button
                       onClick={(e) => handleRemoveAlert(alert.shoeId, e)}
+                      aria-label={`Remove price alert for ${alert.shoeName}`}
                       className="w-8 h-8 bg-zinc-800 rounded-full flex items-center justify-center text-zinc-400 hover:text-red-400 hover:bg-red-500/10 transition-colors"
                     >
-                      <FaTrash className="text-xs" />
+                      <FaTrash className="text-xs" aria-hidden="true" />
                     </button>
                   </div>
                 ))}
               </div>
-            )
+            )}
+            </div>
           )}
         </div>
 

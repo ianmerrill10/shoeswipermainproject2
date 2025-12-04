@@ -1,0 +1,580 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Transform: AWS::Serverless-2016-10-31
+Description: ShoeSwiper AI-Powered Blog Infrastructure
+
+Globals:
+  Function:
+    Timeout: 120
+    Runtime: python3.11
+    MemorySize: 512
+    Environment:
+      Variables:
+        POSTS_TABLE: !Ref BlogPostsTable
+        AFFILIATE_TAG: shoeswiper-20
+
+Parameters:
+  Environment:
+    Type: String
+    Default: prod
+    AllowedValues:
+    - dev
+    - prod
+  DomainName:
+    Type: String
+    Default: shoeswiper.com
+
+Resources:
+  # ============================================
+  # S3 BUCKETS FOR BLOG HOSTING
+  # ============================================
+
+  SneakerBlogBucket:
+    Type: AWS::S3::Bucket
+    Properties:
+      BucketName: blog-shoeswiper-com
+      WebsiteConfiguration:
+        IndexDocument: index.html
+        ErrorDocument: error.html
+      PublicAccessBlockConfiguration:
+        BlockPublicAcls: false
+        BlockPublicPolicy: false
+        IgnorePublicAcls: false
+        RestrictPublicBuckets: false
+      CorsConfiguration:
+        CorsRules:
+        - AllowedHeaders: [ '*' ]
+          AllowedMethods: [ GET, HEAD ]
+          AllowedOrigins: [ '*' ]
+          MaxAge: 3600
+      Tags:
+      - Key: Project
+        Value: ShoeSwiper
+      - Key: Blog
+        Value: Sneaker
+
+  SneakerBlogBucketPolicy:
+    Type: AWS::S3::BucketPolicy
+    Properties:
+      Bucket: !Ref SneakerBlogBucket
+      PolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+        - Sid: PublicReadGetObject
+          Effect: Allow
+          Principal: '*'
+          Action: s3:GetObject
+          Resource: !Sub '${SneakerBlogBucket.Arn}/*'
+
+  ShoeBlogBucket:
+    Type: AWS::S3::Bucket
+    Properties:
+      BucketName: shoes-shoeswiper-com
+      WebsiteConfiguration:
+        IndexDocument: index.html
+        ErrorDocument: error.html
+      PublicAccessBlockConfiguration:
+        BlockPublicAcls: false
+        BlockPublicPolicy: false
+        IgnorePublicAcls: false
+        RestrictPublicBuckets: false
+      Tags:
+      - Key: Project
+        Value: ShoeSwiper
+      - Key: Blog
+        Value: Shoes
+
+  ShoeBlogBucketPolicy:
+    Type: AWS::S3::BucketPolicy
+    Properties:
+      Bucket: !Ref ShoeBlogBucket
+      PolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+        - Sid: PublicReadGetObject
+          Effect: Allow
+          Principal: '*'
+          Action: s3:GetObject
+          Resource: !Sub '${ShoeBlogBucket.Arn}/*'
+
+  WorkwearBlogBucket:
+    Type: AWS::S3::Bucket
+    Properties:
+      BucketName: workwear-shoeswiper-com
+      WebsiteConfiguration:
+        IndexDocument: index.html
+        ErrorDocument: error.html
+      PublicAccessBlockConfiguration:
+        BlockPublicAcls: false
+        BlockPublicPolicy: false
+        IgnorePublicAcls: false
+        RestrictPublicBuckets: false
+      Tags:
+      - Key: Project
+        Value: ShoeSwiper
+      - Key: Blog
+        Value: Workwear
+
+  WorkwearBlogBucketPolicy:
+    Type: AWS::S3::BucketPolicy
+    Properties:
+      Bucket: !Ref WorkwearBlogBucket
+      PolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+        - Sid: PublicReadGetObject
+          Effect: Allow
+          Principal: '*'
+          Action: s3:GetObject
+          Resource: !Sub '${WorkwearBlogBucket.Arn}/*'
+
+  MusicBlogBucket:
+    Type: AWS::S3::Bucket
+    Properties:
+      BucketName: music-shoeswiper-com
+      WebsiteConfiguration:
+        IndexDocument: index.html
+        ErrorDocument: error.html
+      PublicAccessBlockConfiguration:
+        BlockPublicAcls: false
+        BlockPublicPolicy: false
+        IgnorePublicAcls: false
+        RestrictPublicBuckets: false
+      Tags:
+      - Key: Project
+        Value: ShoeSwiper
+      - Key: Blog
+        Value: Music
+
+  MusicBlogBucketPolicy:
+    Type: AWS::S3::BucketPolicy
+    Properties:
+      Bucket: !Ref MusicBlogBucket
+      PolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+        - Sid: PublicReadGetObject
+          Effect: Allow
+          Principal: '*'
+          Action: s3:GetObject
+          Resource: !Sub '${MusicBlogBucket.Arn}/*'
+
+  # ============================================
+  # DYNAMODB TABLE FOR POST METADATA
+  # ============================================
+
+  BlogPostsTable:
+    Type: AWS::DynamoDB::Table
+    Properties:
+      TableName: shoeswiper-blog-posts
+      BillingMode: PAY_PER_REQUEST
+      AttributeDefinitions:
+      - AttributeName: post_id
+        AttributeType: S
+      - AttributeName: blog_type
+        AttributeType: S
+      - AttributeName: created_at
+        AttributeType: S
+      KeySchema:
+      - AttributeName: post_id
+        KeyType: HASH
+      GlobalSecondaryIndexes:
+      - IndexName: blog-type-index
+        KeySchema:
+        - AttributeName: blog_type
+          KeyType: HASH
+        - AttributeName: created_at
+          KeyType: RANGE
+        Projection:
+          ProjectionType: ALL
+      Tags:
+      - Key: Project
+        Value: ShoeSwiper
+
+  # ============================================
+  # LAMBDA FUNCTIONS
+  # ============================================
+
+  ContentGeneratorFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: shoeswiper-content-generator
+      Handler: index.lambda_handler
+      CodeUri: lambda/content-generator/
+      Description: AI content generation using Bedrock
+      Timeout: 300
+      MemorySize: 1024
+      Policies:
+      - Version: '2012-10-17'
+        Statement:
+        - Effect: Allow
+          Action:
+          - bedrock:InvokeModel
+          - bedrock:InvokeModelWithResponseStream
+          Resource: '*'
+        - Effect: Allow
+          Action:
+          - s3:PutObject
+          - s3:GetObject
+          Resource:
+          - !Sub '${SneakerBlogBucket.Arn}/*'
+          - !Sub '${ShoeBlogBucket.Arn}/*'
+          - !Sub '${WorkwearBlogBucket.Arn}/*'
+          - !Sub '${MusicBlogBucket.Arn}/*'
+        - Effect: Allow
+          Action:
+          - dynamodb:PutItem
+          - dynamodb:GetItem
+          - dynamodb:UpdateItem
+          Resource: !GetAtt BlogPostsTable.Arn
+      Tags:
+        Project: ShoeSwiper
+
+  # ============================================
+  # EVENTBRIDGE RULES FOR AUTO-POSTING
+  # ============================================
+
+  # Sneaker Blog: 3x daily (8am, 12pm, 6pm EST)
+  SneakerBlogSchedule1:
+    Type: AWS::Events::Rule
+    Properties:
+      Name: shoeswiper-sneaker-blog-8am
+      Description: Sneaker blog post at 8am EST
+      ScheduleExpression: 'cron(0 13 * * ? *)' # 8am EST = 13:00 UTC
+      State: ENABLED
+      Targets:
+      - Id: sneaker-blog-target
+        Arn: !GetAtt ContentGeneratorFunction.Arn
+        Input: '{"blog_type": "sneaker"}'
+
+  SneakerBlogSchedule2:
+    Type: AWS::Events::Rule
+    Properties:
+      Name: shoeswiper-sneaker-blog-12pm
+      Description: Sneaker blog post at 12pm EST
+      ScheduleExpression: 'cron(0 17 * * ? *)' # 12pm EST = 17:00 UTC
+      State: ENABLED
+      Targets:
+      - Id: sneaker-blog-target
+        Arn: !GetAtt ContentGeneratorFunction.Arn
+        Input: '{"blog_type": "sneaker"}'
+
+  SneakerBlogSchedule3:
+    Type: AWS::Events::Rule
+    Properties:
+      Name: shoeswiper-sneaker-blog-6pm
+      Description: Sneaker blog post at 6pm EST
+      ScheduleExpression: 'cron(0 23 * * ? *)' # 6pm EST = 23:00 UTC
+      State: ENABLED
+      Targets:
+      - Id: sneaker-blog-target
+        Arn: !GetAtt ContentGeneratorFunction.Arn
+        Input: '{"blog_type": "sneaker"}'
+
+  # Shoe Blog: 2x daily (10am, 4pm EST)
+  ShoeBlogSchedule1:
+    Type: AWS::Events::Rule
+    Properties:
+      Name: shoeswiper-shoe-blog-10am
+      Description: Shoe blog post at 10am EST
+      ScheduleExpression: 'cron(0 15 * * ? *)' # 10am EST = 15:00 UTC
+      State: ENABLED
+      Targets:
+      - Id: shoe-blog-target
+        Arn: !GetAtt ContentGeneratorFunction.Arn
+        Input: '{"blog_type": "shoes"}'
+
+  ShoeBlogSchedule2:
+    Type: AWS::Events::Rule
+    Properties:
+      Name: shoeswiper-shoe-blog-4pm
+      Description: Shoe blog post at 4pm EST
+      ScheduleExpression: 'cron(0 21 * * ? *)' # 4pm EST = 21:00 UTC
+      State: ENABLED
+      Targets:
+      - Id: shoe-blog-target
+        Arn: !GetAtt ContentGeneratorFunction.Arn
+        Input: '{"blog_type": "shoes"}'
+
+  # Workwear Blog: 1x daily (9am EST)
+  WorkwearBlogSchedule:
+    Type: AWS::Events::Rule
+    Properties:
+      Name: shoeswiper-workwear-blog-9am
+      Description: Workwear blog post at 9am EST
+      ScheduleExpression: 'cron(0 14 * * ? *)' # 9am EST = 14:00 UTC
+      State: ENABLED
+      Targets:
+      - Id: workwear-blog-target
+        Arn: !GetAtt ContentGeneratorFunction.Arn
+        Input: '{"blog_type": "workwear"}'
+
+  # Music Blog: 4x daily (9am, 12pm, 3pm, 8pm EST)
+  MusicBlogSchedule1:
+    Type: AWS::Events::Rule
+    Properties:
+      Name: shoeswiper-music-blog-9am
+      Description: Music blog post at 9am EST
+      ScheduleExpression: 'cron(0 14 * * ? *)'
+      State: ENABLED
+      Targets:
+      - Id: music-blog-target
+        Arn: !GetAtt ContentGeneratorFunction.Arn
+        Input: '{"blog_type": "music"}'
+
+  MusicBlogSchedule2:
+    Type: AWS::Events::Rule
+    Properties:
+      Name: shoeswiper-music-blog-12pm
+      Description: Music blog post at 12pm EST
+      ScheduleExpression: 'cron(0 17 * * ? *)'
+      State: ENABLED
+      Targets:
+      - Id: music-blog-target
+        Arn: !GetAtt ContentGeneratorFunction.Arn
+        Input: '{"blog_type": "music"}'
+
+  MusicBlogSchedule3:
+    Type: AWS::Events::Rule
+    Properties:
+      Name: shoeswiper-music-blog-3pm
+      Description: Music blog post at 3pm EST
+      ScheduleExpression: 'cron(0 20 * * ? *)'
+      State: ENABLED
+      Targets:
+      - Id: music-blog-target
+        Arn: !GetAtt ContentGeneratorFunction.Arn
+        Input: '{"blog_type": "music"}'
+
+  MusicBlogSchedule4:
+    Type: AWS::Events::Rule
+    Properties:
+      Name: shoeswiper-music-blog-8pm
+      Description: Music blog post at 8pm EST
+      ScheduleExpression: 'cron(0 1 * * ? *)' # 8pm EST = 01:00 UTC next day
+      State: ENABLED
+      Targets:
+      - Id: music-blog-target
+        Arn: !GetAtt ContentGeneratorFunction.Arn
+        Input: '{"blog_type": "music"}'
+
+  # Lambda permissions for EventBridge
+  LambdaInvokePermissionSneaker1:
+    Type: AWS::Lambda::Permission
+    Properties:
+      FunctionName: !Ref ContentGeneratorFunction
+      Action: lambda:InvokeFunction
+      Principal: events.amazonaws.com
+      SourceArn: !GetAtt SneakerBlogSchedule1.Arn
+
+  LambdaInvokePermissionSneaker2:
+    Type: AWS::Lambda::Permission
+    Properties:
+      FunctionName: !Ref ContentGeneratorFunction
+      Action: lambda:InvokeFunction
+      Principal: events.amazonaws.com
+      SourceArn: !GetAtt SneakerBlogSchedule2.Arn
+
+  LambdaInvokePermissionSneaker3:
+    Type: AWS::Lambda::Permission
+    Properties:
+      FunctionName: !Ref ContentGeneratorFunction
+      Action: lambda:InvokeFunction
+      Principal: events.amazonaws.com
+      SourceArn: !GetAtt SneakerBlogSchedule3.Arn
+
+  LambdaInvokePermissionShoe1:
+    Type: AWS::Lambda::Permission
+    Properties:
+      FunctionName: !Ref ContentGeneratorFunction
+      Action: lambda:InvokeFunction
+      Principal: events.amazonaws.com
+      SourceArn: !GetAtt ShoeBlogSchedule1.Arn
+
+  LambdaInvokePermissionShoe2:
+    Type: AWS::Lambda::Permission
+    Properties:
+      FunctionName: !Ref ContentGeneratorFunction
+      Action: lambda:InvokeFunction
+      Principal: events.amazonaws.com
+      SourceArn: !GetAtt ShoeBlogSchedule2.Arn
+
+  LambdaInvokePermissionWorkwear:
+    Type: AWS::Lambda::Permission
+    Properties:
+      FunctionName: !Ref ContentGeneratorFunction
+      Action: lambda:InvokeFunction
+      Principal: events.amazonaws.com
+      SourceArn: !GetAtt WorkwearBlogSchedule.Arn
+
+  LambdaInvokePermissionMusic1:
+    Type: AWS::Lambda::Permission
+    Properties:
+      FunctionName: !Ref ContentGeneratorFunction
+      Action: lambda:InvokeFunction
+      Principal: events.amazonaws.com
+      SourceArn: !GetAtt MusicBlogSchedule1.Arn
+
+  LambdaInvokePermissionMusic2:
+    Type: AWS::Lambda::Permission
+    Properties:
+      FunctionName: !Ref ContentGeneratorFunction
+      Action: lambda:InvokeFunction
+      Principal: events.amazonaws.com
+      SourceArn: !GetAtt MusicBlogSchedule2.Arn
+
+  LambdaInvokePermissionMusic3:
+    Type: AWS::Lambda::Permission
+    Properties:
+      FunctionName: !Ref ContentGeneratorFunction
+      Action: lambda:InvokeFunction
+      Principal: events.amazonaws.com
+      SourceArn: !GetAtt MusicBlogSchedule3.Arn
+
+  LambdaInvokePermissionMusic4:
+    Type: AWS::Lambda::Permission
+    Properties:
+      FunctionName: !Ref ContentGeneratorFunction
+      Action: lambda:InvokeFunction
+      Principal: events.amazonaws.com
+      SourceArn: !GetAtt MusicBlogSchedule4.Arn
+
+  # ============================================
+  # CLOUDFRONT DISTRIBUTIONS
+  # ============================================
+
+  SneakerBlogDistribution:
+    Type: AWS::CloudFront::Distribution
+    Properties:
+      DistributionConfig:
+        Enabled: true
+        Comment: Sneaker Blog CDN
+        DefaultRootObject: index.html
+        Origins:
+        - Id: S3Origin
+          DomainName: !GetAtt SneakerBlogBucket.RegionalDomainName
+          S3OriginConfig:
+            OriginAccessIdentity: ''
+        DefaultCacheBehavior:
+          TargetOriginId: S3Origin
+          ViewerProtocolPolicy: redirect-to-https
+          AllowedMethods: [ GET, HEAD ]
+          CachedMethods: [ GET, HEAD ]
+          ForwardedValues:
+            QueryString: false
+          DefaultTTL: 3600
+          MaxTTL: 86400
+        PriceClass: PriceClass_100
+        ViewerCertificate:
+          CloudFrontDefaultCertificate: true
+      Tags:
+      - Key: Project
+        Value: ShoeSwiper
+
+  ShoeBlogDistribution:
+    Type: AWS::CloudFront::Distribution
+    Properties:
+      DistributionConfig:
+        Enabled: true
+        Comment: Shoe Blog CDN
+        DefaultRootObject: index.html
+        Origins:
+        - Id: S3Origin
+          DomainName: !GetAtt ShoeBlogBucket.RegionalDomainName
+          S3OriginConfig:
+            OriginAccessIdentity: ''
+        DefaultCacheBehavior:
+          TargetOriginId: S3Origin
+          ViewerProtocolPolicy: redirect-to-https
+          AllowedMethods: [ GET, HEAD ]
+          CachedMethods: [ GET, HEAD ]
+          ForwardedValues:
+            QueryString: false
+          DefaultTTL: 3600
+          MaxTTL: 86400
+        PriceClass: PriceClass_100
+        ViewerCertificate:
+          CloudFrontDefaultCertificate: true
+      Tags:
+      - Key: Project
+        Value: ShoeSwiper
+
+  WorkwearBlogDistribution:
+    Type: AWS::CloudFront::Distribution
+    Properties:
+      DistributionConfig:
+        Enabled: true
+        Comment: Workwear Blog CDN
+        DefaultRootObject: index.html
+        Origins:
+        - Id: S3Origin
+          DomainName: !GetAtt WorkwearBlogBucket.RegionalDomainName
+          S3OriginConfig:
+            OriginAccessIdentity: ''
+        DefaultCacheBehavior:
+          TargetOriginId: S3Origin
+          ViewerProtocolPolicy: redirect-to-https
+          AllowedMethods: [ GET, HEAD ]
+          CachedMethods: [ GET, HEAD ]
+          ForwardedValues:
+            QueryString: false
+          DefaultTTL: 3600
+          MaxTTL: 86400
+        PriceClass: PriceClass_100
+        ViewerCertificate:
+          CloudFrontDefaultCertificate: true
+      Tags:
+      - Key: Project
+        Value: ShoeSwiper
+
+  MusicBlogDistribution:
+    Type: AWS::CloudFront::Distribution
+    Properties:
+      DistributionConfig:
+        Enabled: true
+        Comment: Music Blog CDN
+        DefaultRootObject: index.html
+        Origins:
+        - Id: S3Origin
+          DomainName: !GetAtt MusicBlogBucket.RegionalDomainName
+          S3OriginConfig:
+            OriginAccessIdentity: ''
+        DefaultCacheBehavior:
+          TargetOriginId: S3Origin
+          ViewerProtocolPolicy: redirect-to-https
+          AllowedMethods: [ GET, HEAD ]
+          CachedMethods: [ GET, HEAD ]
+          ForwardedValues:
+            QueryString: false
+          DefaultTTL: 3600
+          MaxTTL: 86400
+        PriceClass: PriceClass_100
+        ViewerCertificate:
+          CloudFrontDefaultCertificate: true
+      Tags:
+      - Key: Project
+        Value: ShoeSwiper
+
+Outputs:
+  SneakerBlogUrl:
+    Description: Sneaker Blog CloudFront URL
+    Value: !Sub 'https://${SneakerBlogDistribution.DomainName}'
+
+  ShoeBlogUrl:
+    Description: Shoe Blog CloudFront URL
+    Value: !Sub 'https://${ShoeBlogDistribution.DomainName}'
+
+  WorkwearBlogUrl:
+    Description: Workwear Blog CloudFront URL
+    Value: !Sub 'https://${WorkwearBlogDistribution.DomainName}'
+
+  MusicBlogUrl:
+    Description: Music Blog CloudFront URL
+    Value: !Sub 'https://${MusicBlogDistribution.DomainName}'
+
+  ContentGeneratorArn:
+    Description: Content Generator Lambda ARN
+    Value: !GetAtt ContentGeneratorFunction.Arn
+
+  PostsTableName:
+    Description: DynamoDB Posts Table
+    Value: !Ref BlogPostsTable

@@ -1,0 +1,1472 @@
+openapi: 3.0.3
+info:
+  title: ShoeSwiper API
+  description: |
+    API specification for ShoeSwiper - A TikTok-style sneaker discovery marketplace with AI-powered features.
+    
+    ## Overview
+    ShoeSwiper provides endpoints for:
+    - Browsing and searching sneakers
+    - Managing user favorites and preferences
+    - Setting price alerts
+    - Tracking affiliate clicks
+    - AI-powered outfit analysis
+    
+    ## Authentication
+    Most endpoints require Bearer token authentication via Supabase Auth.
+    Include the token in the `Authorization` header:
+    ```
+    Authorization: Bearer <your_access_token>
+    ```
+    
+    ## Rate Limiting
+    API requests are rate limited. When rate limited, the API returns a 429 status code.
+    Implement exponential backoff for retries.
+    
+    ## Affiliate Links
+    All Amazon URLs include the affiliate tag `shoeswiper-20`.
+  version: 1.0.0
+  contact:
+    email: dadsellsgadgets@gmail.com
+  license:
+    name: MIT
+    url: https://opensource.org/licenses/MIT
+
+servers:
+  - url: '{baseUrl}/api'
+    description: Main API server
+    variables:
+      baseUrl:
+        default: https://shoeswiper.com
+        description: Base URL for the API
+  - url: '{supabaseUrl}/functions/v1'
+    description: Supabase Edge Functions
+    variables:
+      supabaseUrl:
+        default: https://your-project.supabase.co
+        description: Supabase project URL
+
+tags:
+  - name: Shoes
+    description: Endpoints for browsing and searching sneakers
+  - name: User Preferences
+    description: Endpoints for managing user preferences
+  - name: Favorites
+    description: Endpoints for managing user favorites
+  - name: Price Alerts
+    description: Endpoints for price drop alerts
+  - name: Affiliate
+    description: Endpoints for affiliate click tracking
+  - name: AI Analysis
+    description: AI-powered outfit analysis endpoints
+
+security:
+  - BearerAuth: []
+
+paths:
+  /shoes:
+    get:
+      tags:
+        - Shoes
+      summary: List shoes with filters
+      description: Retrieve a paginated list of shoes with optional filtering and sorting.
+      operationId: listShoes
+      security: []
+      parameters:
+        - name: brand
+          in: query
+          description: Filter by brand name
+          schema:
+            type: string
+          example: Nike
+        - name: gender
+          in: query
+          description: Filter by gender category
+          schema:
+            type: string
+            enum: [men, women, unisex, kids]
+          example: men
+        - name: styleTags
+          in: query
+          description: Filter by style tags (comma-separated)
+          schema:
+            type: string
+          example: running,athletic
+        - name: minPrice
+          in: query
+          description: Minimum price filter
+          schema:
+            type: number
+            format: float
+            minimum: 0
+          example: 50
+        - name: maxPrice
+          in: query
+          description: Maximum price filter
+          schema:
+            type: number
+            format: float
+            minimum: 0
+          example: 300
+        - name: page
+          in: query
+          description: Page number for pagination
+          schema:
+            type: integer
+            minimum: 1
+            default: 1
+          example: 1
+        - name: pageSize
+          in: query
+          description: Number of items per page
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 20
+          example: 20
+        - name: sortBy
+          in: query
+          description: Sort order for results
+          schema:
+            type: string
+            enum: [price_asc, price_desc, newest, trending]
+          example: trending
+      responses:
+        '200':
+          description: Successful response with paginated shoes
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedShoesResponse'
+              example:
+                data:
+                  - id: "shoe-123"
+                    name: "Air Jordan 1 Retro High OG"
+                    brand: "Jordan"
+                    price: 170
+                    image_url: "https://example.com/images/jordan1.jpg"
+                    amazon_url: "https://amazon.com/dp/B08XYZ?tag=shoeswiper-20"
+                    amazon_asin: "B08XYZ"
+                    style_tags: ["basketball", "retro", "high-top"]
+                    color_tags: ["red", "black", "white"]
+                    gender: "men"
+                    favorite_count: 1250
+                    view_count: 5430
+                    click_count: 890
+                    is_active: true
+                    is_featured: true
+                pagination:
+                  page: 1
+                  pageSize: 20
+                  total: 150
+                  totalPages: 8
+                  hasMore: true
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '429':
+          $ref: '#/components/responses/RateLimited'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /shoes/{shoeId}:
+    get:
+      tags:
+        - Shoes
+      summary: Get shoe by ID
+      description: Retrieve detailed information about a specific shoe.
+      operationId: getShoeById
+      security: []
+      parameters:
+        - name: shoeId
+          in: path
+          required: true
+          description: Unique identifier of the shoe
+          schema:
+            type: string
+          example: shoe-123
+      responses:
+        '200':
+          description: Successful response with shoe details
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Shoe'
+              example:
+                id: "shoe-123"
+                name: "Air Jordan 1 Retro High OG"
+                brand: "Jordan"
+                price: 170
+                image_url: "https://example.com/images/jordan1.jpg"
+                amazon_url: "https://amazon.com/dp/B08XYZ?tag=shoeswiper-20"
+                amazon_asin: "B08XYZ"
+                style_tags: ["basketball", "retro", "high-top"]
+                color_tags: ["red", "black", "white"]
+                gender: "men"
+                favorite_count: 1250
+                view_count: 5430
+                click_count: 890
+                is_active: true
+                is_featured: true
+                colorway: "Bred"
+                style_code: "555088-001"
+                sizes_available: ["8", "9", "10", "11", "12"]
+                release_date: "2023-05-20"
+                description: "The Air Jordan 1 Retro High OG 'Bred' brings back the iconic colorway."
+                vibe_score: 95
+                stock_status: "in_stock"
+                created_at: "2023-05-01T00:00:00Z"
+                updated_at: "2023-11-15T12:30:00Z"
+                music:
+                  song: "Sicko Mode"
+                  artist: "Travis Scott"
+                  spotifyUrl: "https://open.spotify.com/track/xyz"
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /shoes/featured:
+    get:
+      tags:
+        - Shoes
+      summary: Get featured shoes
+      description: Retrieve a list of featured/highlighted shoes for the homepage.
+      operationId: getFeaturedShoes
+      security: []
+      parameters:
+        - name: limit
+          in: query
+          description: Maximum number of featured shoes to return
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 50
+            default: 10
+          example: 10
+      responses:
+        '200':
+          description: Successful response with featured shoes
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Shoe'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /shoes/trending:
+    get:
+      tags:
+        - Shoes
+      summary: Get trending shoes
+      description: Retrieve shoes trending based on views, clicks, and favorites.
+      operationId: getTrendingShoes
+      security: []
+      parameters:
+        - name: limit
+          in: query
+          description: Maximum number of trending shoes to return
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 50
+            default: 10
+          example: 10
+        - name: period
+          in: query
+          description: Time period for trending calculation
+          schema:
+            type: string
+            enum: [day, week, month]
+            default: week
+          example: week
+      responses:
+        '200':
+          description: Successful response with trending shoes
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Shoe'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /shoes/search:
+    get:
+      tags:
+        - Shoes
+      summary: Search shoes
+      description: Full-text search for shoes by name, brand, or description.
+      operationId: searchShoes
+      security: []
+      parameters:
+        - name: q
+          in: query
+          required: true
+          description: Search query string
+          schema:
+            type: string
+            minLength: 1
+          example: jordan retro
+        - name: brand
+          in: query
+          description: Filter by brand name
+          schema:
+            type: string
+          example: Nike
+        - name: gender
+          in: query
+          description: Filter by gender category
+          schema:
+            type: string
+            enum: [men, women, unisex, kids]
+        - name: minPrice
+          in: query
+          description: Minimum price filter
+          schema:
+            type: number
+            format: float
+            minimum: 0
+        - name: maxPrice
+          in: query
+          description: Maximum price filter
+          schema:
+            type: number
+            format: float
+            minimum: 0
+        - name: page
+          in: query
+          description: Page number for pagination
+          schema:
+            type: integer
+            minimum: 1
+            default: 1
+        - name: pageSize
+          in: query
+          description: Number of items per page
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 20
+      responses:
+        '200':
+          description: Successful response with search results
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedShoesResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '429':
+          $ref: '#/components/responses/RateLimited'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /users/{userId}/preferences:
+    get:
+      tags:
+        - User Preferences
+      summary: Get user preferences
+      description: Retrieve the preferences for a specific user including brands, styles, colors, and price range.
+      operationId: getUserPreferences
+      parameters:
+        - name: userId
+          in: path
+          required: true
+          description: Unique identifier of the user
+          schema:
+            type: string
+          example: user-456
+      responses:
+        '200':
+          description: Successful response with user preferences
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserPreferences'
+              example:
+                userId: "user-456"
+                preferredBrands: ["Nike", "Jordan", "Adidas"]
+                preferredStyles: ["retro", "basketball", "running"]
+                preferredColors: ["black", "white", "red"]
+                gender: "men"
+                priceRange:
+                  min: 50
+                  max: 300
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+    put:
+      tags:
+        - User Preferences
+      summary: Update user preferences
+      description: Update the preferences for a specific user.
+      operationId: updateUserPreferences
+      parameters:
+        - name: userId
+          in: path
+          required: true
+          description: Unique identifier of the user
+          schema:
+            type: string
+          example: user-456
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UserPreferencesUpdate'
+            example:
+              preferredBrands: ["Nike", "Jordan"]
+              preferredStyles: ["retro", "basketball"]
+              preferredColors: ["black", "red"]
+              gender: "men"
+              priceRange:
+                min: 100
+                max: 250
+      responses:
+        '200':
+          description: Preferences updated successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserPreferences'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /users/{userId}/favorites:
+    get:
+      tags:
+        - Favorites
+      summary: Get user's favorite shoes
+      description: Retrieve all shoes that a user has marked as favorites.
+      operationId: getUserFavorites
+      parameters:
+        - name: userId
+          in: path
+          required: true
+          description: Unique identifier of the user
+          schema:
+            type: string
+          example: user-456
+        - name: page
+          in: query
+          description: Page number for pagination
+          schema:
+            type: integer
+            minimum: 1
+            default: 1
+        - name: pageSize
+          in: query
+          description: Number of items per page
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 20
+      responses:
+        '200':
+          description: Successful response with user's favorite shoes
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedShoesResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+    post:
+      tags:
+        - Favorites
+      summary: Add shoe to favorites
+      description: Add a shoe to the user's favorites list.
+      operationId: addFavorite
+      parameters:
+        - name: userId
+          in: path
+          required: true
+          description: Unique identifier of the user
+          schema:
+            type: string
+          example: user-456
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - shoeId
+              properties:
+                shoeId:
+                  type: string
+                  description: Unique identifier of the shoe to add
+                  example: shoe-123
+      responses:
+        '201':
+          description: Shoe added to favorites successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  message:
+                    type: string
+                    example: "Shoe added to favorites"
+                  favoriteCount:
+                    type: integer
+                    description: Updated favorite count for the shoe
+                    example: 1251
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          description: Shoe already in favorites
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+              example:
+                message: "Shoe is already in favorites"
+                status: 409
+                code: "CONFLICT"
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /users/{userId}/favorites/{shoeId}:
+    delete:
+      tags:
+        - Favorites
+      summary: Remove shoe from favorites
+      description: Remove a shoe from the user's favorites list.
+      operationId: removeFavorite
+      parameters:
+        - name: userId
+          in: path
+          required: true
+          description: Unique identifier of the user
+          schema:
+            type: string
+          example: user-456
+        - name: shoeId
+          in: path
+          required: true
+          description: Unique identifier of the shoe to remove
+          schema:
+            type: string
+          example: shoe-123
+      responses:
+        '200':
+          description: Shoe removed from favorites successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  message:
+                    type: string
+                    example: "Shoe removed from favorites"
+                  favoriteCount:
+                    type: integer
+                    description: Updated favorite count for the shoe
+                    example: 1249
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /users/{userId}/price-alerts:
+    get:
+      tags:
+        - Price Alerts
+      summary: Get user's price alerts
+      description: Retrieve all active price alerts for a user.
+      operationId: getUserPriceAlerts
+      parameters:
+        - name: userId
+          in: path
+          required: true
+          description: Unique identifier of the user
+          schema:
+            type: string
+          example: user-456
+      responses:
+        '200':
+          description: Successful response with user's price alerts
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/PriceAlert'
+              example:
+                - id: "alert-789"
+                  userId: "user-456"
+                  shoeId: "shoe-123"
+                  targetPrice: 150
+                  currentPrice: 170
+                  createdAt: "2023-11-01T10:00:00Z"
+                  triggered: false
+                  shoe:
+                    id: "shoe-123"
+                    name: "Air Jordan 1 Retro High OG"
+                    brand: "Jordan"
+                    price: 170
+                    image_url: "https://example.com/images/jordan1.jpg"
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+    post:
+      tags:
+        - Price Alerts
+      summary: Create price alert
+      description: Create a new price alert for a shoe. User will be notified when the price drops to or below the target price.
+      operationId: createPriceAlert
+      parameters:
+        - name: userId
+          in: path
+          required: true
+          description: Unique identifier of the user
+          schema:
+            type: string
+          example: user-456
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - shoeId
+                - targetPrice
+              properties:
+                shoeId:
+                  type: string
+                  description: Unique identifier of the shoe
+                  example: shoe-123
+                targetPrice:
+                  type: number
+                  format: float
+                  minimum: 0
+                  description: Target price for the alert
+                  example: 150
+      responses:
+        '201':
+          description: Price alert created successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  message:
+                    type: string
+                    example: "Price alert created successfully"
+                  alertId:
+                    type: string
+                    description: Unique identifier for the created price alert
+                    example: "alert-789"
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          description: Price alert already exists for this shoe
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+              example:
+                message: "Price alert already exists for this shoe"
+                status: 409
+                code: "CONFLICT"
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /users/{userId}/price-alerts/{alertId}:
+    delete:
+      tags:
+        - Price Alerts
+      summary: Delete price alert
+      description: Delete an existing price alert.
+      operationId: deletePriceAlert
+      parameters:
+        - name: userId
+          in: path
+          required: true
+          description: Unique identifier of the user
+          schema:
+            type: string
+          example: user-456
+        - name: alertId
+          in: path
+          required: true
+          description: Unique identifier of the price alert
+          schema:
+            type: string
+          example: alert-789
+      responses:
+        '200':
+          description: Price alert deleted successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  message:
+                    type: string
+                    example: "Price alert deleted successfully"
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /affiliate/track:
+    post:
+      tags:
+        - Affiliate
+      summary: Track affiliate click
+      description: Track an affiliate click for revenue attribution. Call this when a user clicks through to Amazon.
+      operationId: trackAffiliateClick
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - shoeId
+              properties:
+                shoeId:
+                  type: string
+                  description: Unique identifier of the shoe being clicked
+                  example: shoe-123
+                source:
+                  type: string
+                  description: Where the click originated
+                  enum: [feed, search, alert, favorites, detail, recommendation]
+                  example: feed
+                metadata:
+                  type: object
+                  description: Additional metadata about the click
+                  additionalProperties: true
+                  example:
+                    position: 3
+                    sessionId: "session-xyz"
+      responses:
+        '200':
+          description: Click tracked successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  clickId:
+                    type: string
+                    example: "click-abc123"
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '429':
+          $ref: '#/components/responses/RateLimited'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /analyze-outfit:
+    post:
+      tags:
+        - AI Analysis
+      summary: Analyze outfit image
+      description: |
+        Analyze an outfit image using AI to provide style feedback and sneaker recommendations.
+        
+        This endpoint is a Supabase Edge Function and uses a different base URL.
+        
+        **Note:** If AI analysis fails, a fallback response with generic recommendations is returned.
+      operationId: analyzeOutfit
+      servers:
+        - url: '{supabaseUrl}/functions/v1'
+          description: Supabase Edge Functions
+          variables:
+            supabaseUrl:
+              default: https://your-project.supabase.co
+              description: Supabase project URL
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - image
+              properties:
+                image:
+                  type: string
+                  format: byte
+                  description: Base64 encoded image data
+                  example: "/9j/4AAQSkZJRgABAQEASABIAAD..."
+      responses:
+        '200':
+          description: Successful outfit analysis
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/OutfitAnalysisResponse'
+              examples:
+                success:
+                  summary: Successful AI analysis
+                  value:
+                    rating: 8
+                    feedback: "Great casual streetwear look! The color coordination works well."
+                    style_tags: ["streetwear", "casual", "urban"]
+                    dominant_colors: ["black", "white", "red"]
+                    detected_shoe: "Nike Air Force 1"
+                fallback:
+                  summary: Fallback response when AI fails
+                  value:
+                    rating: 7
+                    feedback: "We couldn't fully analyze your outfit, but here are some recommendations based on your style preferences."
+                    style_tags: ["casual"]
+                    dominant_colors: ["neutral"]
+                    detected_shoe: null
+                    error: "AI analysis temporarily unavailable"
+                    fallback: true
+        '400':
+          description: Bad request - invalid image data
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+              example:
+                message: "Invalid image data"
+                status: 400
+                code: "VALIDATION_ERROR"
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '413':
+          description: Image too large
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+              example:
+                message: "Image exceeds maximum size of 5MB"
+                status: 413
+                code: "PAYLOAD_TOO_LARGE"
+        '429':
+          $ref: '#/components/responses/RateLimited'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+components:
+  securitySchemes:
+    BearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: Supabase Auth JWT token
+
+  schemas:
+    Shoe:
+      type: object
+      required:
+        - id
+        - name
+        - brand
+        - image_url
+        - amazon_url
+        - amazon_asin
+        - style_tags
+        - color_tags
+        - favorite_count
+        - view_count
+        - click_count
+        - is_active
+        - is_featured
+        - created_at
+        - updated_at
+      properties:
+        id:
+          type: string
+          description: Unique identifier for the shoe
+          example: "shoe-123"
+        name:
+          type: string
+          description: Name of the shoe
+          example: "Air Jordan 1 Retro High OG"
+        brand:
+          type: string
+          description: Brand name
+          example: "Jordan"
+        price:
+          type: number
+          format: float
+          nullable: true
+          description: Current price (null if price not available)
+          example: 170
+        image_url:
+          type: string
+          format: uri
+          description: URL to the shoe image
+          example: "https://example.com/images/jordan1.jpg"
+        amazon_url:
+          type: string
+          format: uri
+          description: Amazon product URL (includes affiliate tag shoeswiper-20)
+          example: "https://amazon.com/dp/B08XYZ?tag=shoeswiper-20"
+        amazon_asin:
+          type: string
+          description: Amazon Standard Identification Number
+          example: "B08XYZ"
+        style_tags:
+          type: array
+          items:
+            type: string
+          description: Style categories for the shoe
+          example: ["basketball", "retro", "high-top"]
+        color_tags:
+          type: array
+          items:
+            type: string
+          description: Color categories for the shoe
+          example: ["red", "black", "white"]
+        gender:
+          type: string
+          enum: [men, women, unisex, kids]
+          description: Target gender for the shoe
+          example: "men"
+        favorite_count:
+          type: integer
+          minimum: 0
+          description: Number of times the shoe has been favorited
+          example: 1250
+        view_count:
+          type: integer
+          minimum: 0
+          description: Number of times the shoe has been viewed
+          example: 5430
+        click_count:
+          type: integer
+          minimum: 0
+          description: Number of affiliate clicks
+          example: 890
+        is_active:
+          type: boolean
+          description: Whether the shoe is currently active/available
+          example: true
+        is_featured:
+          type: boolean
+          description: Whether the shoe is featured on the homepage
+          example: true
+        colorway:
+          type: string
+          description: Colorway name
+          example: "Bred"
+        style_code:
+          type: string
+          description: Manufacturer style code
+          example: "555088-001"
+        sizes_available:
+          type: array
+          items:
+            type: string
+          description: Available sizes
+          example: ["8", "9", "10", "11", "12"]
+        release_date:
+          type: string
+          format: date
+          description: Release date of the shoe
+          example: "2023-05-20"
+        description:
+          type: string
+          description: Detailed description of the shoe
+          example: "The Air Jordan 1 Retro High OG 'Bred' brings back the iconic colorway."
+        vibe_score:
+          type: integer
+          minimum: 0
+          maximum: 100
+          description: Popularity/vibe score
+          example: 95
+        stock_status:
+          type: string
+          enum: [in_stock, low_stock, out_of_stock]
+          description: Current stock status
+          example: "in_stock"
+        created_at:
+          type: string
+          format: date-time
+          description: When the shoe was added to the database
+          example: "2023-05-01T00:00:00Z"
+        updated_at:
+          type: string
+          format: date-time
+          description: When the shoe was last updated
+          example: "2023-11-15T12:30:00Z"
+        music:
+          $ref: '#/components/schemas/ShoeMusic'
+
+    ShoeMusic:
+      type: object
+      description: Music track associated with the shoe for the feed experience
+      required:
+        - song
+        - artist
+      properties:
+        song:
+          type: string
+          description: Song title
+          example: "Sicko Mode"
+        artist:
+          type: string
+          description: Artist name
+          example: "Travis Scott"
+        spotifyUrl:
+          type: string
+          format: uri
+          description: Spotify track URL
+          example: "https://open.spotify.com/track/xyz"
+        appleMusicUrl:
+          type: string
+          format: uri
+          description: Apple Music track URL
+          example: "https://music.apple.com/track/xyz"
+        amazonMusicUrl:
+          type: string
+          format: uri
+          description: Amazon Music track URL
+          example: "https://music.amazon.com/track/xyz"
+
+    UserPreferences:
+      type: object
+      required:
+        - userId
+        - preferredBrands
+        - preferredStyles
+        - preferredColors
+        - gender
+        - priceRange
+      properties:
+        userId:
+          type: string
+          description: Unique identifier of the user
+          example: "user-456"
+        preferredBrands:
+          type: array
+          items:
+            type: string
+          description: User's preferred brands
+          example: ["Nike", "Jordan", "Adidas"]
+        preferredStyles:
+          type: array
+          items:
+            type: string
+          description: User's preferred style tags
+          example: ["retro", "basketball", "running"]
+        preferredColors:
+          type: array
+          items:
+            type: string
+          description: User's preferred colors
+          example: ["black", "white", "red"]
+        gender:
+          type: string
+          enum: [men, women, unisex, kids]
+          description: User's gender preference for shoes
+          example: "men"
+        priceRange:
+          type: object
+          required:
+            - min
+            - max
+          properties:
+            min:
+              type: number
+              format: float
+              minimum: 0
+              description: Minimum price preference
+              example: 50
+            max:
+              type: number
+              format: float
+              minimum: 0
+              description: Maximum price preference
+              example: 300
+
+    UserPreferencesUpdate:
+      type: object
+      description: Fields to update for user preferences (all optional)
+      properties:
+        preferredBrands:
+          type: array
+          items:
+            type: string
+          description: User's preferred brands
+        preferredStyles:
+          type: array
+          items:
+            type: string
+          description: User's preferred style tags
+        preferredColors:
+          type: array
+          items:
+            type: string
+          description: User's preferred colors
+        gender:
+          type: string
+          enum: [men, women, unisex, kids]
+          description: User's gender preference for shoes
+        priceRange:
+          type: object
+          properties:
+            min:
+              type: number
+              format: float
+              minimum: 0
+            max:
+              type: number
+              format: float
+              minimum: 0
+
+    PriceAlert:
+      type: object
+      required:
+        - id
+        - userId
+        - shoeId
+        - targetPrice
+        - createdAt
+        - triggered
+      properties:
+        id:
+          type: string
+          description: Unique identifier for the price alert
+          example: "alert-789"
+        userId:
+          type: string
+          description: User who created the alert
+          example: "user-456"
+        shoeId:
+          type: string
+          description: Shoe being monitored
+          example: "shoe-123"
+        targetPrice:
+          type: number
+          format: float
+          description: Target price for the alert
+          example: 150
+        currentPrice:
+          type: number
+          format: float
+          nullable: true
+          description: Current price of the shoe
+          example: 170
+        createdAt:
+          type: string
+          format: date-time
+          description: When the alert was created
+          example: "2023-11-01T10:00:00Z"
+        triggered:
+          type: boolean
+          description: Whether the alert has been triggered
+          example: false
+        triggeredAt:
+          type: string
+          format: date-time
+          nullable: true
+          description: When the alert was triggered
+        shoe:
+          $ref: '#/components/schemas/Shoe'
+
+    OutfitAnalysisResponse:
+      type: object
+      required:
+        - rating
+        - feedback
+        - style_tags
+        - dominant_colors
+      properties:
+        rating:
+          type: integer
+          minimum: 1
+          maximum: 10
+          description: Outfit rating from 1-10
+          example: 8
+        feedback:
+          type: string
+          description: AI-generated feedback about the outfit
+          example: "Great casual streetwear look! The color coordination works well."
+        style_tags:
+          type: array
+          items:
+            type: string
+          description: Detected style tags in the outfit
+          example: ["streetwear", "casual", "urban"]
+        dominant_colors:
+          type: array
+          items:
+            type: string
+          description: Dominant colors detected in the outfit
+          example: ["black", "white", "red"]
+        detected_shoe:
+          type: string
+          nullable: true
+          description: Detected shoe in the image (if any)
+          example: "Nike Air Force 1"
+        error:
+          type: string
+          description: Error message if analysis partially failed
+          example: "AI analysis temporarily unavailable"
+        fallback:
+          type: boolean
+          description: Whether this is a fallback response
+          example: false
+
+    PaginatedResponse:
+      type: object
+      description: Generic paginated response wrapper
+      required:
+        - data
+        - pagination
+      properties:
+        data:
+          type: array
+          items:
+            type: object
+            additionalProperties: true
+          description: Array of paginated items
+        pagination:
+          $ref: '#/components/schemas/Pagination'
+
+    PaginatedShoesResponse:
+      type: object
+      required:
+        - data
+        - pagination
+      properties:
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/Shoe'
+          description: Array of shoes
+        pagination:
+          $ref: '#/components/schemas/Pagination'
+
+    Pagination:
+      type: object
+      required:
+        - page
+        - pageSize
+        - total
+        - totalPages
+        - hasMore
+      properties:
+        page:
+          type: integer
+          minimum: 1
+          description: Current page number
+          example: 1
+        pageSize:
+          type: integer
+          minimum: 1
+          description: Number of items per page
+          example: 20
+        total:
+          type: integer
+          minimum: 0
+          description: Total number of items
+          example: 150
+        totalPages:
+          type: integer
+          minimum: 0
+          description: Total number of pages
+          example: 8
+        hasMore:
+          type: boolean
+          description: Whether there are more pages
+          example: true
+
+    ApiError:
+      type: object
+      required:
+        - message
+        - status
+        - code
+      properties:
+        message:
+          type: string
+          description: Human-readable error message
+          example: "Resource not found"
+        status:
+          type: integer
+          description: HTTP status code
+          example: 404
+        code:
+          type: string
+          enum:
+            - NETWORK_ERROR
+            - TIMEOUT
+            - UNAUTHORIZED
+            - FORBIDDEN
+            - NOT_FOUND
+            - VALIDATION_ERROR
+            - RATE_LIMITED
+            - SERVER_ERROR
+            - UNKNOWN
+            - CONFLICT
+            - PAYLOAD_TOO_LARGE
+          description: Machine-readable error code
+          example: "NOT_FOUND"
+        details:
+          type: object
+          additionalProperties: true
+          description: Additional error details
+          example:
+            field: "email"
+            reason: "invalid format"
+
+  responses:
+    BadRequest:
+      description: Bad request - invalid parameters or request body
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ApiError'
+          example:
+            message: "Invalid request parameters"
+            status: 400
+            code: "VALIDATION_ERROR"
+            details:
+              field: "minPrice"
+              reason: "must be a positive number"
+
+    Unauthorized:
+      description: Authentication required or token invalid
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ApiError'
+          example:
+            message: "Authentication required"
+            status: 401
+            code: "UNAUTHORIZED"
+
+    Forbidden:
+      description: Access forbidden - user lacks permission
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ApiError'
+          example:
+            message: "You do not have permission to access this resource"
+            status: 403
+            code: "FORBIDDEN"
+
+    NotFound:
+      description: Resource not found
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ApiError'
+          example:
+            message: "Resource not found"
+            status: 404
+            code: "NOT_FOUND"
+
+    RateLimited:
+      description: Too many requests - rate limit exceeded
+      headers:
+        Retry-After:
+          schema:
+            type: integer
+          description: Number of seconds to wait before retrying
+          example: 60
+        X-RateLimit-Limit:
+          schema:
+            type: integer
+          description: The rate limit ceiling for the endpoint
+          example: 100
+        X-RateLimit-Remaining:
+          schema:
+            type: integer
+          description: The number of requests remaining in the current window
+          example: 0
+        X-RateLimit-Reset:
+          schema:
+            type: integer
+          description: Unix timestamp when the rate limit resets
+          example: 1699876800
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ApiError'
+          example:
+            message: "Rate limit exceeded. Please try again later."
+            status: 429
+            code: "RATE_LIMITED"
+
+    InternalServerError:
+      description: Internal server error
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ApiError'
+          example:
+            message: "An unexpected error occurred"
+            status: 500
+            code: "SERVER_ERROR"
