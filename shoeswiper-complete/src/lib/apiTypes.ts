@@ -8,6 +8,23 @@
  */
 export type HttpMethod = 'GET' | 'POST' | 'PUT' | 'DELETE' | 'PATCH';
 
+// V8 Error.captureStackTrace interface
+interface ErrorWithCaptureStackTrace extends ErrorConstructor {
+  captureStackTrace?(targetObject: object, constructorOpt?: NewableFunction): void;
+}
+
+// Reference to Error with V8 captureStackTrace support
+const ErrorWithCapture = Error as ErrorWithCaptureStackTrace;
+
+/**
+ * Capture stack trace if V8 runtime supports it
+ */
+function captureStackTraceIfSupported(targetObject: object, constructorOpt: NewableFunction): void {
+  if (typeof ErrorWithCapture.captureStackTrace === 'function') {
+    ErrorWithCapture.captureStackTrace(targetObject, constructorOpt);
+  }
+}
+
 /**
  * Custom API error class with additional context
  */
@@ -20,10 +37,8 @@ export class ApiError extends Error {
   ) {
     super(message);
     this.name = 'ApiError';
-    // Maintain proper stack trace for where error was thrown
-    if (Error.captureStackTrace) {
-      Error.captureStackTrace(this, ApiError);
-    }
+    // Maintain proper stack trace for where error was thrown (V8 only)
+    captureStackTraceIfSupported(this, ApiError);
   }
 
   /**
@@ -87,9 +102,8 @@ export class NetworkError extends Error {
   constructor(message: string = 'Network request failed') {
     super(message);
     this.name = 'NetworkError';
-    if (Error.captureStackTrace) {
-      Error.captureStackTrace(this, NetworkError);
-    }
+    // Maintain proper stack trace for where error was thrown (V8 only)
+    captureStackTraceIfSupported(this, NetworkError);
   }
 
   shouldRetry(): boolean {
@@ -104,9 +118,8 @@ export class TimeoutError extends Error {
   constructor(message: string = 'Request timed out') {
     super(message);
     this.name = 'TimeoutError';
-    if (Error.captureStackTrace) {
-      Error.captureStackTrace(this, TimeoutError);
-    }
+    // Maintain proper stack trace for where error was thrown (V8 only)
+    captureStackTraceIfSupported(this, TimeoutError);
   }
 
   shouldRetry(): boolean {
