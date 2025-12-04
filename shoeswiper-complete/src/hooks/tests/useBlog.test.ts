@@ -122,7 +122,7 @@ describe('useBlog', () => {
         expect(post.metadata.description).toBeTruthy();
         expect(post.metadata.keywords.length).toBeGreaterThan(0);
         expect(post.metadata.author).toBe('ShoeSwiper Team');
-        expect(post.metadata.publishDate).toBe('2025-12-03');
+        expect(post.metadata.publishDate).toBe(new Date().toISOString().split('T')[0]);
         expect(post.metadata.featuredImage).toBeTruthy();
         expect(post.metadata.readTime).toBeGreaterThan(0);
         expect(post.metadata.tags.length).toBeGreaterThan(0);
@@ -149,7 +149,8 @@ describe('useBlog', () => {
   describe('getPostById', () => {
     it('should find post by ID', () => {
       const { result } = renderHook(() => useBlog());
-      const post = result.current.getPostById('blog-sneaker-2025-12-03');
+      const todaysDate = new Date().toISOString().split('T')[0];
+      const post = result.current.getPostById(`blog-sneaker-${todaysDate}`);
       
       expect(post).toBeDefined();
       expect(post?.metadata.category).toBe('sneaker');
@@ -183,7 +184,8 @@ describe('useBlog', () => {
   describe('getAffiliateProducts', () => {
     it('should return affiliate products for a post', () => {
       const { result } = renderHook(() => useBlog());
-      const products = result.current.getAffiliateProducts('blog-sneaker-2025-12-03');
+      const todaysDate = new Date().toISOString().split('T')[0];
+      const products = result.current.getAffiliateProducts(`blog-sneaker-${todaysDate}`);
       
       expect(products.length).toBeGreaterThan(0);
       products.forEach(product => {
