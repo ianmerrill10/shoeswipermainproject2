@@ -3,7 +3,7 @@
 // ============================================
 // Handles smart links that drive app installs + track referrals
 
-import { AFFILIATE_TAG } from './config';
+import { getAffiliateUrl } from './supabaseClient';
 
 // App identifiers (update when app is published)
 export const APP_CONFIG = {
@@ -153,10 +153,8 @@ export const createAffiliateShareData = (
   // Create the ShoeSwiper link (drives app installs)
   const shoeSwiperUrl = createTrackedWebUrl(shoe.id, referralCode);
 
-  // Add affiliate tag to Amazon URL
-  const amazonUrlWithAffiliate = shoe.amazon_url.includes('?')
-    ? `${shoe.amazon_url}&tag=${AFFILIATE_TAG}`
-    : `${shoe.amazon_url}?tag=${AFFILIATE_TAG}`;
+  // Use centralized getAffiliateUrl to ensure tag is always present
+  const amazonUrlWithAffiliate = getAffiliateUrl(shoe.amazon_url);
 
   return {
     title: `${shoe.brand} ${shoe.name}`,

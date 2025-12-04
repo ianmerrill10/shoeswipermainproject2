@@ -6,7 +6,7 @@ import { useAnalytics } from '../hooks/useAnalytics';
 import { useFavorites } from '../hooks/useFavorites';
 import { usePriceAlerts } from '../hooks/usePriceAlerts';
 import { useUIStore } from '../store';
-import { getAffiliateUrl } from '../lib/supabaseClient';
+import { getAffiliateUrl, trackAffiliateClick, extractAsinFromUrl } from '../lib/supabaseClient';
 import { createAffiliateShareData } from '../lib/deepLinks';
 import { Shoe } from '../lib/types';
 import ShoePanel from '../components/ShoePanel';
@@ -105,6 +105,11 @@ const SwipeFeedPage: React.FC = () => {
   const handleBuyClick = (shoe: Shoe) => {
     trackClick(shoe.id);
     trackShoeClick(shoe.id);
+    
+    // Track affiliate click for revenue attribution
+    const asin = extractAsinFromUrl(shoe.amazon_url);
+    trackAffiliateClick(shoe.id, asin || undefined, 'swipe_feed');
+    
     window.open(getAffiliateUrl(shoe.amazon_url), '_blank');
   };
 
