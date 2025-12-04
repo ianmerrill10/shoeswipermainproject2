@@ -1,4 +1,3 @@
-import React from 'react';
 import { Link } from 'react-router-dom';
 import { BlogPost, BlogType, BLOG_CONFIGS } from '../../lib/blogTypes';
 import { formatDistanceToNow } from 'date-fns';
