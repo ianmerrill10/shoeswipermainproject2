@@ -230,7 +230,7 @@ analytics_events
 
 ## SECTION 9: SECURITY REQUIREMENTS (CRITICAL)
 
-- [ ] Move Gemini API key server-side (CURRENTLY EXPOSED - CRITICAL)
+- [x] Move Gemini API key server-side (COMPLETED - uses Edge Function)
 - [ ] Proper JWT authentication with refresh tokens
 - [ ] Rate limiting on all endpoints
 - [ ] RLS policies on all Supabase tables
@@ -363,7 +363,8 @@ VITE_SUPABASE_ANON_KEY=your-anon-key
 VITE_STRIPE_PUBLIC_KEY=your-stripe-key
 
 # Server-side ONLY (NEVER expose)
-VITE_GEMINI_API_KEY=MOVE_TO_SERVER_SIDE  # CRITICAL SECURITY ISSUE
+# GEMINI_API_KEY - Set via: supabase secrets set GEMINI_API_KEY=your-key
+# (Used by analyze-outfit Edge Function - NEVER expose to client)
 SUPABASE_SERVICE_KEY=your-service-key
 STRIPE_SECRET_KEY=sk_your_key
 STRIPE_WEBHOOK_SECRET=whsec_your_secret

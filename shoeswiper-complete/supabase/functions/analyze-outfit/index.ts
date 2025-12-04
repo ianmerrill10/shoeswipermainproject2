@@ -40,7 +40,8 @@ serve(async (req) => {
     }
 
     // Basic base64 validation (should only contain valid base64 characters)
-    const base64Regex = /^[A-Za-z0-9+/]+=*$/;
+    // Allows 0-2 padding characters at the end
+    const base64Regex = /^[A-Za-z0-9+/]*={0,2}$/;
     if (!base64Regex.test(image)) {
       return new Response(JSON.stringify({
         error: "Invalid base64 encoding in 'image' field",
@@ -51,9 +52,9 @@ serve(async (req) => {
       });
     }
 
-    // Limit image size (max 10MB base64 = ~7.5MB image)
-    const MAX_IMAGE_SIZE = 10 * 1024 * 1024;
-    if (image.length > MAX_IMAGE_SIZE) {
+    // Limit base64 encoded image size (max 10MB encoded = ~7.5MB original image)
+    const MAX_BASE64_SIZE = 10 * 1024 * 1024;
+    if (image.length > MAX_BASE64_SIZE) {
       return new Response(JSON.stringify({
         error: "Image too large. Maximum size is 10MB.",
         fallback: true
