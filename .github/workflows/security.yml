@@ -43,8 +43,8 @@ jobs:
           # Create audit report
           npm audit --json > audit-report.json 2>/dev/null || true
           
-          # Check for high/critical vulnerabilities
-          VULN_COUNT=$(npm audit --json 2>/dev/null | jq '.metadata.vulnerabilities.high + .metadata.vulnerabilities.critical' 2>/dev/null || echo "0")
+          # Check for high/critical vulnerabilities (with null coalescing for robustness)
+          VULN_COUNT=$(npm audit --json 2>/dev/null | jq '(.metadata.vulnerabilities.high // 0) + (.metadata.vulnerabilities.critical // 0)' 2>/dev/null || echo "0")
           
           echo "High/Critical vulnerabilities found: $VULN_COUNT"
           
@@ -149,8 +149,13 @@ jobs:
               FILE=$(echo "$line" | cut -d: -f1)
               LINE_NUM=$(echo "$line" | cut -d: -f2)
               
-              # Check if the line or surrounding context has DEV check
-              if ! grep -B 3 -A 1 "console\.log" "$FILE" 2>/dev/null | grep -q "import.meta.env.DEV"; then
+              # Extract the specific line and a few lines before to check for DEV guard
+              # Use sed to get lines (LINE_NUM-3) to LINE_NUM and check if DEV guard exists
+              START_LINE=$((LINE_NUM > 3 ? LINE_NUM - 3 : 1))
+              CONTEXT=$(sed -n "${START_LINE},${LINE_NUM}p" "$FILE" 2>/dev/null || echo "")
+              
+              # Check if there's a proper DEV check guarding this console.log
+              if ! echo "$CONTEXT" | grep -q "import.meta.env.DEV"; then
                 echo "⚠️ Potentially unguarded console.log: $line"
                 UNGUARDED=$((UNGUARDED + 1))
               fi

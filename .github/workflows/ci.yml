@@ -182,8 +182,9 @@ jobs:
           
           JS_COUNT=$(find dist/assets -name "*.js" 2>/dev/null | wc -l || echo "0")
           CSS_COUNT=$(find dist/assets -name "*.css" 2>/dev/null | wc -l || echo "0")
-          JS_SIZE=$(du -sh dist/assets/*.js 2>/dev/null | tail -1 | cut -f1 || echo "0")
-          CSS_SIZE=$(du -sh dist/assets/*.css 2>/dev/null | tail -1 | cut -f1 || echo "0")
+          # Use du -sch to get total size of all files
+          JS_SIZE=$(find dist/assets -name "*.js" -exec du -ch {} + 2>/dev/null | tail -1 | cut -f1 || echo "0")
+          CSS_SIZE=$(find dist/assets -name "*.css" -exec du -ch {} + 2>/dev/null | tail -1 | cut -f1 || echo "0")
           TOTAL=$(du -sh dist 2>/dev/null | cut -f1 || echo "0")
           
           echo "| JavaScript | $JS_COUNT | $JS_SIZE |" >> $GITHUB_STEP_SUMMARY

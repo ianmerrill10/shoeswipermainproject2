@@ -112,7 +112,8 @@ jobs:
           PERF=${{ steps.parse.outputs.performance }}
           THRESHOLD=0.5
           
-          if (( $(echo "$PERF < $THRESHOLD" | bc -l 2>/dev/null || echo "0") )); then
+          # Use awk for portable floating point comparison (bc may not be available)
+          if awk "BEGIN {exit !($PERF < $THRESHOLD)}"; then
             echo "::warning::Performance score is below threshold ($PERF < $THRESHOLD)"
           fi
 

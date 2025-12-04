@@ -196,10 +196,10 @@ export function initWebVitals(): void {
     });
     fcpObserver.observe({ type: 'paint', buffered: true });
 
-    // Time to First Byte
+    // Time to First Byte (responseStart - fetchStart, not requestStart)
     const navigationEntries = performance.getEntriesByType('navigation') as PerformanceNavigationTiming[];
     if (navigationEntries.length > 0) {
-      const ttfb = navigationEntries[0].responseStart - navigationEntries[0].requestStart;
+      const ttfb = navigationEntries[0].responseStart - navigationEntries[0].fetchStart;
       if (ttfb > 0) {
         queueMetric({
           name: 'TTFB',
