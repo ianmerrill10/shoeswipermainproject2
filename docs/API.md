@@ -1090,7 +1090,7 @@ Button that opens Amazon product page with affiliate tag.
 />
 ```
 
-**Note:** All Amazon URLs are automatically formatted with the affiliate tag `?tag=shoeswiper-20`.
+**Note:** All Amazon URLs should include the affiliate tag `?tag=shoeswiper-20`. Use the `formatAmazonUrl` utility or the `AFFILIATE_TAG` constant from `src/lib/config.ts` to ensure proper formatting. See [Affiliate Tag Requirement](#affiliate-tag-requirement) for implementation details.
 
 #### LoadingSpinner
 
