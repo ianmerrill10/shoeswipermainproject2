@@ -69,11 +69,13 @@ export const useFavorites = () => {
   const addFavorite = useCallback(async (shoeId: string): Promise<boolean> => {
     try {
       if (DEMO_MODE) {
-        // DEMO MODE: Save to localStorage
-        const newFavorites = new Set(favorites);
-        newFavorites.add(shoeId);
-        setFavorites(newFavorites);
-        localStorage.setItem(FAVORITES_STORAGE_KEY, JSON.stringify([...newFavorites]));
+        // DEMO MODE: Save to localStorage using functional update
+        setFavorites(prev => {
+          const newFavorites = new Set(prev);
+          newFavorites.add(shoeId);
+          localStorage.setItem(FAVORITES_STORAGE_KEY, JSON.stringify([...newFavorites]));
+          return newFavorites;
+        });
         if (import.meta.env.DEV) console.warn(`[Demo] Added to favorites: ${shoeId}`);
         return true;
       } else {
@@ -108,7 +110,7 @@ export const useFavorites = () => {
       console.error('[Favorites] Error adding favorite:', err);
       return false;
     }
-  }, [favorites]);
+  }, []);
 
   /**
    * Removes a shoe from the user's favorites.
@@ -118,11 +120,13 @@ export const useFavorites = () => {
   const removeFavorite = useCallback(async (shoeId: string): Promise<boolean> => {
     try {
       if (DEMO_MODE) {
-        // DEMO MODE: Remove from localStorage
-        const newFavorites = new Set(favorites);
-        newFavorites.delete(shoeId);
-        setFavorites(newFavorites);
-        localStorage.setItem(FAVORITES_STORAGE_KEY, JSON.stringify([...newFavorites]));
+        // DEMO MODE: Remove from localStorage using functional update
+        setFavorites(prev => {
+          const newFavorites = new Set(prev);
+          newFavorites.delete(shoeId);
+          localStorage.setItem(FAVORITES_STORAGE_KEY, JSON.stringify([...newFavorites]));
+          return newFavorites;
+        });
         if (import.meta.env.DEV) console.warn(`[Demo] Removed from favorites: ${shoeId}`);
         return true;
       } else {
@@ -154,7 +158,7 @@ export const useFavorites = () => {
       console.error('[Favorites] Error removing favorite:', err);
       return false;
     }
-  }, [favorites]);
+  }, []);
 
   /**
    * Toggles the favorite status of a shoe.

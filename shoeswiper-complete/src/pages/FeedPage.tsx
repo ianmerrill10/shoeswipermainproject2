@@ -166,13 +166,17 @@ const FeedPage: React.FC = () => {
     return () => observer.disconnect();
   }, [shoes]);
 
-  const handleBuyClick = (shoe: Shoe) => {
+  const handleBuyClick = useCallback((shoe: Shoe) => {
     trackClick(shoe.id);
     trackShoeClick(shoe.id);
-    window.open(getAffiliateUrl(shoe.amazon_url), '_blank');
-  };
+    // Validate URL before opening
+    const url = getAffiliateUrl(shoe.amazon_url);
+    if (url && url.startsWith('https://')) {
+      window.open(url, '_blank', 'noopener,noreferrer');
+    }
+  }, [trackClick, trackShoeClick]);
 
-  const handleShare = async (shoe: Shoe) => {
+  const handleShare = useCallback(async (shoe: Shoe) => {
     // Generate smart share data with deep links and affiliate tracking
     const shareData = createAffiliateShareData(shoe, 'share_native');
 
@@ -195,15 +199,15 @@ const FeedPage: React.FC = () => {
       setShowShareToast(true);
       setTimeout(() => setShowShareToast(false), 2500);
     }
-  };
+  }, [trackShare]);
 
-  const handleFavorite = async (shoe: Shoe) => {
+  const handleFavorite = useCallback(async (shoe: Shoe) => {
     const wasAlreadyFavorite = isFavorite(shoe.id);
     const success = await toggleFavorite(shoe.id);
     if (success) {
       trackFavorite(shoe.id, wasAlreadyFavorite ? 'remove' : 'add');
     }
-  };
+  }, [isFavorite, toggleFavorite, trackFavorite]);
 
   if (loading && shoes.length === 0) {
     return (

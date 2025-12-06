@@ -10,6 +10,11 @@ import { usePushNotifications } from '../hooks/usePushNotifications';
 
 type Tab = 'favorites' | 'closet';
 
+// Type for user_sneakers join result
+interface UserSneakerWithShoe {
+  shoe: Shoe;
+}
+
 const ProfilePage: React.FC = () => {
   const navigate = useNavigate();
   const { isEnabled: pushEnabled } = usePushNotifications();
@@ -18,31 +23,46 @@ const ProfilePage: React.FC = () => {
   const [closet, _setCloset] = useState<Shoe[]>([]);
   const [activeTab, setActiveTab] = useState<Tab>('favorites');
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [showNotificationSettings, setShowNotificationSettings] = useState(false);
 
   const loadProfile = useCallback(async () => {
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) {
-      navigate('/auth');
-      return;
+    try {
+      const { data: { user }, error: authError } = await supabase.auth.getUser();
+      if (authError) throw authError;
+
+      if (!user) {
+        navigate('/auth');
+        return;
+      }
+
+      setLoading(true);
+      setError(null);
+
+      const { data: profileData, error: profileError } = await supabase
+        .from('profiles')
+        .select('*')
+        .eq('id', user.id)
+        .single();
+
+      if (profileError) throw profileError;
+      setProfile(profileData);
+
+      const { data: favoritesData, error: favError } = await supabase
+        .from('user_sneakers')
+        .select('*, shoe:shoes(*)')
+        .eq('user_id', user.id);
+
+      if (favError) throw favError;
+
+      const shoes = (favoritesData as UserSneakerWithShoe[] | null)?.map(f => f.shoe) || [];
+      setFavorites(shoes);
+    } catch (err) {
+      console.error('[ProfilePage] Error loading profile:', err);
+      setError('Failed to load profile. Please try again.');
+    } finally {
+      setLoading(false);
     }
-
-    setLoading(true);
-    const { data: profileData } = await supabase
-      .from('profiles')
-      .select('*')
-      .eq('id', user.id)
-      .single();
-
-    setProfile(profileData);
-
-    const { data: favoritesData } = await supabase
-      .from('user_sneakers')
-      .select('*, shoe:shoes(*)')
-      .eq('user_id', user.id);
-
-    setFavorites(favoritesData?.map((f: unknown) => (f as { shoe: Shoe }).shoe) || []);
-    setLoading(false);
   }, [navigate]);
 
   useEffect(() => {
@@ -58,6 +78,22 @@ const ProfilePage: React.FC = () => {
     return (
       <div className="min-h-screen bg-zinc-950 flex items-center justify-center">
         <div className="w-8 h-8 border-2 border-orange-500 border-t-transparent rounded-full animate-spin" />
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="min-h-screen bg-zinc-950 flex flex-col items-center justify-center p-6">
+        <div className="text-red-400 text-center mb-4">
+          <p className="text-lg font-medium">{error}</p>
+        </div>
+        <button
+          onClick={loadProfile}
+          className="px-6 py-3 bg-orange-500 hover:bg-orange-600 text-white font-bold rounded-xl transition-colors"
+        >
+          Try Again
+        </button>
       </div>
     );
   }
