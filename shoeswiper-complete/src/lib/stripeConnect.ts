@@ -76,7 +76,8 @@ export interface Payout {
 
 const CONNECT_ACCOUNTS_KEY = 'shoeswiper_connect_accounts';
 const PAYMENT_INTENTS_KEY = 'shoeswiper_payment_intents';
-const PAYOUTS_KEY = 'shoeswiper_payouts';
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
+const _PAYOUTS_KEY = 'shoeswiper_payouts'; // Reserved for future payout tracking
 
 function getDemoAccounts(): StripeConnectAccount[] {
   try {

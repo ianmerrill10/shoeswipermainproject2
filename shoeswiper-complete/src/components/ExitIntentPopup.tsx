@@ -3,6 +3,8 @@ import { FaTimes, FaGift, FaBolt, FaArrowRight } from 'react-icons/fa';
 import { useEmailCapture } from '../hooks/useEmailCapture';
 import { captureEmailSecure } from '../lib/apiService';
 
+/* eslint-disable @typescript-eslint/no-unused-vars */
+
 interface ExitIntentPopupProps {
   /** Delay before popup can show (prevents immediate popup) */
   delayMs?: number;
@@ -57,7 +59,7 @@ const ExitIntentPopup: React.FC<ExitIntentPopupProps> = ({
   }, [canShow, isVisible, isSubscribed]);
 
   // Mobile: detect back button or scroll up intent
-  const handleBeforeUnload = useCallback((e: BeforeUnloadEvent) => {
+  const handleBeforeUnload = useCallback((_e: BeforeUnloadEvent) => {
     if (canShow && !isSubscribed) {
       setIsVisible(true);
       // Don't actually prevent unload, just show popup

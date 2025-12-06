@@ -15,7 +15,6 @@ import {
   priceAlertSchema,
   searchFiltersSchema,
   safeValidateInput,
-  ValidationError
 } from './validationSchemas';
 import { getDeviceFingerprint, SecureStorage, AppStorage, StorageKeys } from './secureStorage';
 import { DEMO_MODE } from './config';
