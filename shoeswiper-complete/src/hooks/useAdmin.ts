@@ -1,20 +1,23 @@
 import { useState, useEffect } from 'react';
 import { Shoe } from '../lib/types';
 import { DEMO_MODE, MOCK_SHOES } from '../lib/mockData';
-import { supabase, ADMIN_EMAIL } from '../lib/supabaseClient';
+import { supabase } from '../lib/supabaseClient';
 
 /**
  * Admin dashboard hook for product management, user oversight, and analytics.
  * Provides CRUD operations for products and access to analytics data.
- * Admin access is restricted to ADMIN_EMAIL (dadsellsgadgets@gmail.com).
- * 
+ * Admin access is determined by the is_admin column in the profiles table.
+ *
+ * Security: Admin status is checked from the database, not from frontend config.
+ * This prevents exposing admin email in the client-side bundle.
+ *
  * @returns Object containing admin state and methods
  * @example
  * const { isAdmin, getProducts, saveProduct, deleteProduct, getAnalytics } = useAdmin();
- * 
+ *
  * // Check admin status before rendering admin UI
  * if (!isAdmin) return <AccessDenied />;
- * 
+ *
  * // Fetch all products
  * const products = await getProducts();
  */
@@ -29,10 +32,20 @@ export const useAdmin = () => {
       return;
     }
 
-    // PRODUCTION MODE: Check user
+    // PRODUCTION MODE: Check is_admin from profile (secure - no email exposed in frontend)
     const checkUser = async () => {
       const { data: { user } } = await supabase.auth.getUser();
-      setIsAdmin(user?.email === ADMIN_EMAIL);
+      if (!user) {
+        setIsAdmin(false);
+        return;
+      }
+      // Fetch is_admin status from profiles table
+      const { data: profile } = await supabase
+        .from('profiles')
+        .select('is_admin')
+        .eq('id', user.id)
+        .single();
+      setIsAdmin(profile?.is_admin === true);
     };
     checkUser();
   }, []);
@@ -70,8 +83,9 @@ export const useAdmin = () => {
     }
 
     // PRODUCTION MODE: Log to Supabase
+    const { data: { user } } = await supabase.auth.getUser();
     await supabase.from('audit_logs').insert({
-      admin_email: ADMIN_EMAIL,
+      admin_email: user?.email || 'unknown',
       action,
       target_table: table,
       target_id: id,

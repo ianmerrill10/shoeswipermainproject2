@@ -1,6 +1,6 @@
 import React, { useEffect, useState, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { supabase, ADMIN_EMAIL } from '../lib/supabaseClient';
+import { supabase } from '../lib/supabaseClient';
 import { FaCog, FaSignOutAlt, FaHeart, FaShoppingBag, FaShieldAlt, FaGem, FaBell } from 'react-icons/fa';
 import { Profile, Shoe } from '../lib/types';
 import { SneakerCard } from '../components/SneakerCard';
@@ -98,7 +98,8 @@ const ProfilePage: React.FC = () => {
     );
   }
 
-  const isAdmin = profile?.email === ADMIN_EMAIL;
+  // Admin status from profile table (secure - no email comparison in frontend)
+  const isAdmin = profile?.is_admin === true;
 
   return (
     <div className="min-h-screen bg-zinc-950 pb-24">

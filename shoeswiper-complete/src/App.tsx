@@ -24,6 +24,7 @@ import BottomNavigation from './components/BottomNavigation';
 import OnboardingFlow from './components/OnboardingFlow';
 import LoadingSpinner from './components/LoadingSpinner';
 import ExitIntentPopup from './components/ExitIntentPopup';
+import ErrorBoundary from './components/ErrorBoundary';
 
 const ONBOARDING_KEY = 'shoeswiper_onboarding';
 
@@ -92,6 +93,7 @@ function App() {
   }
 
   return (
+    <ErrorBoundary>
     <div className="min-h-screen bg-zinc-950">
       {/* Skip to main content link for keyboard users */}
       <a
@@ -135,6 +137,7 @@ function App() {
       {/* Exit Intent Popup - Captures emails when users try to leave */}
       <ExitIntentPopup />
     </div>
+    </ErrorBoundary>
   );
 }
 

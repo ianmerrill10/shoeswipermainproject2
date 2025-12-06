@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { FaTimes, FaBell, FaBellSlash, FaTag, FaRocket, FaBox, FaPercent, FaCheck, FaExclamationTriangle } from 'react-icons/fa';
 import { usePushNotifications } from '../hooks/usePushNotifications';
+import { useFocusTrap } from '../hooks/useFocusTrap';
 
 interface NotificationSettingsProps {
   isOpen: boolean;
@@ -22,6 +23,7 @@ const NotificationSettings: React.FC<NotificationSettingsProps> = ({ isOpen, onC
 
   const [enabling, setEnabling] = useState(false);
   const [testSent, setTestSent] = useState(false);
+  const focusTrapRef = useFocusTrap<HTMLDivElement>(isOpen);
 
   const handleEnableNotifications = async () => {
     setEnabling(true);
@@ -70,6 +72,10 @@ const NotificationSettings: React.FC<NotificationSettingsProps> = ({ isOpen, onC
 
       {/* Panel */}
       <div
+        ref={focusTrapRef}
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="notification-settings-title"
         className={`fixed bottom-0 left-0 right-0 bg-zinc-950 z-50 rounded-t-3xl transform transition-transform duration-300 ease-out max-h-[85vh] overflow-y-auto ${
           isOpen ? 'translate-y-0' : 'translate-y-full'
         }`}
@@ -86,7 +92,7 @@ const NotificationSettings: React.FC<NotificationSettingsProps> = ({ isOpen, onC
               <FaBell className="text-orange-500" />
             </div>
             <div>
-              <h2 className="text-lg font-bold text-white">Notifications</h2>
+              <h2 id="notification-settings-title" className="text-lg font-bold text-white">Notifications</h2>
               <p className="text-zinc-500 text-xs">Never miss a deal</p>
             </div>
           </div>

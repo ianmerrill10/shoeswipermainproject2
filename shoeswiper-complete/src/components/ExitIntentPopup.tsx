@@ -2,6 +2,7 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { FaTimes, FaGift, FaBolt, FaArrowRight } from 'react-icons/fa';
 import { useEmailCapture } from '../hooks/useEmailCapture';
 import { captureEmailSecure } from '../lib/apiService';
+import { useFocusTrap } from '../hooks/useFocusTrap';
 
 interface ExitIntentPopupProps {
   /** Delay before popup can show (prevents immediate popup) */
@@ -28,6 +29,7 @@ const ExitIntentPopup: React.FC<ExitIntentPopupProps> = ({
   const [success, setSuccess] = useState(false);
 
   const { isSubscribed } = useEmailCapture();
+  const focusTrapRef = useFocusTrap<HTMLDivElement>(isVisible);
 
   // Check if we should show based on frequency
   useEffect(() => {
@@ -120,7 +122,13 @@ const ExitIntentPopup: React.FC<ExitIntentPopupProps> = ({
       />
 
       {/* Popup */}
-      <div className="fixed inset-4 md:inset-auto md:top-1/2 md:left-1/2 md:-translate-x-1/2 md:-translate-y-1/2 md:max-w-lg md:w-full bg-zinc-900 rounded-2xl z-[101] overflow-hidden shadow-2xl animate-slide-up">
+      <div
+        ref={focusTrapRef}
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="exit-intent-title"
+        className="fixed inset-4 md:inset-auto md:top-1/2 md:left-1/2 md:-translate-x-1/2 md:-translate-y-1/2 md:max-w-lg md:w-full bg-zinc-900 rounded-2xl z-[101] overflow-hidden shadow-2xl animate-slide-up"
+      >
         {/* Close Button */}
         <button
           onClick={handleClose}
@@ -157,7 +165,7 @@ const ExitIntentPopup: React.FC<ExitIntentPopupProps> = ({
                   <span className="text-white text-sm font-bold">WAIT! EXCLUSIVE OFFER</span>
                 </div>
 
-                <h2 className="text-3xl md:text-4xl font-black text-white mb-2 leading-tight">
+                <h2 id="exit-intent-title" className="text-3xl md:text-4xl font-black text-white mb-2 leading-tight">
                   Get 10% Off Your First Purchase
                 </h2>
                 <p className="text-white/90">

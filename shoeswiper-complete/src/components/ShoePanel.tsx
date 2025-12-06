@@ -6,6 +6,7 @@ import { trackAffiliateClick } from '../lib/apiService';
 import { createAffiliateShareData } from '../lib/deepLinks';
 import { useFavorites } from '../hooks/useFavorites';
 import { useAnalytics } from '../hooks/useAnalytics';
+import { useFocusTrap } from '../hooks/useFocusTrap';
 import PriceAlertButton from './PriceAlertButton';
 
 interface ShoePanelProps {
@@ -20,6 +21,7 @@ const ShoePanel: React.FC<ShoePanelProps> = ({ shoe, isOpen, onClose }) => {
   const [showShareToast, setShowShareToast] = useState(false);
   const { toggleFavorite, isFavorite } = useFavorites();
   const { trackFavorite, trackShare } = useAnalytics();
+  const focusTrapRef = useFocusTrap<HTMLDivElement>(isOpen);
 
   // Generate view angles (in production these would be real image URLs)
   const viewAngles = [
@@ -104,6 +106,7 @@ const ShoePanel: React.FC<ShoePanelProps> = ({ shoe, isOpen, onClose }) => {
 
       {/* Panel */}
       <div
+        ref={focusTrapRef}
         role="dialog"
         aria-modal="true"
         aria-labelledby="shoe-panel-title"

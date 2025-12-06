@@ -110,6 +110,7 @@ export interface Profile {
   username?: string | null;
   avatar_url?: string | null;
   bio?: string;
+  is_admin?: boolean;
   is_banned?: boolean;
   created_at: string;
   updated_at?: string;

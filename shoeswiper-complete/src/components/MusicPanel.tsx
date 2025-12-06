@@ -2,6 +2,7 @@ import React from 'react';
 import { FaTimes, FaSpotify, FaApple, FaAmazon } from 'react-icons/fa';
 import { Shoe } from '../lib/types';
 import { useAnalytics, MusicPlatform } from '../hooks/useAnalytics';
+import { useFocusTrap } from '../hooks/useFocusTrap';
 
 interface MusicPanelProps {
   shoe: Shoe;
@@ -12,6 +13,7 @@ interface MusicPanelProps {
 const MusicPanel: React.FC<MusicPanelProps> = ({ shoe, isOpen, onClose }) => {
   const music = shoe.music;
   const { trackMusicClick } = useAnalytics();
+  const focusTrapRef = useFocusTrap<HTMLDivElement>(isOpen);
 
   const handleMusicClick = (platform: MusicPlatform, url: string) => {
     if (music) {
@@ -54,6 +56,7 @@ const MusicPanel: React.FC<MusicPanelProps> = ({ shoe, isOpen, onClose }) => {
 
       {/* Panel */}
       <div
+        ref={focusTrapRef}
         role="dialog"
         aria-modal="true"
         aria-labelledby="music-panel-title"
