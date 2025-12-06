@@ -204,13 +204,29 @@ const womensShoes: Shoe[] = [
 ];
 
 // ============================================
-// COMBINED MOCK DATA
+// COMBINED PRODUCT DATA
+// Merges hand-collected products with expanded catalog
 // ============================================
-export const MOCK_SHOES: Shoe[] = [
-  ...mensShoes,
-  ...unisexShoes,
-  ...womensShoes,
-];
+
+// Import additional real sneaker data (150+ more products)
+import { REAL_SNEAKER_DATA } from './realSneakerSeedData';
+
+// Combine all product sources - deduped by ASIN
+const allProducts = [...mensShoes, ...unisexShoes, ...womensShoes, ...REAL_SNEAKER_DATA];
+const seenAsins = new Set<string>();
+const dedupedProducts: Shoe[] = [];
+
+for (const shoe of allProducts) {
+  const asin = shoe.amazon_asin || shoe.amazon_url.match(/\/dp\/([A-Z0-9]{10})/i)?.[1];
+  if (asin && !seenAsins.has(asin)) {
+    seenAsins.add(asin);
+    dedupedProducts.push(shoe);
+  } else if (!asin) {
+    dedupedProducts.push(shoe);
+  }
+}
+
+export const MOCK_SHOES: Shoe[] = dedupedProducts;
 
 // Re-export DEMO_MODE from config for backwards compatibility
 export { DEMO_MODE } from './config';
@@ -235,4 +251,10 @@ export const searchShoes = (query: string): Shoe[] => {
   );
 };
 
-if (import.meta.env.DEV) console.warn(`[MockData] Loaded ${MOCK_SHOES.length} products (${mensShoes.length} men's, ${womensShoes.length} women's, ${unisexShoes.length} unisex)`);
+// Product stats
+const brandCounts = MOCK_SHOES.reduce((acc, shoe) => {
+  acc[shoe.brand] = (acc[shoe.brand] || 0) + 1;
+  return acc;
+}, {} as Record<string, number>);
+
+console.log(`[ProductData] Loaded ${MOCK_SHOES.length} products:`, brandCounts);

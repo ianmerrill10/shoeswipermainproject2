@@ -23,6 +23,7 @@ import { AdminLayout } from './components/admin/AdminLayout';
 import BottomNavigation from './components/BottomNavigation';
 import OnboardingFlow from './components/OnboardingFlow';
 import LoadingSpinner from './components/LoadingSpinner';
+import ExitIntentPopup from './components/ExitIntentPopup';
 
 const ONBOARDING_KEY = 'shoeswiper_onboarding';
 
@@ -130,6 +131,9 @@ function App() {
       {!['/auth', '/admin'].some(path => window.location.pathname.startsWith(path)) && (
         <BottomNavigation />
       )}
+
+      {/* Exit Intent Popup - Captures emails when users try to leave */}
+      <ExitIntentPopup />
     </div>
   );
 }
