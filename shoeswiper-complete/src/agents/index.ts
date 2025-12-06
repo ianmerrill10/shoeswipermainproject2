@@ -7,21 +7,28 @@
  * 1. ContentGeneratorAgent - Auto-generates SEO blog posts
  * 2. MarketingAgent - 100+ marketing ideas, social media, email, influencer strategies
  * 3. ProductLaunchPlan - Complete 90-day launch playbook
+ * 4. SocialMediaAgents - Platform-specific agents for TikTok, Instagram, Twitter, YouTube, Pinterest, Snapchat
+ * 5. AdvertisingAgent - Comprehensive paid advertising strategies across all platforms
  *
  * DATA & PRODUCT AGENTS (Planned):
- * 4. ProductDataAgent - Scrapes and enriches shoe catalog data
- * 5. PricingIntelligenceAgent - Monitors competitor prices
- * 6. TrendAnalysisAgent - Analyzes sneaker trends
+ * 6. ProductDataAgent - Scrapes and enriches shoe catalog data
+ * 7. PricingIntelligenceAgent - Monitors competitor prices
+ * 8. TrendAnalysisAgent - Analyzes sneaker trends
  *
  * TECHNICAL AGENTS (Planned):
- * 7. SEOOptimizationAgent - Generates meta, structured data
- * 8. CodeQualityAgent - Tests, fixes errors
- * 9. DeploymentAgent - Builds, deploys, monitors
- * 10. SecurityAuditAgent - Scans for vulnerabilities
+ * 9. SEOOptimizationAgent - Generates meta, structured data
+ * 10. CodeQualityAgent - Tests, fixes errors
+ * 11. DeploymentAgent - Builds, deploys, monitors
+ * 12. SecurityAuditAgent - Scans for vulnerabilities
  *
  * USER & GROWTH AGENTS (Planned):
- * 11. CustomerSupportAgent - Auto-responds to queries
- * 12. GrowthHackingAgent - A/B tests, optimizes funnels
+ * 13. CustomerSupportAgent - Auto-responds to queries
+ * 14. GrowthHackingAgent - A/B tests, optimizes funnels
+ *
+ * REVENUE MODEL: 100% Affiliate-Based (NO Subscriptions)
+ * - Amazon Associates affiliate commissions (4-8% per sale)
+ * - Brand partnership deals
+ * - Seller marketplace commission
  */
 
 // ============================================
@@ -31,6 +38,8 @@
 export * from './ContentGeneratorAgent';
 export * from './MarketingAgent';
 export * from './ProductLaunchPlan';
+export * from './SocialMediaAgents';
+export * from './AdvertisingAgent';
 
 // ============================================
 // Shared Types
@@ -42,7 +51,6 @@ export * from './types';
 // Planned Agents (Future Implementation)
 // ============================================
 
-// export * from './SocialMediaAgent';
 // export * from './EmailMarketingAgent';
 // export * from './ProductDataAgent';
 // export * from './PricingIntelligenceAgent';

@@ -478,8 +478,8 @@ export const PHASE_4_GROWTH = {
   objectives: [
     'Reach 100,000 total users',
     'Achieve 30% D7 retention',
-    'Hit $50,000 cumulative revenue',
-    'Launch premium features',
+    'Hit $75,000 cumulative affiliate revenue',
+    'Maximize affiliate click-through rates',
     'Establish sustainable growth engine',
   ],
 
@@ -487,44 +487,69 @@ export const PHASE_4_GROWTH = {
     strategies: [
       {
         strategy: 'Push Notification Optimization',
-        description: 'Personalized drop alerts, price notifications',
+        description: 'Personalized drop alerts, price notifications, deal alerts',
         expectedImpact: '+15% D7 retention',
       },
       {
         strategy: 'Gamification Features',
-        description: 'Streaks, badges, leaderboards',
+        description: 'Daily streaks, collector badges, swipe leaderboards',
         expectedImpact: '+20% engagement',
       },
       {
         strategy: 'Social Features',
-        description: 'Follow collectors, share wishlists',
+        description: 'Follow collectors, share wishlists, outfit showcases',
         expectedImpact: '+25% shares',
       },
       {
         strategy: 'Personalization Engine',
-        description: 'AI-powered recommendations improve',
+        description: 'AI-powered recommendations improve with each swipe',
         expectedImpact: '+30% click-through',
+      },
+      {
+        strategy: 'Content Refresh',
+        description: 'Daily new products, rotating featured items',
+        expectedImpact: '+20% return visits',
       },
     ],
   },
 
   monetizationOptimization: {
+    revenueModel: '100% Affiliate Commission - No Subscriptions',
     strategies: [
       {
-        strategy: 'Affiliate Optimization',
-        description: 'A/B test CTAs, product placement, timing',
-        expectedImpact: '+20% affiliate conversion',
+        strategy: 'Affiliate CTA Optimization',
+        description: 'A/B test button text, colors, placement',
+        expectedImpact: '+25% affiliate clicks',
       },
       {
-        strategy: 'Premium Subscription Launch',
-        description: 'ShoeSwiper Pro - early access, exclusive deals',
-        pricing: '$4.99/month or $39.99/year',
-        expectedConversion: '3-5% of active users',
+        strategy: 'Price Drop Alerts',
+        description: 'Email/push when favorited items drop in price',
+        expectedImpact: '+40% conversion on alerts',
+      },
+      {
+        strategy: 'Strategic Product Placement',
+        description: 'Feature high-commission products in prime positions',
+        expectedImpact: '+15% revenue per user',
+      },
+      {
+        strategy: 'Deal Aggregation',
+        description: 'Curate best deals section with time-sensitive offers',
+        expectedImpact: '+30% CTR on deal content',
+      },
+      {
+        strategy: 'Seasonal Campaigns',
+        description: 'Black Friday, Back to School, Holiday gift guides',
+        expectedImpact: '3x revenue during peak periods',
       },
       {
         strategy: 'Seller Marketplace Pilot',
         description: 'Allow verified sellers (10% commission)',
         expectedRevenue: '$10,000+/month',
+      },
+      {
+        strategy: 'Brand Partnerships',
+        description: 'Featured placements for sneaker brands',
+        expectedRevenue: '$5,000-20,000/campaign',
       },
     ],
   },
@@ -533,23 +558,28 @@ export const PHASE_4_GROWTH = {
     strategies: [
       {
         strategy: 'Referral Program Optimization',
-        description: 'Test reward amounts, mechanics',
-        goal: '25% of new users from referrals',
+        description: 'Test reward amounts, viral mechanics, share incentives',
+        goal: '30% of new users from referrals',
       },
       {
         strategy: 'SEO Content Engine',
-        description: 'Blog publishing 5x/week, ranking for keywords',
-        goal: '50,000 organic visitors/month',
+        description: 'Blog publishing 7x/week, ranking for high-intent keywords',
+        goal: '100,000 organic visitors/month',
       },
       {
         strategy: 'Partnership Expansion',
-        description: 'Retail partners, brand integrations',
-        goal: '5 major partnerships',
+        description: 'Retail partners, brand integrations, cross-promotions',
+        goal: '10 major partnerships',
       },
       {
         strategy: 'Geographic Expansion',
-        description: 'Localize for UK, Canada, Australia',
-        goal: '20% international users',
+        description: 'Localize for UK, Canada, Australia, Germany',
+        goal: '25% international users',
+      },
+      {
+        strategy: 'YouTube Channel Growth',
+        description: 'Daily sneaker content, reviews, deal roundups',
+        goal: '50,000 subscribers in 6 months',
       },
     ],
   },
@@ -560,8 +590,8 @@ export const PHASE_4_GROWTH = {
     monthlyActiveUsers: 75000,
     d7Retention: '30%',
     d30Retention: '15%',
-    affiliateRevenue: 50000,
-    subscriptionRevenue: 5000,
+    affiliateRevenue: 75000,
+    affiliateClickRate: '8%',
     appStoreRating: 4.7,
   },
 };
@@ -807,18 +837,22 @@ export const LAUNCH_PLAN_SUMMARY = {
   ],
 
   revenueModel: [
-    'Amazon Associates affiliate commissions (4-8%)',
-    'Premium subscription (ShoeSwiper Pro)',
-    'Future: Seller marketplace commission',
-    'Future: Brand partnerships and ads',
+    'Amazon Associates affiliate commissions (4-8% per sale)',
+    'Brand partnership deals and sponsored placements',
+    'Seller marketplace commission (10% on sales)',
+    'In-app advertising (non-intrusive, relevant ads)',
+    'Affiliate programs with other retailers (Foot Locker, Nike, etc.)',
   ],
+
+  noSubscription: true, // Revenue is 100% affiliate/partnership based - NO user subscriptions
 
   successCriteria: {
     downloads: 100000,
     dau: 30000,
-    revenue: 50000,
+    affiliateRevenue: 75000,
     rating: 4.7,
     retention: '30% D7',
+    affiliateClickRate: '8%',
   },
 
   teamNeeded: [
