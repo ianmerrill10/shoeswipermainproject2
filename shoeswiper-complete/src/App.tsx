@@ -27,6 +27,7 @@ import OnboardingFlow from './components/OnboardingFlow';
 import LoadingSpinner from './components/LoadingSpinner';
 import ExitIntentPopup from './components/ExitIntentPopup';
 import ErrorBoundary from './components/ErrorBoundary';
+import CookieConsent from './components/CookieConsent';
 
 const ONBOARDING_KEY = 'shoeswiper_onboarding';
 
@@ -144,6 +145,9 @@ function App() {
 
       {/* Exit Intent Popup - Captures emails when users try to leave */}
       <ExitIntentPopup />
+
+      {/* Cookie Consent Banner - GDPR/CCPA compliance */}
+      <CookieConsent />
     </div>
     </ErrorBoundary>
   );

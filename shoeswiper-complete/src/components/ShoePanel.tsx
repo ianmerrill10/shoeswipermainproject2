@@ -274,6 +274,8 @@ const ShoePanel: React.FC<ShoePanelProps> = ({ shoe, isOpen, onClose }) => {
             <FaCheck className="text-xs text-blue-400" aria-hidden="true" />
             <span className="text-xs text-blue-400 font-medium">Prime eligible</span>
           </div>
+          {/* FTC Affiliate Disclosure */}
+          <p className="text-[10px] text-zinc-500 text-center">Affiliate link - we may earn a commission</p>
 
           {/* Price Alert */}
           <div className="flex justify-center">

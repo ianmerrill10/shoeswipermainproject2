@@ -93,6 +93,8 @@ export const SneakerCard: React.FC<Props> = ({ shoe, variant = 'grid' }) => {
               <FaAmazon aria-hidden="true" /> Shop
             </button>
           </div>
+          {/* FTC Affiliate Disclosure */}
+          <p className="text-[8px] text-zinc-500 text-right mt-1">Affiliate link</p>
         </div>
       </article>
     );
@@ -143,6 +145,8 @@ export const SneakerCard: React.FC<Props> = ({ shoe, variant = 'grid' }) => {
         >
           <FaAmazon className="text-xl" aria-hidden="true" /> SHOP ON AMAZON
         </button>
+        {/* FTC Affiliate Disclosure */}
+        <p className="text-[10px] text-zinc-400 text-center mt-2">Affiliate link - we may earn a commission</p>
       </div>
 
       {/* Side Actions (Like, Share) */}

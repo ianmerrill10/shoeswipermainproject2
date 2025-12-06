@@ -326,6 +326,10 @@ const SwipeableCard: React.FC<SwipeableCardProps> = ({
           <FaAmazon className="text-xl sm:text-2xl" aria-hidden="true" />
           BUY ON AMAZON
         </motion.button>
+        {/* FTC Affiliate Disclosure */}
+        <p className="text-[9px] sm:text-[10px] text-zinc-400 text-center mt-1.5 opacity-80">
+          Affiliate link - we may earn a commission
+        </p>
       </div>
 
       {/* Side Actions - Responsive sizing and spacing */}

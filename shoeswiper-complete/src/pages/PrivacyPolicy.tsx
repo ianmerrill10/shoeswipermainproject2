@@ -151,12 +151,46 @@ const PrivacyPolicy: React.FC = () => {
           {/* Cookies */}
           <section>
             <h2 className="text-2xl font-bold text-white mb-4">Cookies and Tracking</h2>
-            <p>
+            <p className="mb-4">
               We use cookies and similar tracking technologies to track activity on our Service and
               hold certain information. Cookies are files with small amounts of data that may include
-              an anonymous unique identifier. You can instruct your browser to refuse all cookies or
-              to indicate when a cookie is being sent.
+              an anonymous unique identifier.
             </p>
+            <h3 className="text-lg font-semibold text-white mb-2">Types of Cookies We Use</h3>
+            <ul className="list-disc list-inside space-y-2 mb-4 ml-4">
+              <li><strong>Necessary Cookies:</strong> Required for the app to function (authentication, preferences)</li>
+              <li><strong>Analytics Cookies:</strong> Help us understand how you use the app to improve it</li>
+              <li><strong>Marketing Cookies:</strong> Used for affiliate tracking and personalized recommendations</li>
+            </ul>
+            <p>
+              You can manage your cookie preferences using the cookie settings banner when you first
+              visit our site, or by clearing your browser cookies to see the banner again.
+            </p>
+          </section>
+
+          {/* CCPA Notice */}
+          <section>
+            <h2 className="text-2xl font-bold text-white mb-4">California Privacy Rights (CCPA)</h2>
+            <p className="mb-4">
+              If you are a California resident, you have specific rights regarding your personal information
+              under the California Consumer Privacy Act (CCPA).
+            </p>
+            <h3 className="text-lg font-semibold text-white mb-2">Your CCPA Rights</h3>
+            <ul className="list-disc list-inside space-y-2 mb-4 ml-4">
+              <li><strong>Right to Know:</strong> Request disclosure of personal information we collect</li>
+              <li><strong>Right to Delete:</strong> Request deletion of your personal information</li>
+              <li><strong>Right to Opt-Out:</strong> Opt out of the &quot;sale&quot; of personal information</li>
+              <li><strong>Right to Non-Discrimination:</strong> Equal service regardless of privacy choices</li>
+            </ul>
+            <h3 className="text-lg font-semibold text-white mb-2">Do Not Sell My Personal Information</h3>
+            <p className="mb-4">
+              We share certain information with affiliate partners (like Amazon) when you click on product
+              links, which may be considered a &quot;sale&quot; under CCPA. To opt out:
+            </p>
+            <ul className="list-disc list-inside space-y-2 ml-4">
+              <li>Disable &quot;Marketing Cookies&quot; in our cookie settings banner</li>
+              <li>Contact us at the email below to request opt-out</li>
+            </ul>
           </section>
 
           {/* Children's Privacy */}
