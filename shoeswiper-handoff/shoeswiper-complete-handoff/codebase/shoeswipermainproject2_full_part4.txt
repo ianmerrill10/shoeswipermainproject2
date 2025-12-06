@@ -1,0 +1,2647 @@
+================ FILE: shoeswipermainproject2-main/shoeswiper-complete/src/hooks/useAdmin.ts ================
+import { useState, useEffect } from 'react';
+import { Shoe } from '../lib/types';
+import { DEMO_MODE, MOCK_SHOES } from '../lib/mockData';
+import { supabase, ADMIN_EMAIL } from '../lib/supabaseClient';
+
+export const useAdmin = () => {
+  const [loading, setLoading] = useState(false);
+  const [isAdmin, setIsAdmin] = useState<boolean | null>(null);
+
+  useEffect(() => {
+    // DEMO MODE: Always admin
+    if (DEMO_MODE) {
+      setIsAdmin(true);
+      return;
+    }
+
+    // PRODUCTION MODE: Check user
+    const checkUser = async () => {
+      const { data: { user } } = await supabase.auth.getUser();
+      setIsAdmin(user?.email === ADMIN_EMAIL);
+    };
+    checkUser();
+  }, []);
+
+  const formatAmazonUrl = (url: string) => {
+    if (!url.includes('amazon.com')) return url;
+    try {
+      const urlObj = new URL(url);
+      urlObj.searchParams.set('tag', 'shoeswiper-20');
+      return urlObj.toString();
+    } catch (e) {
+      return url;
+    }
+  };
+
+  const logAction = async (action: string, table: string, id: string | undefined, details: any) => {
+    // DEMO MODE: Just log to console
+    if (DEMO_MODE) {
+      console.log(`[Demo] Audit: ${action} on ${table}`, details);
+      return;
+    }
+
+    // PRODUCTION MODE: Log to Supabase
+    await supabase.from('audit_logs').insert({
+      admin_email: ADMIN_EMAIL,
+      action,
+      target_table: table,
+      target_id: id,
+      details
+    });
+  };
+
+  const getProducts = async () => {
+    // DEMO MODE: Return mock data
+    if (DEMO_MODE) {
+      return MOCK_SHOES;
+    }
+
+    // PRODUCTION MODE: Use Supabase
+    const { data, error } = await supabase
+      .from('shoes')
+      .select('*')
+      .order('created_at', { ascending: false });
+    if (error) throw error;
+    return data as Shoe[];
+  };
+
+  const saveProduct = async (product: Partial<Shoe>) => {
+    // DEMO MODE: Just log
+    if (DEMO_MODE) {
+      console.log('[Demo] Save product:', product);
+      return [product];
+    }
+
+    // PRODUCTION MODE: Use Supabase
+    setLoading(true);
+    try {
+      const cleanProduct = {
+        ...product,
+        amazon_url: formatAmazonUrl(product.amazon_url || ''),
+      };
+
+      let result;
+      if (product.id) {
+        result = await supabase.from('shoes').update(cleanProduct).eq('id', product.id).select();
+        await logAction('UPDATE', 'shoes', product.id, cleanProduct);
+      } else {
+        result = await supabase.from('shoes').insert(cleanProduct).select();
+        await logAction('CREATE', 'shoes', result.data?.[0]?.id, cleanProduct);
+      }
+
+      if (result.error) throw result.error;
+      return result.data;
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const deleteProduct = async (id: string) => {
+    // DEMO MODE: Just log
+    if (DEMO_MODE) {
+      console.log('[Demo] Delete product:', id);
+      return;
+    }
+
+    // PRODUCTION MODE: Use Supabase
+    setLoading(true);
+    try {
+      const { error } = await supabase.from('shoes').delete().eq('id', id);
+      if (error) throw error;
+      await logAction('DELETE', 'shoes', id, {});
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const getAnalytics = async () => {
+    // DEMO MODE: Return mock analytics
+    if (DEMO_MODE) {
+      return {
+        totalUsers: 1,
+        totalProducts: MOCK_SHOES.length,
+        clicks: []
+      };
+    }
+
+    // PRODUCTION MODE: Use Supabase
+    const { count: userCount } = await supabase.from('profiles').select('*', { count: 'exact', head: true });
+    const { count: productCount } = await supabase.from('shoes').select('*', { count: 'exact', head: true });
+
+    const { data: clicks } = await supabase
+      .from('affiliate_clicks')
+      .select('clicked_at')
+      .gte('clicked_at', new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString());
+
+    return {
+      totalUsers: userCount || 0,
+      totalProducts: productCount || 0,
+      clicks: clicks || []
+    };
+  };
+
+  return {
+    isAdmin,
+    loading,
+    getProducts,
+    saveProduct,
+    deleteProduct,
+    getAnalytics
+  };
+};
+
+
+================ FILE: shoeswipermainproject2-main/shoeswiper-complete/src/hooks/useAnalytics.ts ================
+import { useCallback } from 'react';
+import { DEMO_MODE } from '../lib/config';
+
+// Analytics event types for type safety
+export type AnalyticsEvent =
+  | 'shoe_view'
+  | 'shoe_click'
+  | 'music_click'
+  | 'panel_open'
+  | 'share'
+  | 'favorite'
+  | 'swipe';
+
+export type MusicPlatform = 'spotify' | 'apple_music' | 'amazon_music';
+export type PanelType = 'shoe' | 'music';
+
+interface AnalyticsData {
+  shoe_id?: string;
+  platform?: MusicPlatform;
+  panel_type?: PanelType;
+  song?: string;
+  artist?: string;
+  direction?: 'left' | 'right' | 'up' | 'down';
+  [key: string]: any;
+}
+
+// In-memory analytics store for DEMO_MODE
+const demoAnalytics: {
+  events: Array<{ event: AnalyticsEvent; data: AnalyticsData; timestamp: string }>;
+  summary: {
+    shoe_views: Record<string, number>;
+    shoe_clicks: Record<string, number>;
+    music_clicks: Record<MusicPlatform, number>;
+    panel_opens: Record<PanelType, number>;
+    shares: number;
+    favorites: number;
+  };
+} = {
+  events: [],
+  summary: {
+    shoe_views: {},
+    shoe_clicks: {},
+    music_clicks: { spotify: 0, apple_music: 0, amazon_music: 0 },
+    panel_opens: { shoe: 0, music: 0 },
+    shares: 0,
+    favorites: 0,
+  },
+};
+
+export const useAnalytics = () => {
+  /**
+   * Core tracking function - all events flow through here
+   */
+  const trackEvent = useCallback(async (event: AnalyticsEvent, data: AnalyticsData = {}) => {
+    const timestamp = new Date().toISOString();
+
+    // DEMO MODE: Store in memory and log
+    if (DEMO_MODE) {
+      demoAnalytics.events.push({ event, data, timestamp });
+
+      // Update summary stats
+      switch (event) {
+        case 'shoe_view':
+          if (data.shoe_id) {
+            demoAnalytics.summary.shoe_views[data.shoe_id] =
+              (demoAnalytics.summary.shoe_views[data.shoe_id] || 0) + 1;
+          }
+          break;
+        case 'shoe_click':
+          if (data.shoe_id) {
+            demoAnalytics.summary.shoe_clicks[data.shoe_id] =
+              (demoAnalytics.summary.shoe_clicks[data.shoe_id] || 0) + 1;
+          }
+          break;
+        case 'music_click':
+          if (data.platform) {
+            demoAnalytics.summary.music_clicks[data.platform]++;
+          }
+          break;
+        case 'panel_open':
+          if (data.panel_type) {
+            demoAnalytics.summary.panel_opens[data.panel_type]++;
+          }
+          break;
+        case 'share':
+          demoAnalytics.summary.shares++;
+          break;
+        case 'favorite':
+          demoAnalytics.summary.favorites++;
+          break;
+      }
+
+      console.log(`[Analytics] ${event}:`, data);
+      return;
+    }
+
+    // PRODUCTION MODE: Send to Supabase
+    try {
+      const { supabase } = await import('../lib/supabaseClient');
+
+      await supabase.from('analytics_events').insert({
+        event_type: event,
+        event_data: data,
+        created_at: timestamp,
+      });
+
+      // Also update specific tracking tables based on event type
+      if (event === 'shoe_click' && data.shoe_id) {
+        await supabase.from('affiliate_clicks').insert({
+          shoe_id: data.shoe_id,
+          clicked_at: timestamp,
+        });
+        await supabase.rpc('increment_shoe_click', { shoe_id: data.shoe_id });
+      }
+
+      if (event === 'music_click' && data.platform) {
+        await supabase.from('music_clicks').insert({
+          shoe_id: data.shoe_id,
+          platform: data.platform,
+          song: data.song,
+          artist: data.artist,
+          clicked_at: timestamp,
+        });
+      }
+    } catch (err) {
+      console.error('[Analytics] Error tracking event:', err);
+    }
+  }, []);
+
+  /**
+   * Track shoe view (when card becomes visible)
+   */
+  const trackShoeView = useCallback((shoeId: string) => {
+    trackEvent('shoe_view', { shoe_id: shoeId });
+  }, [trackEvent]);
+
+  /**
+   * Track shoe click (Amazon buy button)
+   */
+  const trackShoeClick = useCallback((shoeId: string) => {
+    trackEvent('shoe_click', { shoe_id: shoeId });
+  }, [trackEvent]);
+
+  /**
+   * Track music link click (Spotify/Apple/Amazon)
+   */
+  const trackMusicClick = useCallback((
+    platform: MusicPlatform,
+    shoeId: string,
+    song: string,
+    artist: string
+  ) => {
+    trackEvent('music_click', {
+      platform,
+      shoe_id: shoeId,
+      song,
+      artist
+    });
+  }, [trackEvent]);
+
+  /**
+   * Track panel open (Shoe or Music panel)
+   */
+  const trackPanelOpen = useCallback((panelType: PanelType, shoeId: string) => {
+    trackEvent('panel_open', { panel_type: panelType, shoe_id: shoeId });
+  }, [trackEvent]);
+
+  /**
+   * Track share action
+   */
+  const trackShare = useCallback((shoeId: string, method: 'native' | 'clipboard') => {
+    trackEvent('share', { shoe_id: shoeId, method });
+  }, [trackEvent]);
+
+  /**
+   * Track favorite/save action
+   */
+  const trackFavorite = useCallback((shoeId: string, action: 'add' | 'remove') => {
+    trackEvent('favorite', { shoe_id: shoeId, action });
+  }, [trackEvent]);
+
+  /**
+   * Get analytics summary (for admin dashboard)
+   */
+  const getAnalyticsSummary = useCallback(async () => {
+    if (DEMO_MODE) {
+      return {
+        totalEvents: demoAnalytics.events.length,
+        shoeViews: Object.values(demoAnalytics.summary.shoe_views).reduce((a, b) => a + b, 0),
+        shoeClicks: Object.values(demoAnalytics.summary.shoe_clicks).reduce((a, b) => a + b, 0),
+        musicClicks: demoAnalytics.summary.music_clicks,
+        panelOpens: demoAnalytics.summary.panel_opens,
+        shares: demoAnalytics.summary.shares,
+        favorites: demoAnalytics.summary.favorites,
+        recentEvents: demoAnalytics.events.slice(-50).reverse(),
+        topShoes: Object.entries(demoAnalytics.summary.shoe_clicks)
+          .sort(([, a], [, b]) => b - a)
+          .slice(0, 10),
+      };
+    }
+
+    // PRODUCTION: Query Supabase
+    const { supabase } = await import('../lib/supabaseClient');
+    const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString();
+
+    const [
+      { count: totalEvents },
+      { data: musicClicks },
+      { data: recentEvents },
+    ] = await Promise.all([
+      supabase.from('analytics_events').select('*', { count: 'exact', head: true }),
+      supabase.from('music_clicks').select('platform').gte('clicked_at', thirtyDaysAgo),
+      supabase.from('analytics_events').select('*').order('created_at', { ascending: false }).limit(50),
+    ]);
+
+    // Aggregate music clicks by platform
+    const musicClicksByPlatform = (musicClicks || []).reduce((acc: Record<string, number>, click: any) => {
+      acc[click.platform] = (acc[click.platform] || 0) + 1;
+      return acc;
+    }, { spotify: 0, apple_music: 0, amazon_music: 0 });
+
+    return {
+      totalEvents: totalEvents || 0,
+      musicClicks: musicClicksByPlatform,
+      recentEvents: recentEvents || [],
+    };
+  }, []);
+
+  return {
+    trackEvent,
+    trackShoeView,
+    trackShoeClick,
+    trackMusicClick,
+    trackPanelOpen,
+    trackShare,
+    trackFavorite,
+    getAnalyticsSummary,
+  };
+};
+
+
+================ FILE: shoeswipermainproject2-main/shoeswiper-complete/src/hooks/useAuth.ts ================
+import { useState, useEffect } from 'react';
+import { supabase } from '../lib/supabaseClient';
+import { User, Session } from '@supabase/supabase-js';
+
+export const useAuth = () => {
+  const [user, setUser] = useState<User | null>(null);
+  const [session, setSession] = useState<Session | null>(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    // Get initial session
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      setSession(session);
+      setUser(session?.user ?? null);
+      setLoading(false);
+    });
+
+    // Listen for auth changes
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      setSession(session);
+      setUser(session?.user ?? null);
+    });
+
+    return () => subscription.unsubscribe();
+  }, []);
+
+  const signIn = async (email: string, password: string) => {
+    const { data, error } = await supabase.auth.signInWithPassword({ email, password });
+    if (error) throw error;
+    return data;
+  };
+
+  const signUp = async (email: string, password: string, username?: string) => {
+    const { data, error } = await supabase.auth.signUp({
+      email,
+      password,
+      options: {
+        data: { username }
+      }
+    });
+    if (error) throw error;
+    return data;
+  };
+
+  const signInWithGoogle = async () => {
+    const { data, error } = await supabase.auth.signInWithOAuth({
+      provider: 'google',
+      options: {
+        redirectTo: `${window.location.origin}/`,
+      },
+    });
+    if (error) throw error;
+    return data;
+  };
+
+  const signOut = async () => {
+    const { error } = await supabase.auth.signOut();
+    if (error) throw error;
+  };
+
+  return {
+    user,
+    session,
+    loading,
+    signIn,
+    signUp,
+    signInWithGoogle,
+    signOut,
+    isAuthenticated: !!user,
+  };
+};
+
+
+================ FILE: shoeswipermainproject2-main/shoeswiper-complete/src/hooks/useAuthGuard.ts ================
+import { useEffect, useState } from 'react';
+import { DEMO_MODE, ALLOWED_EMAILS } from '../lib/config';
+
+// Only import Supabase types/client if not in demo mode
+type User = {
+  id: string;
+  email?: string;
+};
+
+const isEmailAllowed = (email: string | undefined): boolean => {
+  return email ? ALLOWED_EMAILS.includes(email) : false;
+};
+
+export const useAuthGuard = () => {
+  const [user, setUser] = useState<User | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [isAllowed, setIsAllowed] = useState(false);
+
+  useEffect(() => {
+    // DEMO MODE: Bypass authentication
+    if (DEMO_MODE) {
+      setUser({ id: 'demo-user', email: 'demo@shoeswiper.com' });
+      setIsAllowed(true);
+      setLoading(false);
+      console.log('[Demo] Authentication bypassed - Demo mode active');
+      return;
+    }
+
+    // PRODUCTION MODE: Use Supabase auth
+    const initAuth = async () => {
+      const { supabase } = await import('../lib/supabaseClient');
+
+      // Get initial session
+      supabase.auth.getSession().then(({ data: { session } }: any) => {
+        const currentUser = session?.user ?? null;
+        setUser(currentUser);
+        setIsAllowed(isEmailAllowed(currentUser?.email));
+        setLoading(false);
+      });
+
+      // Listen for auth changes
+      const { data: { subscription } } = supabase.auth.onAuthStateChange((_event: any, session: any) => {
+        const currentUser = session?.user ?? null;
+        setUser(currentUser);
+        setIsAllowed(isEmailAllowed(currentUser?.email));
+        setLoading(false);
+      });
+
+      return () => subscription.unsubscribe();
+    };
+
+    initAuth();
+  }, []);
+
+  return { user, loading, isAllowed };
+};
+
+
+================ FILE: shoeswipermainproject2-main/shoeswiper-complete/src/hooks/useEmailCapture.ts ================
+import { useState, useEffect, useCallback } from 'react';
+import { DEMO_MODE } from '../lib/config';
+
+const EMAIL_CAPTURE_KEY = 'shoeswiper_email_capture';
+const EMAIL_LIST_KEY = 'shoeswiper_email_list';
+
+export interface CapturedEmail {
+  email: string;
+  source: 'price_alert' | 'newsletter' | 'exit_intent' | 'referral';
+  shoeId?: string;
+  shoeName?: string;
+  createdAt: string;
+  preferences: {
+    priceAlerts: boolean;
+    newReleases: boolean;
+    weeklyDigest: boolean;
+    promotions: boolean;
+  };
+}
+
+export interface EmailCaptureState {
+  email: string | null;
+  isSubscribed: boolean;
+  preferences: CapturedEmail['preferences'];
+}
+
+const DEFAULT_PREFERENCES: CapturedEmail['preferences'] = {
+  priceAlerts: true,
+  newReleases: true,
+  weeklyDigest: false,
+  promotions: false,
+};
+
+export const useEmailCapture = () => {
+  const [state, setState] = useState<EmailCaptureState>({
+    email: null,
+    isSubscribed: false,
+    preferences: DEFAULT_PREFERENCES,
+  });
+  const [loading, setLoading] = useState(true);
+
+  // Load saved email on mount
+  useEffect(() => {
+    loadSavedEmail();
+  }, []);
+
+  const loadSavedEmail = async () => {
+    try {
+      if (DEMO_MODE) {
+        const stored = localStorage.getItem(EMAIL_CAPTURE_KEY);
+        if (stored) {
+          const data = JSON.parse(stored);
+          setState({
+            email: data.email,
+            isSubscribed: true,
+            preferences: data.preferences || DEFAULT_PREFERENCES,
+          });
+        }
+      } else {
+        const { supabase } = await import('../lib/supabaseClient');
+        const { data: { user } } = await supabase.auth.getUser();
+
+        if (user?.email) {
+          // Check if user has email preferences saved
+          const { data } = await supabase
+            .from('email_subscriptions')
+            .select('*')
+            .eq('email', user.email)
+            .single();
+
+          if (data) {
+            setState({
+              email: data.email,
+              isSubscribed: data.is_subscribed,
+              preferences: data.preferences || DEFAULT_PREFERENCES,
+            });
+          } else {
+            setState({
+              email: user.email,
+              isSubscribed: false,
+              preferences: DEFAULT_PREFERENCES,
+            });
+          }
+        }
+      }
+    } catch (err) {
+      console.error('[EmailCapture] Error loading saved email:', err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Validate email format
+  const isValidEmail = (email: string): boolean => {
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    return emailRegex.test(email);
+  };
+
+  // Capture email for a specific purpose
+  const captureEmail = useCallback(async (
+    email: string,
+    source: CapturedEmail['source'],
+    shoeData?: { id: string; name: string },
+    preferences?: Partial<CapturedEmail['preferences']>
+  ): Promise<{ success: boolean; error?: string }> => {
+    if (!isValidEmail(email)) {
+      return { success: false, error: 'Please enter a valid email address' };
+    }
+
+    try {
+      const capturedEmail: CapturedEmail = {
+        email: email.toLowerCase().trim(),
+        source,
+        shoeId: shoeData?.id,
+        shoeName: shoeData?.name,
+        createdAt: new Date().toISOString(),
+        preferences: { ...DEFAULT_PREFERENCES, ...preferences },
+      };
+
+      if (DEMO_MODE) {
+        // Save to localStorage
+        localStorage.setItem(EMAIL_CAPTURE_KEY, JSON.stringify({
+          email: capturedEmail.email,
+          preferences: capturedEmail.preferences,
+        }));
+
+        // Also add to email list for admin view
+        const existingList = JSON.parse(localStorage.getItem(EMAIL_LIST_KEY) || '[]');
+        const updatedList = [
+          capturedEmail,
+          ...existingList.filter((e: CapturedEmail) => e.email !== capturedEmail.email),
+        ];
+        localStorage.setItem(EMAIL_LIST_KEY, JSON.stringify(updatedList));
+
+        setState({
+          email: capturedEmail.email,
+          isSubscribed: true,
+          preferences: capturedEmail.preferences,
+        });
+
+        console.log(`[Demo] Email captured: ${email} for ${source}`);
+        return { success: true };
+      } else {
+        const { supabase } = await import('../lib/supabaseClient');
+
+        // Upsert email subscription
+        const { error } = await supabase
+          .from('email_subscriptions')
+          .upsert({
+            email: capturedEmail.email,
+            source: capturedEmail.source,
+            shoe_id: capturedEmail.shoeId,
+            shoe_name: capturedEmail.shoeName,
+            preferences: capturedEmail.preferences,
+            is_subscribed: true,
+            created_at: capturedEmail.createdAt,
+            updated_at: new Date().toISOString(),
+          }, {
+            onConflict: 'email',
+          });
+
+        if (error) throw error;
+
+        setState({
+          email: capturedEmail.email,
+          isSubscribed: true,
+          preferences: capturedEmail.preferences,
+        });
+
+        return { success: true };
+      }
+    } catch (err) {
+      console.error('[EmailCapture] Error capturing email:', err);
+      return { success: false, error: 'Failed to save email. Please try again.' };
+    }
+  }, []);
+
+  // Update email preferences
+  const updatePreferences = useCallback(async (
+    newPreferences: Partial<CapturedEmail['preferences']>
+  ): Promise<boolean> => {
+    if (!state.email) return false;
+
+    try {
+      const updatedPreferences = { ...state.preferences, ...newPreferences };
+
+      if (DEMO_MODE) {
+        localStorage.setItem(EMAIL_CAPTURE_KEY, JSON.stringify({
+          email: state.email,
+          preferences: updatedPreferences,
+        }));
+      } else {
+        const { supabase } = await import('../lib/supabaseClient');
+        await supabase
+          .from('email_subscriptions')
+          .update({
+            preferences: updatedPreferences,
+            updated_at: new Date().toISOString(),
+          })
+          .eq('email', state.email);
+      }
+
+      setState(prev => ({ ...prev, preferences: updatedPreferences }));
+      return true;
+    } catch (err) {
+      console.error('[EmailCapture] Error updating preferences:', err);
+      return false;
+    }
+  }, [state.email, state.preferences]);
+
+  // Unsubscribe from emails
+  const unsubscribe = useCallback(async (): Promise<boolean> => {
+    if (!state.email) return false;
+
+    try {
+      if (DEMO_MODE) {
+        localStorage.removeItem(EMAIL_CAPTURE_KEY);
+      } else {
+        const { supabase } = await import('../lib/supabaseClient');
+        await supabase
+          .from('email_subscriptions')
+          .update({
+            is_subscribed: false,
+            updated_at: new Date().toISOString(),
+          })
+          .eq('email', state.email);
+      }
+
+      setState({
+        email: null,
+        isSubscribed: false,
+        preferences: DEFAULT_PREFERENCES,
+      });
+      return true;
+    } catch (err) {
+      console.error('[EmailCapture] Error unsubscribing:', err);
+      return false;
+    }
+  }, [state.email]);
+
+  // Get all captured emails (for admin)
+  const getAllEmails = useCallback(async (): Promise<CapturedEmail[]> => {
+    try {
+      if (DEMO_MODE) {
+        const stored = localStorage.getItem(EMAIL_LIST_KEY);
+        return stored ? JSON.parse(stored) : [];
+      } else {
+        const { supabase } = await import('../lib/supabaseClient');
+        const { data } = await supabase
+          .from('email_subscriptions')
+          .select('*')
+          .eq('is_subscribed', true)
+          .order('created_at', { ascending: false });
+
+        return (data || []).map((e: any) => ({
+          email: e.email,
+          source: e.source,
+          shoeId: e.shoe_id,
+          shoeName: e.shoe_name,
+          createdAt: e.created_at,
+          preferences: e.preferences,
+        }));
+      }
+    } catch (err) {
+      console.error('[EmailCapture] Error getting emails:', err);
+      return [];
+    }
+  }, []);
+
+  return {
+    email: state.email,
+    isSubscribed: state.isSubscribed,
+    preferences: state.preferences,
+    loading,
+    isValidEmail,
+    captureEmail,
+    updatePreferences,
+    unsubscribe,
+    getAllEmails,
+  };
+};
+
+
+================ FILE: shoeswipermainproject2-main/shoeswiper-complete/src/hooks/useFavorites.ts ================
+import { useState, useEffect, useCallback } from 'react';
+import { DEMO_MODE } from '../lib/config';
+import { Shoe, UserSneaker } from '../lib/types';
+
+const FAVORITES_STORAGE_KEY = 'shoeswiper_favorites';
+
+export const useFavorites = () => {
+  const [favorites, setFavorites] = useState<Set<string>>(new Set());
+  const [loading, setLoading] = useState(true);
+
+  // Load favorites on mount
+  useEffect(() => {
+    loadFavorites();
+  }, []);
+
+  const loadFavorites = async () => {
+    setLoading(true);
+    try {
+      if (DEMO_MODE) {
+        // DEMO MODE: Load from localStorage
+        const stored = localStorage.getItem(FAVORITES_STORAGE_KEY);
+        if (stored) {
+          const ids = JSON.parse(stored) as string[];
+          setFavorites(new Set(ids));
+        }
+        console.log('[Demo] Favorites loaded from localStorage');
+      } else {
+        // PRODUCTION MODE: Load from Supabase
+        const { supabase } = await import('../lib/supabaseClient');
+        const { data: { user } } = await supabase.auth.getUser();
+
+        if (user) {
+          const { data, error } = await supabase
+            .from('user_sneakers')
+            .select('shoe_id')
+            .eq('user_id', user.id);
+
+          if (!error && data) {
+            setFavorites(new Set(data.map((item: { shoe_id: string }) => item.shoe_id)));
+          }
+        }
+      }
+    } catch (err) {
+      console.error('[Favorites] Error loading favorites:', err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const addFavorite = useCallback(async (shoeId: string): Promise<boolean> => {
+    try {
+      if (DEMO_MODE) {
+        // DEMO MODE: Save to localStorage
+        const newFavorites = new Set(favorites);
+        newFavorites.add(shoeId);
+        setFavorites(newFavorites);
+        localStorage.setItem(FAVORITES_STORAGE_KEY, JSON.stringify([...newFavorites]));
+        console.log(`[Demo] Added to favorites: ${shoeId}`);
+        return true;
+      } else {
+        // PRODUCTION MODE: Save to Supabase
+        const { supabase } = await import('../lib/supabaseClient');
+        const { data: { user } } = await supabase.auth.getUser();
+
+        if (!user) {
+          console.error('[Favorites] User not authenticated');
+          return false;
+        }
+
+        const { error } = await supabase.from('user_sneakers').insert({
+          user_id: user.id,
+          shoe_id: shoeId,
+          added_at: new Date().toISOString(),
+        });
+
+        if (error) {
+          // Check if already exists (unique constraint)
+          if (error.code === '23505') {
+            console.log('[Favorites] Already favorited');
+            return true;
+          }
+          throw error;
+        }
+
+        setFavorites(prev => new Set([...prev, shoeId]));
+        return true;
+      }
+    } catch (err) {
+      console.error('[Favorites] Error adding favorite:', err);
+      return false;
+    }
+  }, [favorites]);
+
+  const removeFavorite = useCallback(async (shoeId: string): Promise<boolean> => {
+    try {
+      if (DEMO_MODE) {
+        // DEMO MODE: Remove from localStorage
+        const newFavorites = new Set(favorites);
+        newFavorites.delete(shoeId);
+        setFavorites(newFavorites);
+        localStorage.setItem(FAVORITES_STORAGE_KEY, JSON.stringify([...newFavorites]));
+        console.log(`[Demo] Removed from favorites: ${shoeId}`);
+        return true;
+      } else {
+        // PRODUCTION MODE: Remove from Supabase
+        const { supabase } = await import('../lib/supabaseClient');
+        const { data: { user } } = await supabase.auth.getUser();
+
+        if (!user) {
+          console.error('[Favorites] User not authenticated');
+          return false;
+        }
+
+        const { error } = await supabase
+          .from('user_sneakers')
+          .delete()
+          .eq('user_id', user.id)
+          .eq('shoe_id', shoeId);
+
+        if (error) throw error;
+
+        setFavorites(prev => {
+          const newSet = new Set(prev);
+          newSet.delete(shoeId);
+          return newSet;
+        });
+        return true;
+      }
+    } catch (err) {
+      console.error('[Favorites] Error removing favorite:', err);
+      return false;
+    }
+  }, [favorites]);
+
+  const toggleFavorite = useCallback(async (shoeId: string): Promise<boolean> => {
+    if (favorites.has(shoeId)) {
+      return removeFavorite(shoeId);
+    } else {
+      return addFavorite(shoeId);
+    }
+  }, [favorites, addFavorite, removeFavorite]);
+
+  const isFavorite = useCallback((shoeId: string): boolean => {
+    return favorites.has(shoeId);
+  }, [favorites]);
+
+  const getFavoriteCount = useCallback((): number => {
+    return favorites.size;
+  }, [favorites]);
+
+  const getFavoriteIds = useCallback((): string[] => {
+    return [...favorites];
+  }, [favorites]);
+
+  return {
+    favorites,
+    loading,
+    addFavorite,
+    removeFavorite,
+    toggleFavorite,
+    isFavorite,
+    getFavoriteCount,
+    getFavoriteIds,
+    refreshFavorites: loadFavorites,
+  };
+};
+
+
+================ FILE: shoeswipermainproject2-main/shoeswiper-complete/src/hooks/useNFTMarketplace.ts ================
+// useNFTMarketplace.ts
+import { useCallback, useState } from "react";
+import { supabase } from "@/lib/supabaseClient";
+
+export type Rarity = "common" | "rare" | "legendary" | "grail";
+
+export type NFTFilter = "all" | "for_sale" | "auction" | "recent";
+
+export interface Sneaker {
+  id: string;
+  name: string;
+  brand: string;
+  image_url: string;
+  amazon_url?: string | null;
+}
+
+export interface Profile {
+  id: string;
+  username: string | null;
+  avatar_url: string | null;
+}
+
+export interface NFT {
+  id: string;
+  sneaker_id: string;
+  owner_id: string;
+  token_id: string;
+  rarity: Rarity;
+  minted_at: string | null;
+  for_sale: boolean;
+  price_eth: string | null;
+  auction_end: string | null;
+  sneaker?: Sneaker | null;
+  owner?: Profile | null;
+}
+
+interface ListNFTsParams {
+  filter?: NFTFilter;
+  ownerId?: string;
+}
+
+const uuidv4 = (): string => {
+  if (typeof crypto !== "undefined" && "randomUUID" in crypto) {
+    return crypto.randomUUID();
+  }
+  const random = () =>
+    Math.floor((1 + Math.random()) * 0x10000)
+      .toString(16)
+      .substring(1);
+  return `${random()}${random()}-${random()}-${random()}-${random()}-${random()}${random()}${random()}`;
+};
+
+export const useNFTMarketplace = () => {
+  const [nfts, setNfts] = useState<NFT[]>([]);
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const listNFTs = useCallback(
+    async (params: ListNFTsParams = {}) => {
+      const { filter = "all", ownerId } = params;
+      setIsLoading(true);
+      setError(null);
+
+      try {
+        let query = supabase
+          .from("nfts")
+          .select(
+            `
+          id,
+          sneaker_id,
+          owner_id,
+          token_id,
+          rarity,
+          minted_at,
+          for_sale,
+          price_eth,
+          auction_end,
+          sneaker:shoes (
+            id,
+            name,
+            brand,
+            image_url,
+            amazon_url
+          ),
+          owner:profiles (
+            id,
+            username,
+            avatar_url
+          )
+        `
+          )
+          .order("minted_at", { ascending: false });
+
+        if (ownerId) {
+          query = query.eq("owner_id", ownerId);
+        }
+
+        if (filter === "for_sale") {
+          query = query.eq("for_sale", true);
+        } else if (filter === "auction") {
+          query = query.not("auction_end", "is", null);
+        } else if (filter === "recent") {
+          const sevenDaysAgo = new Date(
+            Date.now() - 7 * 24 * 60 * 60 * 1000
+          ).toISOString();
+          query = query.gte("minted_at", sevenDaysAgo);
+        }
+
+        const { data, error: queryError } = await query;
+
+        if (queryError) {
+          throw queryError;
+        }
+
+        setNfts((data ?? []) as NFT[]);
+        setIsLoading(false);
+        return (data ?? []) as NFT[];
+      } catch (err: any) {
+        setIsLoading(false);
+        setError(err.message ?? "Failed to load NFTs");
+        throw err;
+      }
+    },
+    []
+  );
+
+  const mintNFT = useCallback(
+    async (sneakerId: string, proofImages: (File | string)[], rarity: Rarity) => {
+      setIsLoading(true);
+      setError(null);
+
+      try {
+        const {
+          data: { user },
+          error: userError,
+        } = await supabase.auth.getUser();
+
+        if (userError) throw userError;
+        if (!user) throw new Error("You must be logged in to mint an NFT.");
+
+        // Upload authenticity proofs to Supabase Storage (optional metadata)
+        const proofUrls: string[] = [];
+        for (const [index, item] of proofImages.entries()) {
+          if (typeof item === "string") {
+            proofUrls.push(item);
+          } else {
+            const file = item;
+            const ext = file.name.split(".").pop() || "jpg";
+            const path = `${user.id}/nft-proof-${sneakerId}-${Date.now()}-${index}.${ext}`;
+            const { error: uploadError } = await supabase.storage
+              .from("nft-proofs")
+              .upload(path, file, { upsert: true });
+
+            if (uploadError) {
+              console.warn("Failed to upload proof file", uploadError);
+              continue;
+            }
+
+            const { data: publicData } = supabase.storage
+              .from("nft-proofs")
+              .getPublicUrl(path);
+            if (publicData?.publicUrl) {
+              proofUrls.push(publicData.publicUrl);
+            }
+          }
+        }
+
+        const tokenId = `SS-${Math.random()
+          .toString(36)
+          .slice(2, 10)
+          .toUpperCase()}`;
+        const now = new Date().toISOString();
+        const newId = uuidv4();
+
+        const { data: inserted, error: insertError } = await supabase
+          .from("nfts")
+          .insert({
+            id: newId,
+            sneaker_id: sneakerId,
+            owner_id: user.id,
+            token_id: tokenId,
+            rarity,
+            minted_at: now,
+            for_sale: false,
+            price_eth: null,
+            auction_end: null,
+          })
+          .select(
+            `
+          id,
+          sneaker_id,
+          owner_id,
+          token_id,
+          rarity,
+          minted_at,
+          for_sale,
+          price_eth,
+          auction_end,
+          sneaker:shoes (
+            id,
+            name,
+            brand,
+            image_url,
+            amazon_url
+          ),
+          owner:profiles (
+            id,
+            username,
+            avatar_url
+          )
+        `
+          )
+          .single();
+
+        if (insertError) throw insertError;
+
+        // Initial ownership record (mint)
+        const { error: historyError } = await supabase
+          .from("nft_ownership_history")
+          .insert({
+            id: uuidv4(),
+            nft_id: newId,
+            from_user: null,
+            to_user: user.id,
+            price_eth: 0,
+          });
+
+        if (historyError) {
+          console.warn("Failed to insert ownership history", historyError);
+        }
+
+        // We don't persist proofUrls in schema here, but they exist in storage
+        if (proofUrls.length > 0) {
+          console.info("Stored proof URLs:", proofUrls);
+        }
+
+        const minted = inserted as NFT;
+        setNfts((prev) => [minted, ...prev]);
+        setIsLoading(false);
+        return minted;
+      } catch (err: any) {
+        setIsLoading(false);
+        setError(err.message ?? "Failed to mint NFT");
+        throw err;
+      }
+    },
+    []
+  );
+
+  const buyNFT = useCallback(async (nftId: string) => {
+    setIsLoading(true);
+    setError(null);
+
+    try {
+      const {
+        data: { user },
+        error: userError,
+      } = await supabase.auth.getUser();
+      if (userError) throw userError;
+      if (!user) throw new Error("You must be logged in to buy an NFT.");
+
+      const { data: nftRow, error: fetchError } = await supabase
+        .from("nfts")
+        .select("*")
+        .eq("id", nftId)
+        .single();
+
+      if (fetchError) throw fetchError;
+      if (!nftRow.for_sale || !nftRow.price_eth) {
+        throw new Error("NFT is not for sale.");
+      }
+
+      const oldOwnerId: string = nftRow.owner_id;
+
+      const { error: historyError } = await supabase
+        .from("nft_ownership_history")
+        .insert({
+          id: uuidv4(),
+          nft_id: nftId,
+          from_user: oldOwnerId,
+          to_user: user.id,
+          price_eth: nftRow.price_eth,
+        });
+
+      if (historyError) throw historyError;
+
+      const { data: updated, error: updateError } = await supabase
+        .from("nfts")
+        .update({
+          owner_id: user.id,
+          for_sale: false,
+          auction_end: null,
+        })
+        .eq("id", nftId)
+        .select(
+          `
+        id,
+        sneaker_id,
+        owner_id,
+        token_id,
+        rarity,
+        minted_at,
+        for_sale,
+        price_eth,
+        auction_end,
+        sneaker:shoes (
+          id,
+          name,
+          brand,
+          image_url,
+          amazon_url
+        ),
+        owner:profiles (
+          id,
+          username,
+          avatar_url
+        )
+      `
+        )
+        .single();
+
+      if (updateError) throw updateError;
+
+      const updatedNFT = updated as NFT;
+      setNfts((prev) =>
+        prev.map((existing) => (existing.id === nftId ? updatedNFT : existing))
+      );
+      setIsLoading(false);
+      return updatedNFT;
+    } catch (err: any) {
+      setIsLoading(false);
+      setError(err.message ?? "Failed to buy NFT");
+      throw err;
+    }
+  }, []);
+
+  const listForSale = useCallback(async (nftId: string, priceEth: number) => {
+    setIsLoading(true);
+    setError(null);
+
+    try {
+      const priceString = priceEth.toFixed(8);
+
+      const { data: updated, error: updateError } = await supabase
+        .from("nfts")
+        .update({
+          for_sale: true,
+          price_eth: priceString,
+        })
+        .eq("id", nftId)
+        .select(
+          `
+        id,
+        sneaker_id,
+        owner_id,
+        token_id,
+        rarity,
+        minted_at,
+        for_sale,
+        price_eth,
+        auction_end,
+        sneaker:shoes (
+          id,
+          name,
+          brand,
+          image_url,
+          amazon_url
+        ),
+        owner:profiles (
+          id,
+          username,
+          avatar_url
+        )
+      `
+        )
+        .single();
+
+      if (updateError) throw updateError;
+
+      const updatedNFT = updated as NFT;
+      setNfts((prev) =>
+        prev.map((existing) => (existing.id === nftId ? updatedNFT : existing))
+      );
+      setIsLoading(false);
+      return updatedNFT;
+    } catch (err: any) {
+      setIsLoading(false);
+      setError(err.message ?? "Failed to list NFT for sale");
+      throw err;
+    }
+  }, []);
+
+  return {
+    nfts,
+    isLoading,
+    error,
+    listNFTs,
+    mintNFT,
+    buyNFT,
+    listForSale,
+  };
+};
+
+export default useNFTMarketplace;
+
+
+================ FILE: shoeswipermainproject2-main/shoeswiper-complete/src/hooks/useOutfitAnalysis.ts ================
+import { useState } from 'react';
+import { Shoe } from '../lib/types';
+import { DEMO_MODE, MOCK_SHOES } from '../lib/mockData';
+import { supabase } from '../lib/supabaseClient';
+
+export interface OutfitAnalysis {
+  rating: number;
+  style_tags: string[];
+  dominant_colors: string[];
+  detected_shoe: string;
+  feedback: string;
+}
+
+export const useOutfitAnalysis = () => {
+  const [isAnalyzing, setIsAnalyzing] = useState(false);
+  const [analysis, setAnalysis] = useState<OutfitAnalysis | null>(null);
+  const [recommendations, setRecommendations] = useState<Shoe[]>([]);
+  const [error, setError] = useState<string | null>(null);
+
+  // Helper to fetch recommendations using our SQL function
+  const fetchRecommendations = async (styles: string[], colors: string[]) => {
+    // DEMO MODE: Use mock data
+    if (DEMO_MODE) {
+      const matches = MOCK_SHOES.filter(shoe =>
+        shoe.style_tags.some(tag => styles.includes(tag.toLowerCase()))
+      ).slice(0, 5);
+      setRecommendations(matches.length > 0 ? matches : MOCK_SHOES.slice(0, 5));
+      return;
+    }
+
+    // PRODUCTION MODE: Use Supabase
+    try {
+      // Call the RPC function we created in SQL
+      const { data, error } = await supabase.rpc('match_shoes_for_outfit', {
+        query_styles: styles,
+        query_colors: colors
+      });
+
+      if (error) throw error;
+
+      // Ensure affiliate tags exist on returned data
+      const taggedData = (data || []).map((shoe: any) => ({
+        ...shoe,
+        media: { has_3d_model: false },
+        amazon_url: shoe.amazon_url.includes('shoeswiper-20')
+          ? shoe.amazon_url
+          : `${shoe.amazon_url}${shoe.amazon_url.includes('?') ? '&' : '?'}tag=shoeswiper-20`
+      }));
+
+      setRecommendations(taggedData);
+    } catch (dbErr) {
+      console.error('Recommendation fetch failed:', dbErr);
+      // Fallback: Just get popular shoes if matching fails
+      const { data: fallback } = await supabase
+        .from('shoes')
+        .select('*')
+        .order('favorite_count', { ascending: false })
+        .limit(5);
+      setRecommendations(fallback as Shoe[] || []);
+    }
+  };
+
+  const analyzeImage = async (file: File) => {
+    setIsAnalyzing(true);
+    setError(null);
+
+    // DEMO MODE: Show demo analysis
+    if (DEMO_MODE) {
+      const mockResult: OutfitAnalysis = {
+        rating: 8,
+        style_tags: ['streetwear', 'casual'],
+        dominant_colors: ['black', 'white'],
+        detected_shoe: 'Demo Analysis',
+        feedback: 'Great style! Here are some sneakers that would match perfectly.'
+      };
+      setAnalysis(mockResult);
+      await fetchRecommendations(mockResult.style_tags, mockResult.dominant_colors);
+      setIsAnalyzing(false);
+      return;
+    }
+
+    // PRODUCTION MODE: Use Supabase AI
+    try {
+      const base64Image = await new Promise<string>((resolve) => {
+        const reader = new FileReader();
+        reader.readAsDataURL(file);
+        reader.onload = () => resolve((reader.result as string).split(',')[1]);
+      });
+
+      const { data: aiData, error: aiError } = await supabase.functions.invoke('analyze-outfit', {
+        body: { image: base64Image }
+      });
+
+      if (aiError) throw new Error('AI Service Unavailable');
+
+      const result: OutfitAnalysis = aiData;
+      setAnalysis(result);
+
+      // Perform the smart match
+      await fetchRecommendations(result.style_tags, result.dominant_colors);
+
+    } catch (err: any) {
+      console.error(err);
+      setError("AI Analysis unavailable. Select your style manually.");
+    } finally {
+      setIsAnalyzing(false);
+    }
+  };
+
+  // Manual Override for Fallback UI
+  const manualAnalyze = async (selectedStyle: string) => {
+    setIsAnalyzing(true);
+    setError(null);
+    
+    const mockAnalysis: OutfitAnalysis = {
+      rating: 8,
+      style_tags: [selectedStyle.toLowerCase()],
+      dominant_colors: ['black', 'neutral'],
+      detected_shoe: 'Manual Selection',
+      feedback: `Here are the best ${selectedStyle} kicks for your rotation.`
+    };
+    
+    setAnalysis(mockAnalysis);
+    await fetchRecommendations([selectedStyle.toLowerCase()], []);
+    setIsAnalyzing(false);
+  };
+
+  return { analyzeImage, manualAnalyze, isAnalyzing, analysis, recommendations, error };
+};
+
+
+================ FILE: shoeswipermainproject2-main/shoeswiper-complete/src/hooks/usePriceAlerts.ts ================
+import { useState, useEffect, useCallback } from 'react';
+import { DEMO_MODE } from '../lib/config';
+
+const PRICE_ALERTS_KEY = 'shoeswiper_price_alerts';
+const PRICE_NOTIFICATIONS_KEY = 'shoeswiper_price_notifications';
+
+export interface PriceAlert {
+  shoeId: string;
+  shoeName: string;
+  shoeBrand: string;
+  shoeImage: string;
+  amazonUrl: string;
+  targetPrice: number;
+  currentPrice?: number;
+  originalPrice?: number;
+  createdAt: string;
+  lastChecked?: string;
+  triggered?: boolean;
+  triggeredAt?: string;
+}
+
+export interface PriceNotification {
+  id: string;
+  shoeId: string;
+  shoeName: string;
+  shoeBrand: string;
+  shoeImage: string;
+  amazonUrl: string;
+  oldPrice: number;
+  newPrice: number;
+  savedAmount: number;
+  percentOff: number;
+  createdAt: string;
+  read: boolean;
+}
+
+export const usePriceAlerts = () => {
+  const [alerts, setAlerts] = useState<PriceAlert[]>([]);
+  const [notifications, setNotifications] = useState<PriceNotification[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  // Load alerts on mount
+  useEffect(() => {
+    loadAlerts();
+    loadNotifications();
+  }, []);
+
+  const loadAlerts = async () => {
+    setLoading(true);
+    try {
+      if (DEMO_MODE) {
+        const stored = localStorage.getItem(PRICE_ALERTS_KEY);
+        if (stored) {
+          setAlerts(JSON.parse(stored));
+        }
+      } else {
+        const { supabase } = await import('../lib/supabaseClient');
+        const { data: { user } } = await supabase.auth.getUser();
+
+        if (user) {
+          const { data } = await supabase
+            .from('price_alerts')
+            .select('*')
+            .eq('user_id', user.id)
+            .order('created_at', { ascending: false });
+
+          if (data) {
+            setAlerts(data.map((alert: any) => ({
+              shoeId: alert.shoe_id,
+              shoeName: alert.shoe_name,
+              shoeBrand: alert.shoe_brand,
+              shoeImage: alert.shoe_image,
+              amazonUrl: alert.amazon_url,
+              targetPrice: alert.target_price,
+              currentPrice: alert.current_price,
+              originalPrice: alert.original_price,
+              createdAt: alert.created_at,
+              lastChecked: alert.last_checked,
+              triggered: alert.triggered,
+              triggeredAt: alert.triggered_at,
+            })));
+          }
+        }
+      }
+    } catch (err) {
+      console.error('[PriceAlerts] Error loading alerts:', err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const loadNotifications = async () => {
+    try {
+      if (DEMO_MODE) {
+        const stored = localStorage.getItem(PRICE_NOTIFICATIONS_KEY);
+        if (stored) {
+          setNotifications(JSON.parse(stored));
+        }
+      } else {
+        const { supabase } = await import('../lib/supabaseClient');
+        const { data: { user } } = await supabase.auth.getUser();
+
+        if (user) {
+          const { data } = await supabase
+            .from('price_notifications')
+            .select('*')
+            .eq('user_id', user.id)
+            .order('created_at', { ascending: false })
+            .limit(20);
+
+          if (data) {
+            setNotifications(data.map((n: any) => ({
+              id: n.id,
+              shoeId: n.shoe_id,
+              shoeName: n.shoe_name,
+              shoeBrand: n.shoe_brand,
+              shoeImage: n.shoe_image,
+              amazonUrl: n.amazon_url,
+              oldPrice: n.old_price,
+              newPrice: n.new_price,
+              savedAmount: n.saved_amount,
+              percentOff: n.percent_off,
+              createdAt: n.created_at,
+              read: n.read,
+            })));
+          }
+        }
+      }
+    } catch (err) {
+      console.error('[PriceAlerts] Error loading notifications:', err);
+    }
+  };
+
+  // Add a price alert
+  const addAlert = useCallback(async (
+    shoe: {
+      id: string;
+      name: string;
+      brand: string;
+      image_url: string;
+      amazon_url: string;
+      price?: number;
+    },
+    targetPrice: number
+  ): Promise<boolean> => {
+    try {
+      const newAlert: PriceAlert = {
+        shoeId: shoe.id,
+        shoeName: shoe.name,
+        shoeBrand: shoe.brand,
+        shoeImage: shoe.image_url,
+        amazonUrl: shoe.amazon_url,
+        targetPrice,
+        originalPrice: shoe.price,
+        currentPrice: shoe.price,
+        createdAt: new Date().toISOString(),
+        triggered: false,
+      };
+
+      if (DEMO_MODE) {
+        const updatedAlerts = [...alerts.filter(a => a.shoeId !== shoe.id), newAlert];
+        setAlerts(updatedAlerts);
+        localStorage.setItem(PRICE_ALERTS_KEY, JSON.stringify(updatedAlerts));
+        console.log(`[Demo] Price alert set for ${shoe.name} at $${targetPrice}`);
+        return true;
+      } else {
+        const { supabase } = await import('../lib/supabaseClient');
+        const { data: { user } } = await supabase.auth.getUser();
+
+        if (!user) return false;
+
+        // Upsert alert (update if exists, insert if not)
+        const { error } = await supabase
+          .from('price_alerts')
+          .upsert({
+            user_id: user.id,
+            shoe_id: shoe.id,
+            shoe_name: shoe.name,
+            shoe_brand: shoe.brand,
+            shoe_image: shoe.image_url,
+            amazon_url: shoe.amazon_url,
+            target_price: targetPrice,
+            original_price: shoe.price,
+            current_price: shoe.price,
+            created_at: new Date().toISOString(),
+            triggered: false,
+          }, {
+            onConflict: 'user_id,shoe_id',
+          });
+
+        if (error) throw error;
+
+        setAlerts(prev => [...prev.filter(a => a.shoeId !== shoe.id), newAlert]);
+        return true;
+      }
+    } catch (err) {
+      console.error('[PriceAlerts] Error adding alert:', err);
+      return false;
+    }
+  }, [alerts]);
+
+  // Remove a price alert
+  const removeAlert = useCallback(async (shoeId: string): Promise<boolean> => {
+    try {
+      if (DEMO_MODE) {
+        const updatedAlerts = alerts.filter(a => a.shoeId !== shoeId);
+        setAlerts(updatedAlerts);
+        localStorage.setItem(PRICE_ALERTS_KEY, JSON.stringify(updatedAlerts));
+        console.log(`[Demo] Price alert removed for shoe ${shoeId}`);
+        return true;
+      } else {
+        const { supabase } = await import('../lib/supabaseClient');
+        const { data: { user } } = await supabase.auth.getUser();
+
+        if (!user) return false;
+
+        const { error } = await supabase
+          .from('price_alerts')
+          .delete()
+          .eq('user_id', user.id)
+          .eq('shoe_id', shoeId);
+
+        if (error) throw error;
+
+        setAlerts(prev => prev.filter(a => a.shoeId !== shoeId));
+        return true;
+      }
+    } catch (err) {
+      console.error('[PriceAlerts] Error removing alert:', err);
+      return false;
+    }
+  }, [alerts]);
+
+  // Check if alert exists for a shoe
+  const hasAlert = useCallback((shoeId: string): boolean => {
+    return alerts.some(a => a.shoeId === shoeId);
+  }, [alerts]);
+
+  // Get alert for a specific shoe
+  const getAlert = useCallback((shoeId: string): PriceAlert | undefined => {
+    return alerts.find(a => a.shoeId === shoeId);
+  }, [alerts]);
+
+  // Simulate a price drop (for DEMO mode) - also triggers push notification
+  const simulatePriceDrop = useCallback(async (shoeId: string, newPrice: number) => {
+    const alert = alerts.find(a => a.shoeId === shoeId);
+    if (!alert) return;
+
+    if (newPrice <= alert.targetPrice && !alert.triggered) {
+      const oldPrice = alert.currentPrice || alert.originalPrice || 0;
+      const notification: PriceNotification = {
+        id: `notif-${Date.now()}`,
+        shoeId: alert.shoeId,
+        shoeName: alert.shoeName,
+        shoeBrand: alert.shoeBrand,
+        shoeImage: alert.shoeImage,
+        amazonUrl: alert.amazonUrl,
+        oldPrice,
+        newPrice,
+        savedAmount: oldPrice - newPrice,
+        percentOff: Math.round((oldPrice - newPrice) / (oldPrice || 1) * 100),
+        createdAt: new Date().toISOString(),
+        read: false,
+      };
+
+      // Update alert as triggered
+      const updatedAlerts = alerts.map(a =>
+        a.shoeId === shoeId
+          ? { ...a, triggered: true, triggeredAt: new Date().toISOString(), currentPrice: newPrice }
+          : a
+      );
+      setAlerts(updatedAlerts);
+      localStorage.setItem(PRICE_ALERTS_KEY, JSON.stringify(updatedAlerts));
+
+      // Add notification
+      const updatedNotifications = [notification, ...notifications];
+      setNotifications(updatedNotifications);
+      localStorage.setItem(PRICE_NOTIFICATIONS_KEY, JSON.stringify(updatedNotifications));
+
+      // Trigger push notification if enabled
+      try {
+        if ('Notification' in window && Notification.permission === 'granted') {
+          const percentOff = Math.round((oldPrice - newPrice) / (oldPrice || 1) * 100);
+          const registration = await navigator.serviceWorker?.ready;
+          if (registration?.active) {
+            registration.active.postMessage({
+              type: 'SHOW_LOCAL_NOTIFICATION',
+              payload: {
+                title: `Price Drop: ${alert.shoeName}`,
+                body: `Now $${newPrice} (was $${oldPrice}) - Save ${percentOff}%!`,
+                data: {
+                  shoeId: alert.shoeId,
+                  amazonUrl: alert.amazonUrl,
+                  type: 'price_drop',
+                },
+              },
+            });
+          }
+        }
+      } catch (err) {
+        console.log('[PriceAlerts] Push notification not available');
+      }
+
+      console.log(`[Demo] Price drop alert triggered for ${alert.shoeName}! Now $${newPrice}`);
+    }
+  }, [alerts, notifications]);
+
+  // Mark notification as read
+  const markNotificationRead = useCallback(async (notificationId: string) => {
+    if (DEMO_MODE) {
+      const updated = notifications.map(n =>
+        n.id === notificationId ? { ...n, read: true } : n
+      );
+      setNotifications(updated);
+      localStorage.setItem(PRICE_NOTIFICATIONS_KEY, JSON.stringify(updated));
+    } else {
+      const { supabase } = await import('../lib/supabaseClient');
+      await supabase
+        .from('price_notifications')
+        .update({ read: true })
+        .eq('id', notificationId);
+
+      setNotifications(prev =>
+        prev.map(n => n.id === notificationId ? { ...n, read: true } : n)
+      );
+    }
+  }, [notifications]);
+
+  // Clear all notifications
+  const clearNotifications = useCallback(async () => {
+    if (DEMO_MODE) {
+      setNotifications([]);
+      localStorage.setItem(PRICE_NOTIFICATIONS_KEY, JSON.stringify([]));
+    } else {
+      const { supabase } = await import('../lib/supabaseClient');
+      const { data: { user } } = await supabase.auth.getUser();
+
+      if (user) {
+        await supabase
+          .from('price_notifications')
+          .delete()
+          .eq('user_id', user.id);
+
+        setNotifications([]);
+      }
+    }
+  }, []);
+
+  // Get unread notification count
+  const unreadCount = notifications.filter(n => !n.read).length;
+
+  return {
+    alerts,
+    notifications,
+    loading,
+    unreadCount,
+    addAlert,
+    removeAlert,
+    hasAlert,
+    getAlert,
+    simulatePriceDrop,
+    markNotificationRead,
+    clearNotifications,
+    refreshAlerts: loadAlerts,
+    refreshNotifications: loadNotifications,
+  };
+};
+
+
+================ FILE: shoeswipermainproject2-main/shoeswiper-complete/src/hooks/usePushNotifications.ts ================
+import { useState, useEffect, useCallback } from 'react';
+import { DEMO_MODE } from '../lib/config';
+
+const PUSH_SETTINGS_KEY = 'shoeswiper_push_settings';
+
+export interface PushSettings {
+  enabled: boolean;
+  priceDrops: boolean;
+  newReleases: boolean;
+  restocks: boolean;
+  promotions: boolean;
+  subscribedAt?: string;
+}
+
+const DEFAULT_SETTINGS: PushSettings = {
+  enabled: false,
+  priceDrops: true,
+  newReleases: true,
+  restocks: true,
+  promotions: false,
+};
+
+export const usePushNotifications = () => {
+  const [permission, setPermission] = useState<NotificationPermission>('default');
+  const [isSupported, setIsSupported] = useState(false);
+  const [swRegistration, setSwRegistration] = useState<ServiceWorkerRegistration | null>(null);
+  const [settings, setSettings] = useState<PushSettings>(DEFAULT_SETTINGS);
+  const [loading, setLoading] = useState(true);
+
+  // Check support and load settings on mount
+  useEffect(() => {
+    checkSupport();
+    loadSettings();
+  }, []);
+
+  const checkSupport = () => {
+    const supported = 'Notification' in window && 'serviceWorker' in navigator && 'PushManager' in window;
+    setIsSupported(supported);
+
+    if (supported) {
+      setPermission(Notification.permission);
+    }
+  };
+
+  const loadSettings = () => {
+    try {
+      const stored = localStorage.getItem(PUSH_SETTINGS_KEY);
+      if (stored) {
+        setSettings(JSON.parse(stored));
+      }
+    } catch (err) {
+      console.error('[Push] Error loading settings:', err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const saveSettings = (newSettings: PushSettings) => {
+    setSettings(newSettings);
+    localStorage.setItem(PUSH_SETTINGS_KEY, JSON.stringify(newSettings));
+  };
+
+  // Register service worker
+  const registerServiceWorker = useCallback(async (): Promise<ServiceWorkerRegistration | null> => {
+    if (!isSupported) return null;
+
+    try {
+      const registration = await navigator.serviceWorker.register('/sw.js', {
+        scope: '/',
+      });
+
+      console.log('[Push] Service worker registered:', registration.scope);
+      setSwRegistration(registration);
+
+      // Wait for the service worker to be ready
+      await navigator.serviceWorker.ready;
+      console.log('[Push] Service worker ready');
+
+      return registration;
+    } catch (err) {
+      console.error('[Push] Service worker registration failed:', err);
+      return null;
+    }
+  }, [isSupported]);
+
+  // Request notification permission
+  const requestPermission = useCallback(async (): Promise<boolean> => {
+    if (!isSupported) {
+      console.log('[Push] Push notifications not supported');
+      return false;
+    }
+
+    try {
+      const result = await Notification.requestPermission();
+      setPermission(result);
+
+      if (result === 'granted') {
+        console.log('[Push] Permission granted');
+
+        // Register service worker if not already registered
+        let registration = swRegistration;
+        if (!registration) {
+          registration = await registerServiceWorker();
+        }
+
+        if (registration) {
+          // Update settings
+          saveSettings({
+            ...settings,
+            enabled: true,
+            subscribedAt: new Date().toISOString(),
+          });
+
+          // Store subscription in Supabase (for production)
+          if (!DEMO_MODE) {
+            await saveSubscriptionToServer(registration);
+          }
+
+          return true;
+        }
+      }
+
+      return false;
+    } catch (err) {
+      console.error('[Push] Error requesting permission:', err);
+      return false;
+    }
+  }, [isSupported, swRegistration, settings, registerServiceWorker]);
+
+  // Save subscription to server (for production push from backend)
+  const saveSubscriptionToServer = async (registration: ServiceWorkerRegistration) => {
+    try {
+      const subscription = await registration.pushManager.subscribe({
+        userVisibleOnly: true,
+        // In production, you'd use a VAPID key here
+        // applicationServerKey: urlBase64ToUint8Array(VAPID_PUBLIC_KEY)
+      });
+
+      const { supabase } = await import('../lib/supabaseClient');
+      const { data: { user } } = await supabase.auth.getUser();
+
+      if (user) {
+        await supabase.from('push_subscriptions').upsert({
+          user_id: user.id,
+          subscription: JSON.stringify(subscription),
+          created_at: new Date().toISOString(),
+          settings: settings,
+        }, {
+          onConflict: 'user_id',
+        });
+      }
+    } catch (err) {
+      console.error('[Push] Error saving subscription:', err);
+    }
+  };
+
+  // Disable push notifications
+  const disablePush = useCallback(async () => {
+    saveSettings({
+      ...settings,
+      enabled: false,
+    });
+
+    // Unsubscribe from push manager
+    if (swRegistration) {
+      try {
+        const subscription = await swRegistration.pushManager.getSubscription();
+        if (subscription) {
+          await subscription.unsubscribe();
+          console.log('[Push] Unsubscribed from push notifications');
+        }
+      } catch (err) {
+        console.error('[Push] Error unsubscribing:', err);
+      }
+    }
+
+    // Remove from server
+    if (!DEMO_MODE) {
+      try {
+        const { supabase } = await import('../lib/supabaseClient');
+        const { data: { user } } = await supabase.auth.getUser();
+
+        if (user) {
+          await supabase.from('push_subscriptions').delete().eq('user_id', user.id);
+        }
+      } catch (err) {
+        console.error('[Push] Error removing subscription from server:', err);
+      }
+    }
+  }, [swRegistration, settings]);
+
+  // Update notification preferences
+  const updateSettings = useCallback((updates: Partial<PushSettings>) => {
+    const newSettings = { ...settings, ...updates };
+    saveSettings(newSettings);
+
+    // Sync to server in production
+    if (!DEMO_MODE && newSettings.enabled) {
+      syncSettingsToServer(newSettings);
+    }
+  }, [settings]);
+
+  const syncSettingsToServer = async (newSettings: PushSettings) => {
+    try {
+      const { supabase } = await import('../lib/supabaseClient');
+      const { data: { user } } = await supabase.auth.getUser();
+
+      if (user) {
+        await supabase
+          .from('push_subscriptions')
+          .update({ settings: newSettings })
+          .eq('user_id', user.id);
+      }
+    } catch (err) {
+      console.error('[Push] Error syncing settings:', err);
+    }
+  };
+
+  // Show a local notification (for demo/testing)
+  const showLocalNotification = useCallback(async (
+    title: string,
+    body: string,
+    data?: Record<string, any>
+  ) => {
+    if (permission !== 'granted') {
+      console.log('[Push] No permission for notifications');
+      return false;
+    }
+
+    try {
+      // Try to use service worker for notification
+      const registration = swRegistration || await navigator.serviceWorker.ready;
+
+      if (registration && registration.active) {
+        registration.active.postMessage({
+          type: 'SHOW_LOCAL_NOTIFICATION',
+          payload: { title, body, data },
+        });
+        return true;
+      }
+
+      // Fallback to basic notification
+      new Notification(title, {
+        body,
+        icon: '/favicon.svg',
+        badge: '/favicon.svg',
+        tag: 'shoeswiper-notification',
+        data,
+      });
+
+      return true;
+    } catch (err) {
+      console.error('[Push] Error showing notification:', err);
+      return false;
+    }
+  }, [permission, swRegistration]);
+
+  // Send price drop notification
+  const notifyPriceDrop = useCallback(async (
+    shoeName: string,
+    oldPrice: number,
+    newPrice: number,
+    amazonUrl: string,
+    shoeId: string
+  ) => {
+    if (!settings.enabled || !settings.priceDrops) return false;
+
+    const percentOff = Math.round(((oldPrice - newPrice) / oldPrice) * 100);
+    const savedAmount = (oldPrice - newPrice).toFixed(2);
+
+    return showLocalNotification(
+      `Price Drop: ${shoeName}`,
+      `Now $${newPrice} (was $${oldPrice}) - Save $${savedAmount} (${percentOff}% off!)`,
+      { shoeId, amazonUrl, type: 'price_drop' }
+    );
+  }, [settings, showLocalNotification]);
+
+  // Send new release notification
+  const notifyNewRelease = useCallback(async (
+    shoeName: string,
+    brand: string,
+    shoeId: string
+  ) => {
+    if (!settings.enabled || !settings.newReleases) return false;
+
+    return showLocalNotification(
+      `New Release: ${brand}`,
+      `${shoeName} is now available! Tap to check it out.`,
+      { shoeId, type: 'new_release' }
+    );
+  }, [settings, showLocalNotification]);
+
+  // Send restock notification
+  const notifyRestock = useCallback(async (
+    shoeName: string,
+    amazonUrl: string,
+    shoeId: string
+  ) => {
+    if (!settings.enabled || !settings.restocks) return false;
+
+    return showLocalNotification(
+      `Back in Stock!`,
+      `${shoeName} is available again. Grab it before it sells out!`,
+      { shoeId, amazonUrl, type: 'restock' }
+    );
+  }, [settings, showLocalNotification]);
+
+  return {
+    // State
+    isSupported,
+    permission,
+    settings,
+    loading,
+    isEnabled: permission === 'granted' && settings.enabled,
+
+    // Actions
+    requestPermission,
+    disablePush,
+    updateSettings,
+    registerServiceWorker,
+
+    // Notification triggers
+    showLocalNotification,
+    notifyPriceDrop,
+    notifyNewRelease,
+    notifyRestock,
+  };
+};
+
+
+================ FILE: shoeswipermainproject2-main/shoeswiper-complete/src/hooks/useReferral.ts ================
+import { useState, useEffect, useCallback } from 'react';
+import { DEMO_MODE } from '../lib/config';
+
+const REFERRAL_STORAGE_KEY = 'shoeswiper_referral';
+const USER_REFERRAL_CODE_KEY = 'shoeswiper_my_referral_code';
+const REFERRAL_STATS_KEY = 'shoeswiper_referral_stats';
+
+interface ReferralStats {
+  totalShares: number;
+  totalClicks: number;
+  totalSignups: number;
+  earnedRewards: number; // Points or credits earned
+  pendingRewards: number;
+}
+
+interface ReferralInfo {
+  code: string;
+  referredBy?: string;
+  createdAt: string;
+}
+
+// Generate a unique referral code based on user ID
+const generateReferralCode = (userId: string): string => {
+  const prefix = 'SS'; // ShoeSwiper
+  const userPart = userId.substring(0, 6).toUpperCase();
+  const random = Math.random().toString(36).substring(2, 5).toUpperCase();
+  return `${prefix}${userPart}${random}`;
+};
+
+export const useReferral = () => {
+  const [referralCode, setReferralCode] = useState<string | null>(null);
+  const [referralStats, setReferralStats] = useState<ReferralStats>({
+    totalShares: 0,
+    totalClicks: 0,
+    totalSignups: 0,
+    earnedRewards: 0,
+    pendingRewards: 0,
+  });
+  const [loading, setLoading] = useState(true);
+
+  // Load referral data on mount
+  useEffect(() => {
+    loadReferralData();
+  }, []);
+
+  const loadReferralData = async () => {
+    setLoading(true);
+    try {
+      if (DEMO_MODE) {
+        // DEMO MODE: Load from localStorage
+        let code = localStorage.getItem(USER_REFERRAL_CODE_KEY);
+
+        if (!code) {
+          // Generate a demo referral code
+          code = generateReferralCode('demo-user-id');
+          localStorage.setItem(USER_REFERRAL_CODE_KEY, code);
+        }
+
+        setReferralCode(code);
+
+        // Load stats
+        const storedStats = localStorage.getItem(REFERRAL_STATS_KEY);
+        if (storedStats) {
+          setReferralStats(JSON.parse(storedStats));
+        }
+      } else {
+        // PRODUCTION MODE: Load from Supabase
+        const { supabase } = await import('../lib/supabaseClient');
+        const { data: { user } } = await supabase.auth.getUser();
+
+        if (user) {
+          // Get or create referral code
+          const { data: referralData, error } = await supabase
+            .from('user_referrals')
+            .select('*')
+            .eq('user_id', user.id)
+            .single();
+
+          if (referralData) {
+            setReferralCode(referralData.code);
+            setReferralStats({
+              totalShares: referralData.total_shares || 0,
+              totalClicks: referralData.total_clicks || 0,
+              totalSignups: referralData.total_signups || 0,
+              earnedRewards: referralData.earned_rewards || 0,
+              pendingRewards: referralData.pending_rewards || 0,
+            });
+          } else if (!error || error.code === 'PGRST116') {
+            // Create new referral code
+            const newCode = generateReferralCode(user.id);
+            await supabase.from('user_referrals').insert({
+              user_id: user.id,
+              code: newCode,
+              created_at: new Date().toISOString(),
+            });
+            setReferralCode(newCode);
+          }
+        }
+      }
+    } catch (err) {
+      console.error('[Referral] Error loading referral data:', err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Track a share action
+  const trackShare = useCallback(async () => {
+    try {
+      if (DEMO_MODE) {
+        const newStats = {
+          ...referralStats,
+          totalShares: referralStats.totalShares + 1,
+        };
+        setReferralStats(newStats);
+        localStorage.setItem(REFERRAL_STATS_KEY, JSON.stringify(newStats));
+        console.log('[Demo] Referral share tracked');
+      } else {
+        const { supabase } = await import('../lib/supabaseClient');
+        const { data: { user } } = await supabase.auth.getUser();
+
+        if (user) {
+          await supabase.rpc('increment_referral_shares', { user_id: user.id });
+          setReferralStats(prev => ({
+            ...prev,
+            totalShares: prev.totalShares + 1,
+          }));
+        }
+      }
+    } catch (err) {
+      console.error('[Referral] Error tracking share:', err);
+    }
+  }, [referralStats]);
+
+  // Track when someone clicks a referral link
+  const trackClick = useCallback(async (referrerCode: string) => {
+    try {
+      if (DEMO_MODE) {
+        console.log(`[Demo] Referral click tracked for code: ${referrerCode}`);
+        // In demo mode, we can simulate tracking
+        const storedStats = localStorage.getItem(REFERRAL_STATS_KEY);
+        if (storedStats) {
+          const stats = JSON.parse(storedStats);
+          stats.totalClicks = (stats.totalClicks || 0) + 1;
+          localStorage.setItem(REFERRAL_STATS_KEY, JSON.stringify(stats));
+        }
+      } else {
+        const { supabase } = await import('../lib/supabaseClient');
+
+        // Find the referrer and increment their click count
+        await supabase.rpc('track_referral_click', { referrer_code: referrerCode });
+      }
+    } catch (err) {
+      console.error('[Referral] Error tracking click:', err);
+    }
+  }, []);
+
+  // Process a successful signup via referral
+  const processReferralSignup = useCallback(async (referrerCode: string, newUserId: string) => {
+    try {
+      if (DEMO_MODE) {
+        console.log(`[Demo] Referral signup: ${newUserId} referred by ${referrerCode}`);
+
+        // Store who referred this user
+        localStorage.setItem(REFERRAL_STORAGE_KEY, JSON.stringify({
+          code: referrerCode,
+          userId: newUserId,
+          signedUpAt: new Date().toISOString(),
+        }));
+
+        // Update referrer's stats
+        const storedStats = localStorage.getItem(REFERRAL_STATS_KEY);
+        if (storedStats) {
+          const stats = JSON.parse(storedStats);
+          stats.totalSignups = (stats.totalSignups || 0) + 1;
+          stats.pendingRewards = (stats.pendingRewards || 0) + 100; // 100 points per referral
+          localStorage.setItem(REFERRAL_STATS_KEY, JSON.stringify(stats));
+        }
+      } else {
+        const { supabase } = await import('../lib/supabaseClient');
+
+        // Process the referral in Supabase
+        await supabase.rpc('process_referral_signup', {
+          referrer_code: referrerCode,
+          new_user_id: newUserId,
+        });
+      }
+    } catch (err) {
+      console.error('[Referral] Error processing signup:', err);
+    }
+  }, []);
+
+  // Get the referral share URL
+  const getReferralUrl = useCallback((): string => {
+    if (!referralCode) return '';
+
+    const baseUrl = typeof window !== 'undefined'
+      ? window.location.origin
+      : 'https://shoeswiper.com';
+
+    return `${baseUrl}/?ref=${referralCode}`;
+  }, [referralCode]);
+
+  // Get shareable referral message
+  const getReferralMessage = useCallback((): string => {
+    const url = getReferralUrl();
+    return `Check out ShoeSwiper! Discover the hottest sneakers with a TikTok-style feed. Use my link to join: ${url}`;
+  }, [getReferralUrl]);
+
+  // Share referral link
+  const shareReferralLink = useCallback(async () => {
+    const message = getReferralMessage();
+    const url = getReferralUrl();
+
+    trackShare();
+
+    if (navigator.share) {
+      try {
+        await navigator.share({
+          title: 'Join ShoeSwiper',
+          text: message,
+          url,
+        });
+        return { success: true, method: 'native' };
+      } catch (err) {
+        console.log('Share cancelled');
+        return { success: false, method: 'cancelled' };
+      }
+    } else {
+      await navigator.clipboard.writeText(message);
+      return { success: true, method: 'clipboard' };
+    }
+  }, [getReferralMessage, getReferralUrl, trackShare]);
+
+  // Check if current user was referred and by whom
+  const checkReferralStatus = useCallback(async (): Promise<ReferralInfo | null> => {
+    try {
+      if (DEMO_MODE) {
+        const stored = localStorage.getItem(REFERRAL_STORAGE_KEY);
+        if (stored) {
+          return JSON.parse(stored);
+        }
+      } else {
+        const { supabase } = await import('../lib/supabaseClient');
+        const { data: { user } } = await supabase.auth.getUser();
+
+        if (user) {
+          const { data } = await supabase
+            .from('user_referrals')
+            .select('referred_by, created_at')
+            .eq('user_id', user.id)
+            .single();
+
+          if (data?.referred_by) {
+            return {
+              code: referralCode || '',
+              referredBy: data.referred_by,
+              createdAt: data.created_at,
+            };
+          }
+        }
+      }
+      return null;
+    } catch (err) {
+      console.error('[Referral] Error checking referral status:', err);
+      return null;
+    }
+  }, [referralCode]);
+
+  // Calculate reward tier based on signups
+  const getRewardTier = useCallback((): { tier: string; progress: number; nextTier: string; signupsNeeded: number } => {
+    const signups = referralStats.totalSignups;
+
+    if (signups >= 50) {
+      return { tier: 'Diamond', progress: 100, nextTier: 'Diamond', signupsNeeded: 0 };
+    } else if (signups >= 25) {
+      return { tier: 'Gold', progress: ((signups - 25) / 25) * 100, nextTier: 'Diamond', signupsNeeded: 50 - signups };
+    } else if (signups >= 10) {
+      return { tier: 'Silver', progress: ((signups - 10) / 15) * 100, nextTier: 'Gold', signupsNeeded: 25 - signups };
+    } else if (signups >= 3) {
+      return { tier: 'Bronze', progress: ((signups - 3) / 7) * 100, nextTier: 'Silver', signupsNeeded: 10 - signups };
+    } else {
+      return { tier: 'Starter', progress: (signups / 3) * 100, nextTier: 'Bronze', signupsNeeded: 3 - signups };
+    }
+  }, [referralStats.totalSignups]);
+
+  return {
+    referralCode,
+    referralStats,
+    loading,
+    trackShare,
+    trackClick,
+    processReferralSignup,
+    getReferralUrl,
+    getReferralMessage,
+    shareReferralLink,
+    checkReferralStatus,
+    getRewardTier,
+    refreshReferralData: loadReferralData,
+  };
+};
+
+
+================ FILE: shoeswipermainproject2-main/shoeswiper-complete/src/hooks/useSneakerSearch.ts ================
+import { useState } from 'react';
+import { Shoe } from '../lib/types';
+import { DEMO_MODE, searchShoes } from '../lib/mockData';
+import { supabase } from '../lib/supabaseClient';
+
+export interface SearchFilters {
+  brands?: string[];
+  minPrice?: number;
+  maxPrice?: number;
+  gender?: 'men' | 'women' | 'unisex' | 'kids';
+  styleTags?: string[];
+  colorTags?: string[];
+  sortBy?: 'price_asc' | 'price_desc' | 'newest' | 'trending';
+}
+
+export const useSneakerSearch = () => {
+  const [results, setResults] = useState<Shoe[]>([]);
+  const [isSearching, setIsSearching] = useState(false);
+
+  const searchSneakers = async (query: string, filters: SearchFilters = {}) => {
+    setIsSearching(true);
+
+    try {
+      // DEMO MODE: Use mock data
+      if (DEMO_MODE) {
+        let results = searchShoes(query);
+
+        // Apply filters
+        if (filters.brands && filters.brands.length > 0) {
+          results = results.filter(shoe => filters.brands!.includes(shoe.brand));
+        }
+        if (filters.gender) {
+          results = results.filter(shoe => shoe.gender === filters.gender);
+        }
+        if (filters.styleTags && filters.styleTags.length > 0) {
+          results = results.filter(shoe =>
+            shoe.style_tags.some(tag => filters.styleTags!.includes(tag))
+          );
+        }
+
+        setResults(results.slice(0, 50));
+        setIsSearching(false);
+        return;
+      }
+
+      // PRODUCTION MODE: Use Supabase
+      let dbQuery = supabase.from('shoes').select('*').eq('is_active', true);
+
+      // 1. Text Search (if query exists)
+      if (query.trim().length > 0) {
+        dbQuery = dbQuery.textSearch('name', query, {
+          type: 'websearch',
+          config: 'english'
+        });
+      }
+
+      // 2. Apply Filters
+      if (filters.brands && filters.brands.length > 0) {
+        dbQuery = dbQuery.in('brand', filters.brands);
+      }
+
+      if (filters.minPrice !== undefined) {
+        dbQuery = dbQuery.gte('price', filters.minPrice);
+      }
+      
+      if (filters.maxPrice !== undefined) {
+        dbQuery = dbQuery.lte('price', filters.maxPrice);
+      }
+
+      if (filters.gender) {
+        dbQuery = dbQuery.eq('gender', filters.gender);
+      }
+
+      // Array Overlap Checks
+      if (filters.styleTags && filters.styleTags.length > 0) {
+        dbQuery = dbQuery.contains('style_tags', filters.styleTags);
+      }
+      
+      if (filters.colorTags && filters.colorTags.length > 0) {
+        dbQuery = dbQuery.contains('color_tags', filters.colorTags);
+      }
+
+      // 3. Sorting
+      switch (filters.sortBy) {
+        case 'price_asc':
+          dbQuery = dbQuery.order('price', { ascending: true });
+          break;
+        case 'price_desc':
+          dbQuery = dbQuery.order('price', { ascending: false });
+          break;
+        case 'newest':
+          dbQuery = dbQuery.order('created_at', { ascending: false });
+          break;
+        case 'trending':
+          dbQuery = dbQuery.order('view_count', { ascending: false });
+          break;
+        default:
+          if (!query) dbQuery = dbQuery.order('favorite_count', { ascending: false });
+      }
+
+      const { data, error } = await dbQuery.limit(50);
+      
+      if (error) throw error;
+      setResults(data as Shoe[]);
+      
+    } catch (err) {
+      console.error('Search failed:', err);
+    } finally {
+      setIsSearching(false);
+    }
+  };
+
+  return {
+    searchSneakers,
+    results,
+    isSearching
+  };
+};
+
+

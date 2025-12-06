@@ -1,0 +1,1898 @@
+================ FILE: shoeswipermainproject2-main/shoeswiper-complete/src/components/ShoePanel.tsx ================
+import React, { useState } from 'react';
+import { FaTimes, FaAmazon, FaBookmark, FaShare, FaChevronLeft, FaChevronRight, FaCheck, FaBell } from 'react-icons/fa';
+import { Shoe } from '../lib/types';
+import { getAffiliateUrl, shouldShowPrice, formatPrice } from '../lib/supabaseClient';
+import { createAffiliateShareData } from '../lib/deepLinks';
+import { useFavorites } from '../hooks/useFavorites';
+import { useAnalytics } from '../hooks/useAnalytics';
+import PriceAlertButton from './PriceAlertButton';
+
+interface ShoePanelProps {
+  shoe: Shoe;
+  isOpen: boolean;
+  onClose: () => void;
+}
+
+const ShoePanel: React.FC<ShoePanelProps> = ({ shoe, isOpen, onClose }) => {
+  const [selectedSize, setSelectedSize] = useState<string | null>(null);
+  const [currentImageIndex, setCurrentImageIndex] = useState(0);
+  const [showShareToast, setShowShareToast] = useState(false);
+  const { toggleFavorite, isFavorite } = useFavorites();
+  const { trackFavorite, trackShare } = useAnalytics();
+
+  // Generate view angles (in production these would be real image URLs)
+  const viewAngles = [
+    { label: 'Side', url: shoe.image_url },
+    { label: 'Front', url: shoe.image_url },
+    { label: 'Back', url: shoe.image_url },
+    { label: 'Top', url: shoe.image_url },
+    { label: 'Sole', url: shoe.image_url },
+  ];
+
+  // Default sizes if none provided
+  const sizes = shoe.sizes_available || ['7', '7.5', '8', '8.5', '9', '9.5', '10', '10.5', '11', '11.5', '12', '13'];
+
+  const handleBuyClick = () => {
+    window.open(getAffiliateUrl(shoe.amazon_url), '_blank');
+  };
+
+  const handleShare = async () => {
+    // Generate smart share data with deep links and affiliate tracking
+    const shareData = createAffiliateShareData(shoe, 'share_native');
+
+    if (navigator.share) {
+      try {
+        await navigator.share({
+          title: shareData.title,
+          text: shareData.text,
+          url: shareData.url,
+        });
+        trackShare(shoe.id, 'native');
+      } catch (err) {
+        console.log('Share cancelled');
+      }
+    } else {
+      // Copy rich share text to clipboard
+      navigator.clipboard.writeText(shareData.text);
+      trackShare(shoe.id, 'clipboard');
+      // Show toast instead of alert
+      setShowShareToast(true);
+      setTimeout(() => setShowShareToast(false), 2500);
+    }
+  };
+
+  const handleAddToCloset = async () => {
+    const wasAlreadyFavorite = isFavorite(shoe.id);
+    const success = await toggleFavorite(shoe.id);
+    if (success) {
+      trackFavorite(shoe.id, wasAlreadyFavorite ? 'remove' : 'add');
+    }
+  };
+
+  const isInCloset = isFavorite(shoe.id);
+
+  const prevImage = () => {
+    setCurrentImageIndex((prev) => (prev === 0 ? viewAngles.length - 1 : prev - 1));
+  };
+
+  const nextImage = () => {
+    setCurrentImageIndex((prev) => (prev === viewAngles.length - 1 ? 0 : prev + 1));
+  };
+
+  return (
+    <>
+      {/* Backdrop */}
+      <div
+        className={`fixed inset-0 bg-black/60 backdrop-blur-sm z-40 transition-opacity duration-300 ${
+          isOpen ? 'opacity-100' : 'opacity-0 pointer-events-none'
+        }`}
+        onClick={onClose}
+      />
+
+      {/* Panel */}
+      <div
+        className={`fixed top-0 left-0 h-full w-full max-w-md bg-zinc-950 z-50 transform transition-transform duration-300 ease-out overflow-y-auto ${
+          isOpen ? 'translate-x-0' : '-translate-x-full'
+        }`}
+      >
+        {/* Header */}
+        <div className="sticky top-0 bg-zinc-950/95 backdrop-blur-sm border-b border-zinc-800 p-4 flex items-center justify-between z-10">
+          <h2 className="text-lg font-bold text-white">3D View</h2>
+          <button
+            onClick={onClose}
+            className="w-10 h-10 bg-zinc-800 rounded-full flex items-center justify-center text-white hover:bg-zinc-700 transition-colors"
+          >
+            <FaTimes />
+          </button>
+        </div>
+
+        {/* Model Viewer / Main Image */}
+        <div className="relative bg-gradient-to-b from-zinc-900 to-zinc-950 aspect-square flex items-center justify-center">
+          <img
+            src={viewAngles[currentImageIndex].url}
+            alt={`${shoe.name} - ${viewAngles[currentImageIndex].label}`}
+            className="max-w-[80%] max-h-[80%] object-contain drop-shadow-2xl"
+          />
+
+          {/* Navigation arrows */}
+          <button
+            onClick={prevImage}
+            className="absolute left-3 top-1/2 -translate-y-1/2 w-10 h-10 bg-black/50 backdrop-blur-sm rounded-full flex items-center justify-center text-white hover:bg-black/70 transition-colors"
+          >
+            <FaChevronLeft />
+          </button>
+          <button
+            onClick={nextImage}
+            className="absolute right-3 top-1/2 -translate-y-1/2 w-10 h-10 bg-black/50 backdrop-blur-sm rounded-full flex items-center justify-center text-white hover:bg-black/70 transition-colors"
+          >
+            <FaChevronRight />
+          </button>
+
+          {/* 3D badge placeholder */}
+          <div className="absolute top-4 left-4 bg-orange-500 text-white text-xs font-bold px-3 py-1 rounded-full">
+            360° VIEW
+          </div>
+        </div>
+
+        {/* View Angles Gallery */}
+        <div className="p-4 border-b border-zinc-800">
+          <p className="text-zinc-400 text-sm mb-3">View Angles</p>
+          <div className="flex gap-2 overflow-x-auto pb-2">
+            {viewAngles.map((angle, index) => (
+              <button
+                key={angle.label}
+                onClick={() => setCurrentImageIndex(index)}
+                className={`flex-shrink-0 w-16 h-16 rounded-lg overflow-hidden border-2 transition-colors ${
+                  currentImageIndex === index
+                    ? 'border-orange-500'
+                    : 'border-zinc-700 hover:border-zinc-600'
+                }`}
+              >
+                <img
+                  src={angle.url}
+                  alt={angle.label}
+                  className="w-full h-full object-cover"
+                />
+              </button>
+            ))}
+          </div>
+        </div>
+
+        {/* Shoe Details */}
+        <div className="p-4 border-b border-zinc-800">
+          <span className="bg-orange-500 text-white text-xs font-bold px-2 py-1 rounded uppercase">
+            {shoe.brand}
+          </span>
+          <h3 className="text-xl font-bold text-white mt-2">{shoe.name}</h3>
+          {shouldShowPrice(shoe.price) && (
+            <p className="text-2xl font-bold text-orange-400 mt-1">{formatPrice(shoe.price)}</p>
+          )}
+        </div>
+
+        {/* Size Selector */}
+        <div className="p-4 border-b border-zinc-800">
+          <p className="text-zinc-400 text-sm mb-3">Select Size (US)</p>
+          <div className="grid grid-cols-4 gap-2">
+            {sizes.map((size) => (
+              <button
+                key={size}
+                onClick={() => setSelectedSize(size)}
+                className={`py-3 rounded-lg font-bold text-sm transition-colors ${
+                  selectedSize === size
+                    ? 'bg-orange-500 text-white'
+                    : 'bg-zinc-800 text-zinc-300 hover:bg-zinc-700'
+                }`}
+              >
+                {size}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        {/* Specifications */}
+        <div className="p-4 border-b border-zinc-800">
+          <p className="text-zinc-400 text-sm mb-3">Specifications</p>
+          <div className="space-y-2">
+            {shoe.colorway && (
+              <div className="flex justify-between text-sm">
+                <span className="text-zinc-500">Colorway</span>
+                <span className="text-white">{shoe.colorway}</span>
+              </div>
+            )}
+            {shoe.style_code && (
+              <div className="flex justify-between text-sm">
+                <span className="text-zinc-500">Style Code</span>
+                <span className="text-white">{shoe.style_code}</span>
+              </div>
+            )}
+            {shoe.release_date && (
+              <div className="flex justify-between text-sm">
+                <span className="text-zinc-500">Release Date</span>
+                <span className="text-white">{shoe.release_date}</span>
+              </div>
+            )}
+            {shouldShowPrice(shoe.retail_price) && (
+              <div className="flex justify-between text-sm">
+                <span className="text-zinc-500">Retail</span>
+                <span className="text-white">{formatPrice(shoe.retail_price)}</span>
+              </div>
+            )}
+            {shoe.amazon_asin && (
+              <div className="flex justify-between text-sm">
+                <span className="text-zinc-500">ASIN</span>
+                <span className="text-zinc-400 font-mono">{shoe.amazon_asin}</span>
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* Description */}
+        {shoe.description && (
+          <div className="p-4 border-b border-zinc-800">
+            <p className="text-zinc-400 text-sm mb-2">Description</p>
+            <p className="text-zinc-300 text-sm leading-relaxed">{shoe.description}</p>
+          </div>
+        )}
+
+        {/* Action Buttons */}
+        <div className="p-4 space-y-3 pb-8">
+          <button
+            onClick={handleBuyClick}
+            className="w-full bg-white text-black font-black py-4 rounded-xl flex items-center justify-center gap-3 text-base active:scale-95 transition-transform"
+          >
+            <FaAmazon className="text-2xl" />
+            BUY ON AMAZON
+          </button>
+
+          {/* Price Alert */}
+          <div className="flex justify-center">
+            <PriceAlertButton shoe={shoe} />
+          </div>
+
+          <div className="flex gap-3">
+            <button
+              onClick={handleAddToCloset}
+              className={`flex-1 font-bold py-3 rounded-xl flex items-center justify-center gap-2 transition-colors ${
+                isInCloset
+                  ? 'bg-orange-500 text-white'
+                  : 'bg-zinc-800 text-white hover:bg-zinc-700'
+              }`}
+            >
+              {isInCloset ? <FaCheck /> : <FaBookmark />}
+              {isInCloset ? 'In Closet' : 'Add to Closet'}
+            </button>
+            <button
+              onClick={handleShare}
+              className="flex-1 bg-zinc-800 text-white font-bold py-3 rounded-xl flex items-center justify-center gap-2 hover:bg-zinc-700 transition-colors"
+            >
+              <FaShare />
+              Share
+            </button>
+          </div>
+        </div>
+
+        {/* Share Success Toast */}
+        <div
+          className={`fixed bottom-8 left-1/2 -translate-x-1/2 bg-zinc-700 text-white px-4 py-3 rounded-xl flex items-center gap-2 shadow-lg z-[60] transition-all duration-300 ${
+            showShareToast ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4 pointer-events-none'
+          }`}
+        >
+          <div className="w-6 h-6 bg-green-500 rounded-full flex items-center justify-center">
+            <FaCheck className="text-xs text-white" />
+          </div>
+          <span className="font-medium text-sm">Copied with affiliate link!</span>
+        </div>
+      </div>
+    </>
+  );
+};
+
+export default ShoePanel;
+
+
+================ FILE: shoeswipermainproject2-main/shoeswiper-complete/src/components/SneakerCard.tsx ================
+import React, { useState } from 'react';
+import { motion } from 'framer-motion';
+import { FaHeart, FaRegHeart, FaAmazon, FaTag } from 'react-icons/fa';
+import { Shoe } from '../lib/types';
+import { useSneakers } from '../hooks/useSneakers';
+import { shouldShowPrice, formatPrice, AFFILIATE_TAG } from '../lib/supabaseClient';
+
+interface Props {
+  shoe: Shoe;
+  variant?: 'feed' | 'grid';
+}
+
+export const SneakerCard: React.FC<Props> = ({ shoe, variant = 'grid' }) => {
+  const { trackClick, trackView } = useSneakers();
+  const [isLiked, setIsLiked] = useState(false);
+
+  const getAffiliateLink = (url: string) => {
+    if (url.includes(`tag=${AFFILIATE_TAG}`)) return url;
+    const separator = url.includes('?') ? '&' : '?';
+    return `${url}${separator}tag=${AFFILIATE_TAG}`;
+  };
+
+  const showPrice = shouldShowPrice(shoe.price);
+
+  const handleBuyClick = () => {
+    trackClick(shoe.id);
+    window.open(getAffiliateLink(shoe.amazon_url), '_blank');
+  };
+
+  const toggleLike = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    setIsLiked(!isLiked);
+  };
+
+  const isOnSale = showPrice && shoe.sale_price && shoe.sale_price < (shoe.price || 0);
+  const discount = isOnSale && shoe.price
+    ? Math.round(((shoe.price - shoe.sale_price!) / shoe.price) * 100)
+    : 0;
+
+  // Render Grid Version (Search Results/Profile)
+  if (variant === 'grid') {
+    return (
+      <div className="bg-zinc-900 border border-zinc-800 rounded-xl overflow-hidden group hover:border-orange-500/50 transition-all">
+        <div className="relative aspect-square bg-zinc-800">
+          <img 
+            src={shoe.image_url} 
+            alt={shoe.name}
+            loading="lazy"
+            className="w-full h-full object-cover object-center group-hover:scale-105 transition-transform duration-500"
+          />
+          {isOnSale && (
+            <div className="absolute top-2 left-2 bg-red-500 text-white text-[10px] font-bold px-2 py-1 rounded-full flex items-center gap-1">
+              <FaTag /> -{discount}%
+            </div>
+          )}
+          <button 
+            onClick={toggleLike}
+            className="absolute top-2 right-2 p-2 rounded-full bg-black/50 backdrop-blur-sm text-white hover:text-red-500 transition-colors"
+          >
+            {isLiked ? <FaHeart className="text-red-500" /> : <FaRegHeart />}
+          </button>
+        </div>
+        
+        <div className="p-3">
+          <p className="text-xs text-zinc-500 font-bold uppercase">{shoe.brand}</p>
+          <h3 className="text-sm font-medium text-white line-clamp-1">{shoe.name}</h3>
+
+          <div className="mt-3 flex items-center justify-between">
+            {showPrice ? (
+              <div className="flex flex-col">
+                {isOnSale && <span className="text-[10px] text-zinc-500 line-through">{formatPrice(shoe.price)}</span>}
+                <span className={`font-bold ${isOnSale ? 'text-red-400' : 'text-orange-500'}`}>
+                  {formatPrice(isOnSale ? shoe.sale_price : shoe.price)}
+                </span>
+              </div>
+            ) : (
+              <span className="text-xs text-zinc-400">See price on Amazon</span>
+            )}
+
+            <button
+              onClick={handleBuyClick}
+              className="bg-white text-black px-3 py-1.5 rounded-lg text-xs font-bold flex items-center gap-1 hover:bg-zinc-200"
+            >
+              <FaAmazon /> Shop
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // Render Feed Version (Full Screen TikTok Style)
+  return (
+    <div className="relative w-full h-full bg-black">
+      <img 
+        src={shoe.image_url} 
+        alt={shoe.name}
+        className="w-full h-full object-cover opacity-80"
+      />
+      
+      {/* Gradient Overlay */}
+      <div className="absolute inset-0 bg-gradient-to-b from-black/20 via-transparent to-black/90 pointer-events-none" />
+
+      {/* Content */}
+      <div className="absolute bottom-24 left-0 w-full p-6">
+        <div className="flex items-end justify-between">
+          <div>
+            <div className="flex items-center gap-2 mb-2">
+              <span className="bg-orange-500 text-white text-xs font-bold px-2 py-1 rounded uppercase">
+                {shoe.brand}
+              </span>
+              {shoe.style_tags.slice(0, 2).map(tag => (
+                <span key={tag} className="bg-zinc-800/80 text-zinc-300 text-xs px-2 py-1 rounded backdrop-blur-md">
+                  #{tag}
+                </span>
+              ))}
+            </div>
+            <h2 className="text-3xl font-black text-white leading-tight mb-2 shadow-sm">{shoe.name}</h2>
+            {showPrice ? (
+              <div className="flex items-center gap-3">
+                <span className="text-2xl font-bold text-orange-400">{formatPrice(shoe.price)}</span>
+                <span className="text-zinc-400 text-sm">Free Shipping via Amazon</span>
+              </div>
+            ) : (
+              <span className="text-zinc-400 text-sm">Shop on Amazon for current price</span>
+            )}
+          </div>
+        </div>
+
+        <button
+          onClick={handleBuyClick}
+          className="mt-6 w-full bg-white text-black font-black py-4 rounded-xl flex items-center justify-center gap-2 text-lg hover:scale-[1.02] active:scale-95 transition-all shadow-lg shadow-white/10"
+        >
+          <FaAmazon className="text-xl" /> SHOP ON AMAZON
+        </button>
+      </div>
+
+      {/* Side Actions (Like, Share) */}
+      <div className="absolute bottom-32 right-4 flex flex-col gap-6 items-center">
+        <button onClick={toggleLike} className="flex flex-col items-center gap-1">
+          <div className="p-3 bg-zinc-800/60 backdrop-blur-md rounded-full">
+            {isLiked ? <FaHeart className="text-2xl text-red-500" /> : <FaRegHeart className="text-2xl text-white" />}
+          </div>
+          <span className="text-xs font-bold text-white">{shoe.favorite_count + (isLiked ? 1 : 0)}</span>
+        </button>
+      </div>
+    </div>
+  );
+};
+
+
+================ FILE: shoeswipermainproject2-main/shoeswiper-complete/src/components/admin/AdminLayout.tsx ================
+import React, { useEffect } from 'react';
+import { useNavigate, Outlet, Link, useLocation } from 'react-router-dom';
+import { useAdmin } from '../../hooks/useAdmin';
+import { FaBox, FaUsers, FaChartLine, FaSignOutAlt, FaShieldAlt } from 'react-icons/fa';
+
+export const AdminLayout: React.FC = () => {
+  const { isAdmin } = useAdmin();
+  const navigate = useNavigate();
+  const location = useLocation();
+
+  useEffect(() => {
+    if (isAdmin === false) {
+      navigate('/');
+    }
+  }, [isAdmin, navigate]);
+
+  if (isAdmin === null) return <div className="min-h-screen bg-zinc-950 flex items-center justify-center text-white">Verifying Access...</div>;
+
+  const navItems = [
+    { path: '/admin', label: 'Overview', icon: FaChartLine },
+    { path: '/admin/products', label: 'Products', icon: FaBox },
+    { path: '/admin/users', label: 'Users', icon: FaUsers },
+  ];
+
+  return (
+    <div className="flex h-screen bg-zinc-950 text-white">
+      {/* Sidebar */}
+      <div className="w-64 bg-zinc-900 border-r border-zinc-800 flex flex-col">
+        <div className="p-6 border-b border-zinc-800">
+          <h1 className="text-xl font-bold flex items-center gap-2">
+            <FaShieldAlt className="text-orange-500" /> Admin
+          </h1>
+          <p className="text-xs text-zinc-500 mt-1">dadsellsgadgets@gmail.com</p>
+        </div>
+
+        <nav className="flex-1 p-4 space-y-2">
+          {navItems.map((item) => (
+            <Link
+              key={item.path}
+              to={item.path}
+              className={`flex items-center gap-3 px-4 py-3 rounded-lg transition-colors ${
+                location.pathname === item.path 
+                  ? 'bg-orange-500/10 text-orange-500 font-bold' 
+                  : 'text-zinc-400 hover:bg-zinc-800 hover:text-white'
+              }`}
+            >
+              <item.icon />
+              {item.label}
+            </Link>
+          ))}
+        </nav>
+
+        <div className="p-4 border-t border-zinc-800">
+          <Link to="/" className="flex items-center gap-3 px-4 py-3 text-zinc-400 hover:text-white transition-colors">
+            <FaSignOutAlt /> Exit Admin
+          </Link>
+        </div>
+      </div>
+
+      {/* Main Content */}
+      <div className="flex-1 overflow-y-auto">
+        <div className="p-8 max-w-7xl mx-auto">
+          <Outlet />
+        </div>
+      </div>
+    </div>
+  );
+};
+
+
+================ FILE: shoeswipermainproject2-main/shoeswiper-complete/src/components/check-fit/ManualStyleSelector.tsx ================
+import React from 'react';
+import { motion } from 'framer-motion';
+import { FaFire, FaRunning, FaUserTie, FaTree, FaGem, FaHistory } from 'react-icons/fa';
+
+interface Props {
+  onSelect: (style: string) => void;
+}
+
+const STYLES = [
+  { id: 'streetwear', label: 'Streetwear', icon: FaFire, color: 'text-orange-500', bg: 'bg-orange-500/10', border: 'border-orange-500/20' },
+  { id: 'athletic', label: 'Athletic', icon: FaRunning, color: 'text-blue-500', bg: 'bg-blue-500/10', border: 'border-blue-500/20' },
+  { id: 'casual', label: 'Casual', icon: FaTree, color: 'text-green-500', bg: 'bg-green-500/10', border: 'border-green-500/20' },
+  { id: 'hype', label: 'Hype / Grail', icon: FaGem, color: 'text-purple-500', bg: 'bg-purple-500/10', border: 'border-purple-500/20' },
+  { id: 'retro', label: 'Vintage', icon: FaHistory, color: 'text-yellow-500', bg: 'bg-yellow-500/10', border: 'border-yellow-500/20' },
+  { id: 'formal', label: 'Formal', icon: FaUserTie, color: 'text-zinc-300', bg: 'bg-zinc-500/10', border: 'border-zinc-500/20' },
+];
+
+export const ManualStyleSelector: React.FC<Props> = ({ onSelect }) => {
+  return (
+    <motion.div 
+      initial={{ opacity: 0 }} 
+      animate={{ opacity: 1 }} 
+      className="p-4 bg-zinc-900 rounded-2xl border border-zinc-800"
+    >
+      <h3 className="text-white font-bold mb-4 text-center">Select Your Vibe</h3>
+      <div className="grid grid-cols-2 gap-3">
+        {STYLES.map((style) => (
+          <button
+            key={style.id}
+            onClick={() => onSelect(style.id)}
+            className={`p-4 rounded-xl border ${style.border} ${style.bg} hover:scale-[1.02] active:scale-95 transition-all flex flex-col items-center justify-center gap-2`}
+          >
+            <style.icon className={`text-2xl ${style.color}`} />
+            <span className="text-sm font-bold text-zinc-300">{style.label}</span>
+          </button>
+        ))}
+      </div>
+    </motion.div>
+  );
+};
+
+
+================ FILE: shoeswipermainproject2-main/shoeswiper-complete/src/components/check-fit/ShareResults.tsx ================
+import React from 'react';
+import { motion } from 'framer-motion';
+import { FaShareAlt, FaAmazon, FaArrowRight } from 'react-icons/fa';
+import { Shoe } from '../../lib/types';
+import { OutfitAnalysis } from '../../hooks/useOutfitAnalysis';
+
+interface Props {
+  outfitImage: string;
+  analysis: OutfitAnalysis;
+  recommendations: Shoe[];
+}
+
+export const ShareResults: React.FC<Props> = ({ analysis, recommendations }) => {
+  
+  const handleShare = async () => {
+    if (navigator.share) {
+      try {
+        await navigator.share({
+          title: `My fit is a ${analysis.rating}/10 on ShoeSwiper!`,
+          text: `Check out my outfit rating. AI says: "${analysis.feedback}"`,
+          url: 'https://shoeswiper.com',
+        });
+      } catch (err) {
+        console.log('Share canceled');
+      }
+    }
+  };
+
+  return (
+    <div className="space-y-6">
+      <div className="flex items-center justify-between">
+        <h3 className="font-bold text-lg text-white">Shoe Upgrades</h3>
+        <button 
+          onClick={handleShare}
+          className="text-orange-500 text-sm flex items-center gap-2 hover:text-orange-400"
+        >
+          <FaShareAlt /> Share Result
+        </button>
+      </div>
+
+      <div className="grid gap-4">
+        {recommendations.map((shoe, idx) => (
+          <motion.div
+            key={shoe.id}
+            initial={{ opacity: 0, x: -20 }}
+            animate={{ opacity: 1, x: 0 }}
+            transition={{ delay: idx * 0.1 }}
+            className="bg-zinc-900 border border-zinc-800 rounded-xl overflow-hidden flex h-32"
+          >
+            {/* Shoe Image */}
+            <div className="w-32 h-full bg-zinc-800 relative">
+              <img src={shoe.image_url} alt={shoe.name} className="w-full h-full object-cover" />
+              {shoe.media?.has_3d_model && (
+                <div className="absolute top-1 left-1 bg-black/60 px-1.5 py-0.5 rounded text-[10px] text-white backdrop-blur-md">3D</div>
+              )}
+            </div>
+
+            {/* Info & Action */}
+            <div className="flex-1 p-3 flex flex-col justify-between">
+              <div>
+                <h4 className="font-bold text-sm text-white line-clamp-1">{shoe.name}</h4>
+                <p className="text-xs text-zinc-400">{shoe.brand}</p>
+              </div>
+              
+              <div className="flex items-end justify-between mt-2">
+                <div>
+                   <span className="text-orange-500 font-bold">${shoe.price}</span>
+                   <div className="text-[10px] text-green-500 flex items-center gap-1 mt-0.5">
+                     Match for {analysis.style_tags[0]}
+                   </div>
+                </div>
+
+                <a 
+                  href={shoe.amazon_url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="bg-white text-black px-3 py-2 rounded-lg text-xs font-bold flex items-center gap-1 shadow hover:scale-105 transition-transform"
+                >
+                  <FaAmazon /> Shop <FaArrowRight className="text-[10px]" />
+                </a>
+              </div>
+            </div>
+          </motion.div>
+        ))}
+      </div>
+
+      {recommendations.length === 0 && (
+         <div className="text-center p-8 bg-zinc-900/50 rounded-xl border border-dashed border-zinc-700">
+           <p className="text-zinc-500">No perfect matches found right now.</p>
+         </div>
+      )}
+    </div>
+  );
+};
+
+
+================ FILE: shoeswipermainproject2-main/shoeswiper-complete/src/components/nft/NFTDetailModal.tsx ================
+import React, { useEffect, useState } from "react";
+import { supabase, AFFILIATE_TAG } from "../../lib/supabaseClient";
+import type { NFT, Profile, NFTOwnershipHistory } from "../../lib/types";
+
+interface OwnershipHistoryItem {
+  id: string;
+  nft_id: string;
+  from_user: Profile | null;
+  to_user: Profile | null;
+  price_eth: string | null;
+  transferred_at: string;
+}
+
+interface NFTDetailModalProps {
+  open: boolean;
+  nft: NFT | null;
+  onClose: () => void;
+  onBuy?: (nftId: string) => Promise<void>;
+}
+
+const NFTDetailModal: React.FC<NFTDetailModalProps> = ({
+  open,
+  nft,
+  onClose,
+  onBuy,
+}) => {
+  const [history, setHistory] = useState<OwnershipHistoryItem[]>([]);
+  const [loadingHistory, setLoadingHistory] = useState(false);
+  const [isBuying, setIsBuying] = useState(false);
+
+  useEffect(() => {
+    const loadHistory = async () => {
+      if (!open || !nft?.id) return;
+      setLoadingHistory(true);
+      try {
+        const { data: rows, error } = await supabase
+          .from("nft_ownership_history")
+          .select(
+            "id, nft_id, from_user, to_user, price_eth, transferred_at"
+          )
+          .eq("nft_id", nft.id)
+          .order("transferred_at", { ascending: false });
+
+        if (error) {
+          console.error(error);
+          return;
+        }
+
+        const rawRows =
+          (rows as {
+            id: string;
+            nft_id: string;
+            from_user: string | null;
+            to_user: string;
+            price_eth: string | null;
+            transferred_at: string;
+          }[]) ?? [];
+
+        const userIds = Array.from(
+          new Set(
+            rawRows
+              .flatMap((row) => [row.from_user, row.to_user])
+              .filter(Boolean) as string[]
+          )
+        );
+
+        let profilesById: Record<string, Profile> = {};
+        if (userIds.length > 0) {
+          const { data: profiles, error: profilesError } = await supabase
+            .from("profiles")
+            .select("id, username, avatar_url")
+            .in("id", userIds);
+
+          if (profilesError) {
+            console.error(profilesError);
+          } else {
+            profilesById =
+              (profiles as Profile[]).reduce<Record<string, Profile>>(
+                (acc, profile) => {
+                  acc[profile.id] = profile;
+                  return acc;
+                },
+                {}
+              );
+          }
+        }
+
+        const mapped: OwnershipHistoryItem[] = rawRows.map((row) => ({
+          id: row.id,
+          nft_id: row.nft_id,
+          from_user: row.from_user ? profilesById[row.from_user] ?? null : null,
+          to_user: profilesById[row.to_user] ?? null,
+          price_eth: row.price_eth,
+          transferred_at: row.transferred_at,
+        }));
+
+        setHistory(mapped);
+      } finally {
+        setLoadingHistory(false);
+      }
+    };
+
+    void loadHistory();
+  }, [open, nft?.id]);
+
+  if (!open || !nft) return null;
+
+  const handleBuyClick = async () => {
+    if (!onBuy) return;
+    setIsBuying(true);
+    try {
+      await onBuy(nft.id);
+    } catch (e) {
+      console.error(e);
+    } finally {
+      setIsBuying(false);
+    }
+  };
+
+  const formatEth = (value?: string | null) => {
+    if (!value) return "—";
+    const num = Number(value);
+    if (Number.isNaN(num)) return `${value} ETH`;
+    return `${num.toFixed(3)} ETH`;
+  };
+
+  return (
+    <div className="fixed inset-0 z-40 flex items-center justify-center bg-black/70 backdrop-blur-xl">
+      <button
+        type="button"
+        aria-label="Close"
+        onClick={onClose}
+        className="absolute inset-0 cursor-default"
+      />
+      <div
+        className="relative z-10 w-full max-w-5xl rounded-[32px] border border-violet-400/60 bg-slate-950/95 p-4 text-slate-50 shadow-[0_0_60px_rgba(139,92,246,0.9)] sm:p-6 lg:p-8"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div className="absolute -inset-px rounded-[32px] bg-gradient-to-br from-violet-500/30 via-fuchsia-500/20 to-sky-500/30 opacity-40 blur-xl" />
+        <div className="relative grid gap-6 lg:grid-cols-[minmax(0,1.15fr),minmax(0,1fr)]">
+          <div className="space-y-4">
+            <div className="relative overflow-hidden rounded-[28px] border border-white/15 bg-gradient-to-br from-slate-900 via-slate-950 to-slate-900 p-4">
+              <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_0%_0%,rgba(248,250,252,0.4),transparent_40%),radial-gradient(circle_at_100%_0%,rgba(244,114,182,0.3),transparent_40%),radial-gradient(circle_at_0%_100%,rgba(96,165,250,0.3),transparent_40%)] mix-blend-screen opacity-80" />
+              <div className="pointer-events-none absolute -inset-1 rounded-[30px] border border-white/20" />
+              <div className="relative rounded-[24px] bg-slate-900/80 p-4">
+                <div className="relative overflow-hidden rounded-[22px] bg-slate-800/80">
+                  <img
+                    src={nft.sneaker?.image_url ?? "/placeholder-sneaker.png"}
+                    alt={nft.sneaker?.name ?? "Sneaker NFT"}
+                    className="h-72 w-full object-cover sm:h-80"
+                  />
+                  <div className="pointer-events-none absolute inset-0 bg-[linear-gradient(135deg,rgba(244,114,182,0.3),transparent_40%),linear-gradient(225deg,rgba(56,189,248,0.35),transparent_50%),linear-gradient(45deg,rgba(190,242,100,0.25),transparent_40%)] mix-blend-screen opacity-80" />
+                  <div className="pointer-events-none absolute inset-0 bg-[repeating-linear-gradient(135deg,rgba(15,23,42,0.1)_0,rgba(15,23,42,0.1)_1px,transparent_1px,transparent_3px)] opacity-60" />
+                  <div className="pointer-events-none absolute inset-0 rounded-[22px] ring-1 ring-white/40" />
+
+                  <div className="absolute left-4 top-4 inline-flex items-center gap-1 rounded-full bg-black/70 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.18em] text-violet-100 shadow-[0_0_22px_rgba(15,23,42,0.95)] backdrop-blur">
+                    <span className="h-1.5 w-1.5 rounded-full bg-emerald-400 shadow-[0_0_12px_rgba(52,211,153,0.9)]" />
+                    Authentic NFT
+                  </div>
+
+                  {nft.rarity && (
+                    <div className="absolute bottom-4 right-4">
+                      <div className="rounded-full bg-gradient-to-r from-yellow-300 via-amber-400 to-rose-400 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-900 shadow-[0_0_20px_rgba(251,191,36,0.8)]">
+                        {nft.rarity.toUpperCase()}
+                      </div>
+                    </div>
+                  )}
+                </div>
+
+                <div className="mt-4 flex items-start justify-between gap-3 text-xs">
+                  <div>
+                    <p className="text-[11px] uppercase tracking-[0.16em] text-slate-400">
+                      {nft.sneaker?.brand ?? "Unknown Brand"}
+                    </p>
+                    <p className="mt-1 text-sm font-semibold text-slate-50">
+                      {nft.sneaker?.name ?? "Sneaker NFT"}
+                    </p>
+                    {nft.token_id && (
+                      <p className="mt-1 font-mono text-[11px] text-slate-400">
+                        Token ID:{" "}
+                        <span className="text-slate-100">{nft.token_id}</span>
+                      </p>
+                    )}
+                  </div>
+                  <div className="flex flex-col items-end gap-1">
+                    <div className="inline-flex items-center gap-2 rounded-full border border-emerald-400/70 bg-emerald-500/10 px-3 py-1 text-[11px] font-medium text-emerald-200 shadow-[0_0_16px_rgba(52,211,153,0.8)]">
+                      <span className="h-1.5 w-1.5 rounded-full bg-emerald-400 shadow-[0_0_10px_rgba(52,211,153,0.9)]" />
+                      Verified authenticity
+                    </div>
+                    {nft.minted_at && (
+                      <span className="text-[11px] text-slate-400">
+                        Minted{" "}
+                        {new Date(nft.minted_at).toLocaleString(undefined, {
+                          month: "short",
+                          day: "numeric",
+                          year: "numeric",
+                          hour: "2-digit",
+                          minute: "2-digit",
+                        })}
+                      </span>
+                    )}
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {nft.sneaker?.amazon_url && (
+              <a
+                href={nft.sneaker.amazon_url}
+                target="_blank"
+                rel="noreferrer"
+                className="inline-flex items-center gap-2 text-xs text-sky-300 hover:text-sky-200"
+              >
+                View deadstock pairs on Amazon
+                <span className="text-[10px] text-sky-200/80">
+                  (affiliate: shoeswiper-20)
+                </span>
+              </a>
+            )}
+          </div>
+
+          <div className="flex flex-col gap-4">
+            <div className="flex items-start justify-between gap-3">
+              <div>
+                <p className="text-[11px] uppercase tracking-[0.18em] text-slate-400">
+                  Current listing
+                </p>
+                <p className="mt-2 text-2xl font-semibold tracking-tight text-sky-300">
+                  {nft.for_sale ? formatEth(nft.price_eth) : "Not for sale"}
+                </p>
+                {nft.for_sale && (
+                  <p className="mt-1 text-[11px] text-slate-400">
+                    Instant settlement in your ShoeSwiper account. No gas fees
+                    (mock chain).
+                  </p>
+                )}
+              </div>
+              <button
+                type="button"
+                onClick={onClose}
+                className="inline-flex h-7 w-7 items-center justify-center rounded-full bg-slate-800/80 text-slate-300 hover:bg-slate-700 hover:text-white"
+              >
+                ✕
+              </button>
+            </div>
+
+            <div className="flex flex-col gap-2 rounded-2xl bg-slate-900/80 p-3">
+              <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-400">
+                Actions
+              </p>
+              <div className="flex flex-col gap-2 sm:flex-row">
+                <button
+                  type="button"
+                  disabled={!nft.for_sale || isBuying || !onBuy}
+                  onClick={handleBuyClick}
+                  className="inline-flex flex-1 items-center justify-center gap-2 rounded-full bg-gradient-to-r from-violet-500 via-fuchsia-500 to-sky-400 px-4 py-1.5 text-xs font-semibold text-slate-900 shadow-[0_0_26px_rgba(139,92,246,0.9)] disabled:cursor-not-allowed disabled:opacity-40"
+                >
+                  {isBuying && (
+                    <span className="h-3 w-3 animate-spin rounded-full border border-slate-900 border-r-transparent" />
+                  )}
+                  {nft.for_sale ? "Buy Now" : "Not for sale"}
+                </button>
+                <button
+                  type="button"
+                  className="inline-flex flex-1 items-center justify-center gap-2 rounded-full border border-slate-600/80 bg-slate-900/80 px-4 py-1.5 text-xs font-semibold text-slate-100 hover:border-slate-400 hover:bg-slate-900"
+                >
+                  Place Bid
+                  <span className="rounded-full bg-slate-800 px-2 py-0.5 text-[10px] text-slate-300">
+                    Soon
+                  </span>
+                </button>
+              </div>
+            </div>
+
+            <div className="flex flex-col gap-2 rounded-2xl bg-slate-900/80 p-3">
+              <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-400">
+                Owner
+              </p>
+              <div className="flex items-center gap-3">
+                <div className="relative h-9 w-9 overflow-hidden rounded-full border border-violet-300/80 bg-slate-800">
+                  {nft.owner?.avatar_url ? (
+                    <img
+                      src={nft.owner.avatar_url}
+                      alt={nft.owner.username ?? "Owner"}
+                      className="h-full w-full object-cover"
+                    />
+                  ) : (
+                    <div className="flex h-full w-full items-center justify-center text-xs font-semibold text-violet-200">
+                      {nft.owner?.username?.[0]?.toUpperCase() ?? "?"}
+                    </div>
+                  )}
+                  <span className="absolute -bottom-0.5 -right-0.5 h-3 w-3 rounded-full bg-emerald-400 shadow-[0_0_10px_rgba(52,211,153,0.9)]" />
+                </div>
+                <div className="flex flex-col">
+                  <span className="text-xs font-medium text-slate-100">
+                    {nft.owner?.username ?? "Unknown owner"}
+                  </span>
+                  <span className="text-[11px] text-slate-400">
+                    Current custodian of this NFT
+                  </span>
+                </div>
+              </div>
+            </div>
+
+            <div className="flex-1 rounded-2xl bg-slate-900/80 p-3">
+              <p className="mb-2 text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-400">
+                Ownership history
+              </p>
+              {loadingHistory ? (
+                <div className="space-y-2">
+                  {Array.from({ length: 3 }).map((_, idx) => (
+                    <div
+                      key={idx}
+                      className="h-10 animate-pulse rounded-xl bg-slate-800/80"
+                    />
+                  ))}
+                </div>
+              ) : history.length === 0 ? (
+                <p className="text-[11px] text-slate-400">
+                  No transfers yet. This NFT was just minted.
+                </p>
+              ) : (
+                <div className="space-y-2">
+                  {history.map((entry) => (
+                    <div
+                      key={entry.id}
+                      className="flex items-center justify-between gap-3 rounded-xl bg-slate-800/80 px-3 py-2 text-xs"
+                    >
+                      <div className="flex flex-1 items-center gap-2">
+                        <div className="flex items-center gap-1">
+                          <span className="max-w-[110px] truncate text-slate-200">
+                            {entry.from_user?.username ?? "Mint"}
+                          </span>
+                          <span className="text-[10px] text-slate-500">→</span>
+                          <span className="max-w-[110px] truncate text-slate-50">
+                            {entry.to_user?.username ?? "Unknown"}
+                          </span>
+                        </div>
+                      </div>
+                      <div className="flex flex-col items-end gap-1">
+                        <span className="font-mono text-[11px] text-sky-300">
+                          {formatEth(entry.price_eth)}
+                        </span>
+                        <span className="text-[10px] text-slate-500">
+                          {new Date(
+                            entry.transferred_at
+                          ).toLocaleDateString(undefined, {
+                            month: "short",
+                            day: "numeric",
+                            year: "numeric",
+                          })}
+                        </span>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+export default NFTDetailModal;
+
+
+================ FILE: shoeswipermainproject2-main/shoeswiper-complete/src/components/nft/NFTMarketplace.tsx ================
+import React, { useEffect, useState } from "react";
+import { supabase } from "../../lib/supabaseClient";
+import NFTMintFlow from "./NFTMintFlow";
+import NFTDetailModal from "./NFTDetailModal";
+import {
+  useNFTMarketplace,
+  type NFT,
+  type NFTFilter,
+} from "../../hooks/useNFTMarketplace";
+
+type Tab = "explore" | "my" | "create";
+
+const tabs: { id: Tab; label: string }[] = [
+  { id: "explore", label: "Explore" },
+  { id: "my", label: "My NFTs" },
+  { id: "create", label: "Create" },
+];
+
+const filters: { id: NFTFilter; label: string }[] = [
+  { id: "all", label: "All" },
+  { id: "for_sale", label: "For Sale" },
+  { id: "auction", label: "Auction" },
+  { id: "recent", label: "Recently Minted" },
+];
+
+const NFTMarketplace: React.FC = () => {
+  const [activeTab, setActiveTab] = useState<Tab>("explore");
+  const [activeFilter, setActiveFilter] = useState<NFTFilter>("all");
+  const [userId, setUserId] = useState<string | null>(null);
+  const [selectedNFT, setSelectedNFT] = useState<NFT | null>(null);
+
+  const { nfts, isLoading, error, listNFTs, buyNFT } = useNFTMarketplace();
+
+  useEffect(() => {
+    const fetchUser = async () => {
+      const { data, error: userError } = await supabase.auth.getUser();
+      if (userError) {
+        console.error(userError);
+        return;
+      }
+      setUserId(data.user?.id ?? null);
+    };
+    fetchUser();
+  }, []);
+
+  useEffect(() => {
+    const load = async () => {
+      if (activeTab === "my" && !userId) return;
+
+      await listNFTs({
+        filter: activeFilter,
+        ownerId: activeTab === "my" ? userId ?? undefined : undefined,
+      });
+    };
+
+    void load();
+  }, [activeTab, activeFilter, userId, listNFTs]);
+
+  const handleMinted = (nft: NFT) => {
+    setActiveTab("my");
+    setActiveFilter("all");
+    setSelectedNFT(nft);
+  };
+
+  const handleCardClick = (nft: NFT) => {
+    setSelectedNFT(nft);
+  };
+
+  const handleBuy = async (nftId: string) => {
+    try {
+      await buyNFT(nftId);
+      await listNFTs({
+        filter: activeFilter,
+        ownerId: activeTab === "my" ? userId ?? undefined : undefined,
+      });
+    } catch (e) {
+      console.error(e);
+    }
+  };
+
+  const formatPrice = (nft: NFT) => {
+    if (nft.for_sale && nft.price_eth) {
+      const num = Number(nft.price_eth);
+      if (Number.isNaN(num)) return `${nft.price_eth} ETH`;
+      return `${num.toFixed(3)} ETH`;
+    }
+    return "Not for sale";
+  };
+
+  const rarityLabel = (rarity?: NFT["rarity"]) => {
+    if (!rarity) return "";
+    return rarity.charAt(0).toUpperCase() + rarity.slice(1);
+  };
+
+  const rarityColorClasses = (rarity?: NFT["rarity"]) => {
+    switch (rarity) {
+      case "grail":
+        return "from-yellow-400 via-amber-500 to-rose-500 text-slate-900";
+      case "legendary":
+        return "from-fuchsia-400 via-purple-500 to-indigo-500 text-white";
+      case "rare":
+        return "from-sky-400 via-cyan-500 to-emerald-500 text-slate-900";
+      default:
+        return "from-slate-200/80 via-slate-300/80 to-slate-200/80 text-slate-900";
+    }
+  };
+
+  return (
+    <div className="min-h-screen bg-gradient-to-br from-[#050017] via-[#120826] to-black px-4 py-6 sm:px-6 lg:px-10">
+      <div className="mx-auto max-w-6xl">
+        <header className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+          <div>
+            <h1 className="bg-gradient-to-r from-violet-300 via-fuchsia-300 to-sky-300 bg-clip-text text-3xl font-bold text-transparent sm:text-4xl">
+              NFT Marketplace
+            </h1>
+            <p className="mt-2 max-w-xl text-sm text-slate-300/80">
+              Mint, flex, and trade sneaker authenticity NFTs. Powered by
+              Supabase — blockchain vibes, no wallet required (yet).
+            </p>
+          </div>
+
+          <div className="flex items-center gap-3">
+            <div className="hidden rounded-full bg-white/5 px-4 py-2 text-xs text-slate-200/80 shadow-inner shadow-purple-500/40 backdrop-blur sm:flex sm:flex-col">
+              <span className="text-[10px] uppercase tracking-[0.2em] text-violet-300/80">
+                Affiliate
+              </span>
+              <span className="font-mono text-xs text-slate-100">
+                shoeswiper-20
+              </span>
+            </div>
+          </div>
+        </header>
+
+        <div className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+          <div className="inline-flex rounded-full bg-white/5 p-1 shadow-lg shadow-purple-500/40 backdrop-blur">
+            {tabs.map((tab) => (
+              <button
+                key={tab.id}
+                type="button"
+                onClick={() => setActiveTab(tab.id)}
+                className={`relative flex-1 rounded-full px-4 py-1.5 text-xs font-medium transition ${
+                  activeTab === tab.id
+                    ? "text-slate-900"
+                    : "text-slate-300/80 hover:text-white"
+                }`}
+              >
+                {activeTab === tab.id && (
+                  <span className="pointer-events-none absolute inset-0 rounded-full bg-gradient-to-r from-violet-400 via-fuchsia-400 to-sky-400 shadow-[0_0_25px_rgba(168,85,247,0.7)]" />
+                )}
+                <span className="relative">{tab.label}</span>
+              </button>
+            ))}
+          </div>
+
+          {activeTab !== "create" && (
+            <div className="flex flex-wrap items-center gap-2 rounded-full bg-white/5 p-1 shadow-inner shadow-purple-500/30 backdrop-blur">
+              {filters.map((filter) => (
+                <button
+                  key={filter.id}
+                  type="button"
+                  onClick={() => setActiveFilter(filter.id)}
+                  className={`rounded-full px-3 py-1 text-xs font-medium transition ${
+                    activeFilter === filter.id
+                      ? "bg-gradient-to-r from-violet-500/80 via-fuchsia-500/80 to-sky-500/80 text-slate-900 shadow-[0_0_20px_rgba(139,92,246,0.8)]"
+                      : "text-slate-300/80 hover:bg-white/5 hover:text-white"
+                  }`}
+                >
+                  {filter.label}
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
+
+        {activeTab === "create" ? (
+          <div className="rounded-3xl border border-white/10 bg-white/5 p-4 shadow-[0_0_40px_rgba(139,92,246,0.65)] backdrop-blur-xl sm:p-6">
+            <NFTMintFlow onMinted={handleMinted} />
+          </div>
+        ) : (
+          <section>
+            {error && (
+              <div className="mb-4 rounded-2xl border border-red-500/40 bg-red-500/10 px-4 py-3 text-xs text-red-100">
+                {error}
+              </div>
+            )}
+
+            {isLoading ? (
+              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+                {Array.from({ length: 8 }).map((_, idx) => (
+                  <div
+                    key={idx}
+                    className="h-64 animate-pulse rounded-3xl border border-white/10 bg-white/5"
+                  >
+                    <div className="h-40 rounded-t-3xl bg-gradient-to-br from-violet-500/20 via-fuchsia-500/10 to-sky-500/20" />
+                    <div className="space-y-2 p-4">
+                      <div className="h-3 w-2/3 rounded bg-white/10" />
+                      <div className="h-3 w-1/3 rounded bg-white/10" />
+                      <div className="mt-3 h-3 w-1/2 rounded bg-white/10" />
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : nfts.length === 0 ? (
+              <div className="flex flex-col items-center justify-center rounded-3xl border border-dashed border-slate-600/60 bg-slate-900/30 px-6 py-16 text-center backdrop-blur">
+                <div className="mb-4 inline-flex h-16 w-16 items-center justify-center rounded-full bg-gradient-to-tr from-violet-500 via-fuchsia-500 to-sky-500 text-2xl shadow-[0_0_30px_rgba(129,140,248,0.8)]">
+                  💎
+                </div>
+                <h2 className="text-lg font-semibold text-slate-50">
+                  No NFTs here yet
+                </h2>
+                <p className="mt-2 max-w-sm text-sm text-slate-300/75">
+                  Mint your first pair in the <span className="font-medium">Create</span> tab, or
+                  switch back to <span className="font-medium">Explore</span> to browse the global
+                  feed.
+                </p>
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+                {nfts.map((nft) => (
+                  <button
+                    key={nft.id}
+                    type="button"
+                    onClick={() => handleCardClick(nft)}
+                    className="group flex h-full flex-col rounded-3xl border border-white/10 bg-white/5 p-3 text-left shadow-[0_0_20px_rgba(15,23,42,0.9)] transition-transform transition-shadow hover:-translate-y-1 hover:border-violet-400/80 hover:bg-white/10 hover:shadow-[0_0_30px_rgba(168,85,247,0.85)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-violet-400/80"
+                  >
+                    <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-violet-500/30 via-fuchsia-500/20 to-sky-500/30 p-3">
+                      <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_0%_0%,rgba(248,250,252,0.35),transparent_40%),radial-gradient(circle_at_100%_0%,rgba(244,114,182,0.25),transparent_40%),radial-gradient(circle_at_0%_100%,rgba(96,165,250,0.25),transparent_40%)] opacity-60 mix-blend-screen" />
+                      <img
+                        src={nft.sneaker?.image_url ?? "/placeholder-sneaker.png"}
+                        alt={nft.sneaker?.name ?? "Sneaker NFT"}
+                        className="relative h-40 w-full rounded-2xl object-cover transition duration-500 group-hover:scale-105"
+                      />
+                      <div className="pointer-events-none absolute inset-0 rounded-2xl ring-1 ring-white/20" />
+
+                      <span className="absolute left-3 top-3 inline-flex items-center gap-1 rounded-full bg-black/60 px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.2em] text-violet-200 shadow-[0_0_20px_rgba(15,23,42,0.9)] backdrop-blur">
+                        <span className="h-1.5 w-1.5 rounded-full bg-lime-400 shadow-[0_0_10px_rgba(190,242,100,0.9)]" />
+                        NFT
+                      </span>
+
+                      {nft.rarity && (
+                        <span
+                          className={`absolute bottom-3 right-3 inline-flex items-center gap-1 rounded-full bg-gradient-to-r px-2.5 py-0.5 text-[10px] font-semibold uppercase tracking-[0.18em] ${rarityColorClasses(
+                            nft.rarity
+                          )}`}
+                        >
+                          {rarityLabel(nft.rarity)}
+                        </span>
+                      )}
+                    </div>
+
+                    <div className="mt-3 flex flex-1 flex-col gap-2">
+                      <div>
+                        <p className="truncate text-xs font-semibold uppercase tracking-[0.18em] text-slate-400">
+                          {nft.sneaker?.brand ?? "Unknown Brand"}
+                        </p>
+                        <p className="mt-0.5 line-clamp-2 text-sm font-semibold text-slate-50">
+                          {nft.sneaker?.name ?? "Untitled Sneaker NFT"}
+                        </p>
+                      </div>
+
+                      <div className="mt-1 flex items-center justify-between gap-2">
+                        <div className="flex flex-col">
+                          <span className="text-[11px] text-slate-400">Price</span>
+                          <span className="font-mono text-sm text-sky-300">
+                            {formatPrice(nft)}
+                          </span>
+                        </div>
+
+                        <div className="flex items-center gap-2">
+                          <div className="relative h-7 w-7 shrink-0 overflow-hidden rounded-full border border-violet-300/70 bg-slate-900/80">
+                            {nft.owner?.avatar_url ? (
+                              <img
+                                src={nft.owner.avatar_url}
+                                alt={nft.owner.username ?? "Owner"}
+                                className="h-full w-full object-cover"
+                              />
+                            ) : (
+                              <div className="flex h-full w-full items-center justify-center text-[10px] font-semibold text-violet-200">
+                                {nft.owner?.username?.[0]?.toUpperCase() ?? "?"}
+                              </div>
+                            )}
+                            <span className="absolute -bottom-0.5 -right-0.5 h-2.5 w-2.5 rounded-full bg-emerald-400 shadow-[0_0_10px_rgba(52,211,153,0.9)]" />
+                          </div>
+                          <div className="flex flex-col">
+                            <span className="text-[11px] text-slate-400">Owner</span>
+                            <span className="max-w-[120px] truncate text-xs text-slate-100/90">
+                              {nft.owner?.username ?? "Unknown"}
+                            </span>
+                          </div>
+                        </div>
+                      </div>
+
+                      {nft.minted_at && (
+                        <p className="mt-1 text-[11px] text-slate-400">
+                          Minted{" "}
+                          {new Date(nft.minted_at).toLocaleDateString(undefined, {
+                            month: "short",
+                            day: "numeric",
+                            year: "numeric",
+                          })}
+                        </p>
+                      )}
+                    </div>
+                  </button>
+                ))}
+              </div>
+            )}
+          </section>
+        )}
+
+        <NFTDetailModal
+          open={!!selectedNFT}
+          nft={selectedNFT}
+          onClose={() => setSelectedNFT(null)}
+          onBuy={handleBuy}
+        />
+      </div>
+    </div>
+  );
+};
+
+export default NFTMarketplace;
+
+
+================ FILE: shoeswipermainproject2-main/shoeswiper-complete/src/components/nft/NFTMintFlow.tsx ================
+import React, { useEffect, useState } from "react";
+import { supabase } from "../../lib/supabaseClient";
+import { useNFTMarketplace } from "../../hooks/useNFTMarketplace";
+import type { NFT, Rarity, Shoe } from "../../lib/types";
+
+// Alias for compatibility
+type Sneaker = Shoe;
+
+interface NFTMintFlowProps {
+  onMinted?: (nft: NFT) => void;
+}
+
+const steps = [
+  "Select sneaker",
+  "Upload proof",
+  "Rarity tier",
+  "Preview & mint",
+];
+
+const rarityOptions: { id: Rarity; label: string; description: string }[] = [
+  {
+    id: "common",
+    label: "Common",
+    description: "Everyday heat, still verified.",
+  },
+  {
+    id: "rare",
+    label: "Rare",
+    description: "Limited release, strong story.",
+  },
+  {
+    id: "legendary",
+    label: "Legendary",
+    description: "Hyped collab or major moment.",
+  },
+  {
+    id: "grail",
+    label: "Grail",
+    description: "Once-in-a-lifetime sneaker energy.",
+  },
+];
+
+const NFTMintFlow: React.FC<NFTMintFlowProps> = ({ onMinted }) => {
+  const [currentStep, setCurrentStep] = useState(0);
+  const [closet, setCloset] = useState<Sneaker[]>([]);
+  const [loadingCloset, setLoadingCloset] = useState(false);
+
+  const [selectedSneaker, setSelectedSneaker] = useState<Sneaker | null>(null);
+  const [proofFiles, setProofFiles] = useState<File[]>([]);
+  const [rarity, setRarity] = useState<Rarity>("common");
+  const [mintPreviewOpen, setMintPreviewOpen] = useState(false);
+
+  const [isMinting, setIsMinting] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const { mintNFT } = useNFTMarketplace();
+
+  useEffect(() => {
+    const loadCloset = async () => {
+      setLoadingCloset(true);
+      try {
+        const { data, error: userError } = await supabase.auth.getUser();
+        if (userError) {
+          console.error(userError);
+          return;
+        }
+        const user = data.user;
+        if (!user) return;
+
+        // Example schema: user_sneakers(user_id, sneaker_id) -> sneakers table
+        const { data: closetRows, error: closetError } = await supabase
+          .from("user_sneakers")
+          .select(
+            `
+            sneaker:shoes (
+              id,
+              name,
+              brand,
+              image_url,
+              amazon_url
+            )
+          `
+          )
+          .eq("user_id", user.id);
+
+        if (closetError) {
+          console.error(closetError);
+          return;
+        }
+
+        const sneakers =
+          closetRows?.map((row: { sneaker: Sneaker }) => row.sneaker) ?? [];
+        setCloset(sneakers);
+      } finally {
+        setLoadingCloset(false);
+      }
+    };
+
+    void loadCloset();
+  }, []);
+
+  const canGoNext = () => {
+    if (currentStep === 0) return !!selectedSneaker;
+    if (currentStep === 1) return proofFiles.length > 0;
+    if (currentStep === 2) return !!rarity;
+    return true;
+  };
+
+  const handleProofChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (!e.target.files) return;
+    setProofFiles(Array.from(e.target.files));
+  };
+
+  const handleMint = async () => {
+    if (!selectedSneaker) return;
+    setIsMinting(true);
+    setError(null);
+    try {
+      const minted = await mintNFT(selectedSneaker.id, proofFiles, rarity);
+      setMintPreviewOpen(true);
+      onMinted?.(minted);
+      // Reset flow
+      setCurrentStep(0);
+      setSelectedSneaker(null);
+      setProofFiles([]);
+      setRarity("common");
+    } catch (err: any) {
+      setError(err.message ?? "Failed to mint NFT");
+    } finally {
+      setIsMinting(false);
+    }
+  };
+
+  const progress = ((currentStep + 1) / steps.length) * 100;
+
+  return (
+    <div className="flex flex-col gap-6">
+      <div>
+        <div className="mb-4 flex items-center justify-between">
+          <h2 className="text-lg font-semibold text-slate-50">
+            Create authenticity NFT
+          </h2>
+          <span className="text-xs font-mono uppercase tracking-[0.25em] text-slate-400">
+            Step {currentStep + 1} / {steps.length}
+          </span>
+        </div>
+
+        <div className="relative mb-4 flex items-center justify-between">
+          {steps.map((label, index) => {
+            const isActive = index === currentStep;
+            const isCompleted = index < currentStep;
+            return (
+              <div
+                key={label}
+                className="flex flex-1 items-center last:flex-none"
+              >
+                <div className="relative flex flex-col items-center gap-1">
+                  <div
+                    className={`flex h-8 w-8 items-center justify-center rounded-full border text-xs font-bold transition ${
+                      isCompleted
+                        ? "border-emerald-400 bg-emerald-400 text-slate-900 shadow-[0_0_16px_rgba(52,211,153,0.9)]"
+                        : isActive
+                        ? "border-violet-400 bg-slate-900 text-violet-200 shadow-[0_0_14px_rgba(139,92,246,0.7)]"
+                        : "border-slate-600/80 bg-slate-900/80 text-slate-500"
+                    }`}
+                  >
+                    {index + 1}
+                  </div>
+                  <span className="text-[10px] uppercase tracking-[0.18em] text-slate-400">
+                    {label}
+                  </span>
+                </div>
+                {index !== steps.length - 1 && (
+                  <div className="mx-2 h-px flex-1 rounded-full bg-gradient-to-r from-slate-700 via-violet-500/60 to-slate-700" />
+                )}
+              </div>
+            );
+          })}
+          <div className="pointer-events-none absolute inset-x-0 bottom-0 h-px bg-gradient-to-r from-transparent via-white/30 to-transparent blur-[1px]" />
+        </div>
+
+        <div className="relative h-1.5 overflow-hidden rounded-full bg-slate-900/80">
+          <div
+            className="h-full bg-gradient-to-r from-violet-500 via-fuchsia-500 to-sky-400 shadow-[0_0_25px_rgba(129,140,248,0.9)] transition-all"
+            style={{ width: `${progress}%` }}
+          />
+        </div>
+      </div>
+
+      {error && (
+        <div className="rounded-2xl border border-red-500/40 bg-red-500/10 px-4 py-3 text-xs text-red-100">
+          {error}
+        </div>
+      )}
+
+      {currentStep === 0 && (
+        <div className="space-y-4">
+          <h3 className="text-sm font-semibold text-slate-50">
+            Step 1 — Pick the pair
+          </h3>
+          {loadingCloset ? (
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
+              {Array.from({ length: 6 }).map((_, idx) => (
+                <div
+                  key={idx}
+                  className="h-32 animate-pulse rounded-2xl bg-slate-900/60"
+                />
+              ))}
+            </div>
+          ) : closet.length === 0 ? (
+            <div className="rounded-2xl border border-dashed border-slate-600/70 bg-slate-900/60 px-4 py-6 text-center text-xs text-slate-300/80">
+              No sneakers in your closet yet. Minting requires at least one
+              sneaker in your ShoeSwiper closet.
+            </div>
+          ) : (
+            <div className="grid max-h-80 grid-cols-1 gap-3 overflow-y-auto pr-1 sm:grid-cols-2 lg:grid-cols-3">
+              {closet.map((sneaker) => {
+                const isSelected = selectedSneaker?.id === sneaker.id;
+                return (
+                  <button
+                    key={sneaker.id}
+                    type="button"
+                    onClick={() => setSelectedSneaker(sneaker)}
+                    className={`group flex flex-col rounded-2xl border p-2.5 text-left transition ${
+                      isSelected
+                        ? "border-violet-400/80 bg-gradient-to-br from-violet-500/30 via-fuchsia-500/25 to-sky-500/30 shadow-[0_0_24px_rgba(168,85,247,0.8)]"
+                        : "border-white/10 bg-slate-900/60 hover:border-violet-400/60 hover:bg-slate-900"
+                    }`}
+                  >
+                    <div className="relative overflow-hidden rounded-xl bg-slate-800/80">
+                      <img
+                        src={sneaker.image_url ?? "/placeholder-sneaker.png"}
+                        alt={sneaker.name}
+                        className="h-28 w-full object-cover transition group-hover:scale-105"
+                      />
+                      {isSelected && (
+                        <div className="pointer-events-none absolute inset-0 bg-gradient-to-tr from-violet-400/40 via-fuchsia-500/30 to-sky-400/40 mix-blend-screen" />
+                      )}
+                    </div>
+                    <div className="mt-2">
+                      <p className="truncate text-[11px] uppercase tracking-[0.18em] text-slate-400">
+                        {sneaker.brand}
+                      </p>
+                      <p className="mt-0.5 line-clamp-2 text-sm font-semibold text-slate-50">
+                        {sneaker.name}
+                      </p>
+                    </div>
+                  </button>
+                );
+              })}
+            </div>
+          )}
+        </div>
+      )}
+
+      {currentStep === 1 && (
+        <div className="space-y-4">
+          <h3 className="text-sm font-semibold text-slate-50">
+            Step 2 — Upload authenticity proof
+          </h3>
+          <p className="text-xs text-slate-300/80">
+            Upload a purchase receipt, box label, or detailed photos. Files are
+            stored privately in Supabase Storage and linked to this NFT mint.
+          </p>
+          <label className="flex cursor-pointer flex-col items-center justify-center gap-2 rounded-2xl border border-dashed border-slate-600/80 bg-slate-900/70 px-4 py-6 text-center text-xs text-slate-300/80 hover:border-violet-400/80 hover:bg-slate-900">
+            <span className="rounded-full bg-slate-800/80 px-3 py-1 font-mono text-[10px] uppercase tracking-[0.2em] text-violet-300">
+              Drop files or click to upload
+            </span>
+            <span className="text-[11px] text-slate-400">
+              Supported: photos (JPG/PNG) or PDFs. Max 10 files.
+            </span>
+            <input
+              type="file"
+              multiple
+              accept="image/*,application/pdf"
+              className="hidden"
+              onChange={handleProofChange}
+            />
+          </label>
+
+          {proofFiles.length > 0 && (
+            <div className="space-y-2 rounded-2xl bg-slate-900/80 p-3">
+              <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-400">
+                Selected files
+              </p>
+              <ul className="space-y-1 text-xs text-slate-200/90">
+                {proofFiles.map((file) => (
+                  <li
+                    key={file.name + file.lastModified}
+                    className="flex items-center justify-between gap-2 rounded-xl bg-slate-800/80 px-3 py-1.5"
+                  >
+                    <span className="line-clamp-1">{file.name}</span>
+                    <span className="shrink-0 text-[10px] text-slate-400">
+                      {(file.size / 1024 / 1024).toFixed(2)} MB
+                    </span>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
+        </div>
+      )}
+
+      {currentStep === 2 && (
+        <div className="space-y-4">
+          <h3 className="text-sm font-semibold text-slate-50">
+            Step 3 — Choose rarity tier
+          </h3>
+          <p className="text-xs text-slate-300/80">
+            Rarity tiers help buyers understand how special this pair is. It
+            doesn&apos;t affect authenticity — that&apos;s always on-chain.
+          </p>
+
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+            {rarityOptions.map((option) => {
+              const isSelected = rarity === option.id;
+              let gradient = "";
+              if (option.id === "grail") {
+                gradient =
+                  "from-yellow-300 via-amber-400 to-rose-400 text-slate-900";
+              } else if (option.id === "legendary") {
+                gradient =
+                  "from-fuchsia-400 via-purple-500 to-indigo-500 text-white";
+              } else if (option.id === "rare") {
+                gradient =
+                  "from-sky-400 via-cyan-400 to-emerald-400 text-slate-900";
+              } else {
+                gradient =
+                  "from-slate-200/90 via-slate-100/90 to-slate-200/90 text-slate-900";
+              }
+
+              return (
+                <button
+                  key={option.id}
+                  type="button"
+                  onClick={() => setRarity(option.id)}
+                  className={`relative flex flex-col rounded-2xl border p-[1px] text-left transition ${
+                    isSelected
+                      ? "border-violet-300/90 shadow-[0_0_24px_rgba(168,85,247,0.85)]"
+                      : "border-transparent hover:border-violet-400/80"
+                  }`}
+                >
+                  <div className="rounded-2xl bg-slate-900/95 p-3">
+                    <div
+                      className={`inline-flex items-center rounded-full bg-gradient-to-r px-2.5 py-0.5 text-[10px] font-semibold uppercase tracking-[0.2em] ${gradient}`}
+                    >
+                      {option.label}
+                    </div>
+                    <p className="mt-2 text-xs text-slate-300/90">
+                      {option.description}
+                    </p>
+                  </div>
+                </button>
+              );
+            })}
+          </div>
+        </div>
+      )}
+
+      {currentStep === 3 && (
+        <div className="space-y-4">
+          <h3 className="text-sm font-semibold text-slate-50">
+            Step 4 — Preview & mint
+          </h3>
+          {selectedSneaker ? (
+            <div className="grid gap-4 lg:grid-cols-[minmax(0,1.1fr),minmax(0,1fr)]">
+              <div className="relative overflow-hidden rounded-3xl border border-violet-400/60 bg-gradient-to-br from-violet-700/40 via-fuchsia-700/30 to-sky-700/40 p-4 shadow-[0_0_36px_rgba(139,92,246,0.85)]">
+                <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_0%_0%,rgba(248,250,252,0.4),transparent_40%),radial-gradient(circle_at_100%_0%,rgba(244,114,182,0.3),transparent_40%),radial-gradient(circle_at_0%_100%,rgba(96,165,250,0.3),transparent_40%)] mix-blend-screen opacity-80" />
+                <img
+                  src={selectedSneaker.image_url ?? "/placeholder-sneaker.png"}
+                  alt={selectedSneaker.name}
+                  className="relative mx-auto h-40 w-full max-w-sm rounded-2xl object-cover shadow-[0_0_30px_rgba(15,23,42,0.95)]"
+                />
+                <div className="pointer-events-none absolute inset-0 rounded-3xl ring-1 ring-white/30" />
+                <div className="mt-4 flex items-center justify-between text-xs text-slate-100">
+                  <div>
+                    <p className="text-[11px] uppercase tracking-[0.18em] text-slate-200">
+                      {selectedSneaker.brand}
+                    </p>
+                    <p className="mt-1 text-sm font-semibold">
+                      {selectedSneaker.name}
+                    </p>
+                  </div>
+                  <div className="text-right">
+                    <p className="text-[10px] uppercase tracking-[0.2em] text-slate-200">
+                      Rarity
+                    </p>
+                    <p className="mt-1 text-sm font-semibold text-violet-50">
+                      {rarityOptions.find((r) => r.id === rarity)?.label ??
+                        "Common"}
+                    </p>
+                  </div>
+                </div>
+              </div>
+
+              <div className="space-y-3 rounded-3xl border border-white/10 bg-slate-900/80 p-4">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-[11px] uppercase tracking-[0.2em] text-slate-400">
+                      Authenticity
+                    </p>
+                    <p className="mt-1 text-xs text-slate-200/90">
+                      Proof files linked from Supabase Storage.
+                    </p>
+                  </div>
+                  <div className="inline-flex items-center gap-2 rounded-full border border-emerald-400/70 bg-emerald-500/10 px-3 py-1 text-[11px] font-medium text-emerald-200 shadow-[0_0_16px_rgba(52,211,153,0.8)]">
+                    <span className="h-1.5 w-1.5 rounded-full bg-emerald-400 shadow-[0_0_10px_rgba(52,211,153,0.9)]" />
+                    Verification Ready
+                  </div>
+                </div>
+
+                <div className="rounded-2xl bg-slate-800/90 p-3 text-xs text-slate-200/90">
+                  <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-slate-400">
+                    Proof files
+                  </p>
+                  {proofFiles.length === 0 ? (
+                    <p className="mt-1 text-slate-400">
+                      No files attached. You can still mint, but buyers may
+                      prefer NFTs with receipts or detailed photos.
+                    </p>
+                  ) : (
+                    <ul className="mt-2 space-y-1">
+                      {proofFiles.slice(0, 3).map((file) => (
+                        <li
+                          key={file.name + file.lastModified}
+                          className="flex items-center justify-between gap-2 rounded-xl bg-slate-900/80 px-3 py-1.5"
+                        >
+                          <span className="line-clamp-1">{file.name}</span>
+                          <span className="shrink-0 text-[10px] text-slate-400">
+                            {(file.size / 1024 / 1024).toFixed(2)} MB
+                          </span>
+                        </li>
+                      ))}
+                      {proofFiles.length > 3 && (
+                        <li className="text-[11px] text-slate-400">
+                          + {proofFiles.length - 3} more file
+                          {proofFiles.length - 3 === 1 ? "" : "s"}
+                        </li>
+                      )}
+                    </ul>
+                  )}
+                </div>
+
+                <div className="rounded-2xl bg-slate-800/90 p-3 text-xs text-slate-200/90">
+                  <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-slate-400">
+                    Network
+                  </p>
+                  <p className="mt-1 text-slate-200/80">
+                    Mock chain only — this mints into Supabase. When ShoeSwiper
+                    adds real Web3, this certificate will be ready to bridge.
+                  </p>
+                </div>
+              </div>
+            </div>
+          ) : (
+            <div className="rounded-2xl border border-dashed border-slate-600/70 bg-slate-900/70 px-4 py-6 text-center text-xs text-slate-300/80">
+              Go back to Step 1 and pick a sneaker from your closet to preview
+              the mint.
+            </div>
+          )}
+        </div>
+      )}
+
+      <div className="mt-2 flex flex-col items-stretch justify-between gap-3 border-t border-slate-800/90 pt-4 sm:flex-row sm:items-center">
+        <div className="text-[11px] text-slate-400">
+          <span className="font-semibold text-violet-200">Tip:</span> Minting is
+          free while we&apos;re in beta. Gas fees will only apply if/when we
+          deploy NFTs on-chain.
+        </div>
+        <div className="flex justify-end gap-2">
+          {currentStep > 0 && (
+            <button
+              type="button"
+              disabled={isMinting}
+              onClick={() => setCurrentStep((s) => Math.max(0, s - 1))}
+              className="rounded-full border border-slate-600/80 bg-slate-900/80 px-4 py-1.5 text-xs font-medium text-slate-100 hover:border-slate-400 hover:bg-slate-900 disabled:opacity-50"
+            >
+              Back
+            </button>
+          )}
+          {currentStep < steps.length - 1 && (
+            <button
+              type="button"
+              disabled={!canGoNext() || isMinting}
+              onClick={() =>
+                setCurrentStep((s) => Math.min(steps.length - 1, s + 1))
+              }
+              className="rounded-full bg-gradient-to-r from-violet-500 via-fuchsia-500 to-sky-400 px-5 py-1.5 text-xs font-semibold text-slate-900 shadow-[0_0_22px_rgba(129,140,248,0.85)] disabled:cursor-not-allowed disabled:opacity-40"
+            >
+              Next
+            </button>
+          )}
+          {currentStep === steps.length - 1 && (
+            <button
+              type="button"
+              onClick={handleMint}
+              disabled={isMinting || !selectedSneaker}
+              className="inline-flex items-center justify-center gap-2 rounded-full bg-gradient-to-r from-violet-500 via-fuchsia-500 to-sky-400 px-6 py-1.5 text-xs font-semibold text-slate-900 shadow-[0_0_28px_rgba(139,92,246,0.9)] disabled:cursor-not-allowed disabled:opacity-40"
+            >
+              {isMinting && (
+                <span className="h-3 w-3 animate-spin rounded-full border border-slate-900 border-r-transparent" />
+              )}
+              {isMinting ? "Minting..." : "Mint NFT"}
+            </button>
+          )}
+        </div>
+      </div>
+
+      {mintPreviewOpen && (
+        <div className="fixed inset-0 z-30 flex items-center justify-center bg-black/70 backdrop-blur">
+          <div className="w-full max-w-sm rounded-3xl border border-violet-400/80 bg-slate-950/95 p-5 shadow-[0_0_40px_rgba(139,92,246,0.9)]">
+            <h4 className="text-sm font-semibold text-slate-50">
+              NFT minted successfully 🎉
+            </h4>
+            <p className="mt-2 text-xs text-slate-300/85">
+              Your authenticity certificate is live in the{" "}
+              <span className="font-semibold">My NFTs</span> tab. You can now
+              list it for sale or just flex it.
+            </p>
+            <button
+              type="button"
+              onClick={() => setMintPreviewOpen(false)}
+              className="mt-4 w-full rounded-full bg-gradient-to-r from-violet-500 via-fuchsia-500 to-sky-400 px-4 py-1.5 text-xs font-semibold text-slate-900 shadow-[0_0_24px_rgba(129,140,248,0.9)]"
+            >
+              Got it
+            </button>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+};
+
+export default NFTMintFlow;
+
+
+================ FILE: shoeswipermainproject2-main/shoeswiper-complete/src/hooks/index.ts ================
+// Export all hooks for easy importing
+export { useAuth } from './useAuth';
+export { useAuthGuard } from './useAuthGuard';
+export { useSneakers } from './useSneakers';
+export { useSneakerSearch } from './useSneakerSearch';
+export { useOutfitAnalysis } from './useOutfitAnalysis';
+export { useAdmin } from './useAdmin';
+export { useNFTMarketplace } from './useNFTMarketplace';
+
+

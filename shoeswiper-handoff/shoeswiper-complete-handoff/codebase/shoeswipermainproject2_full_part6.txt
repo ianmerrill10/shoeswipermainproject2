@@ -1,0 +1,1709 @@
+================ FILE: shoeswipermainproject2-main/shoeswiper-complete/src/pages/FeedPage.tsx ================
+import React, { useEffect, useState, useRef } from 'react';
+import { FaHeart, FaShare, FaBookmark, FaAmazon, FaMusic, FaCheck, FaBell } from 'react-icons/fa';
+import { useSneakers } from '../hooks/useSneakers';
+import { useAnalytics } from '../hooks/useAnalytics';
+import { useFavorites } from '../hooks/useFavorites';
+import { usePriceAlerts } from '../hooks/usePriceAlerts';
+import { getAffiliateUrl, shouldShowPrice, formatPrice } from '../lib/supabaseClient';
+import { createAffiliateShareData } from '../lib/deepLinks';
+import { Shoe } from '../lib/types';
+import ShoePanel from '../components/ShoePanel';
+import MusicPanel from '../components/MusicPanel';
+import NotificationsPanel from '../components/NotificationsPanel';
+
+const FeedPage: React.FC = () => {
+  const { getInfiniteFeed, trackView, trackClick, loading } = useSneakers();
+  const { trackPanelOpen, trackShare, trackFavorite, trackShoeClick } = useAnalytics();
+  const { toggleFavorite, isFavorite } = useFavorites();
+  const { unreadCount } = usePriceAlerts();
+  const [shoes, setShoes] = useState<Shoe[]>([]);
+  const [currentIndex, setCurrentIndex] = useState(0);
+  const [page, setPage] = useState(0);
+  const [showShoePanel, setShowShoePanel] = useState(false);
+  const [showMusicPanel, setShowMusicPanel] = useState(false);
+  const [showNotifications, setShowNotifications] = useState(false);
+  const [showShareToast, setShowShareToast] = useState(false);
+  const containerRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    loadShoes();
+  }, []);
+
+  const loadShoes = async () => {
+    const data = await getInfiniteFeed(page, 10);
+    setShoes(prev => [...prev, ...data]);
+    setPage(prev => prev + 1);
+  };
+
+  useEffect(() => {
+    if (shoes[currentIndex]) {
+      trackView(shoes[currentIndex].id);
+    }
+  }, [currentIndex, shoes]);
+
+  // Load more when near end
+  useEffect(() => {
+    if (currentIndex >= shoes.length - 3 && !loading) {
+      loadShoes();
+    }
+  }, [currentIndex, shoes.length, loading]);
+
+  // Keyboard navigation
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      const container = containerRef.current;
+      if (!container || shoes.length === 0) return;
+
+      if (e.key === 'ArrowUp') {
+        e.preventDefault();
+        const prevIndex = Math.max(0, currentIndex - 1);
+        const card = container.querySelector(`[data-index="${prevIndex}"]`);
+        card?.scrollIntoView({ behavior: 'smooth' });
+      } else if (e.key === 'ArrowDown') {
+        e.preventDefault();
+        const nextIndex = Math.min(shoes.length - 1, currentIndex + 1);
+        const card = container.querySelector(`[data-index="${nextIndex}"]`);
+        card?.scrollIntoView({ behavior: 'smooth' });
+      } else if (e.key === 'ArrowLeft') {
+        e.preventDefault();
+        handleOpenShoePanel();
+      } else if (e.key === 'ArrowRight') {
+        e.preventDefault();
+        handleOpenMusicPanel();
+      } else if (e.key === 'Escape') {
+        setShowShoePanel(false);
+        setShowMusicPanel(false);
+        setShowNotifications(false);
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [currentIndex, shoes.length]);
+
+  // Touch swipe gestures for mobile
+  useEffect(() => {
+    const container = containerRef.current;
+    if (!container) return;
+
+    let touchStartX = 0;
+    let touchStartY = 0;
+
+    const handleTouchStart = (e: TouchEvent) => {
+      touchStartX = e.touches[0].clientX;
+      touchStartY = e.touches[0].clientY;
+    };
+
+    const handleTouchEnd = (e: TouchEvent) => {
+      const touchEndX = e.changedTouches[0].clientX;
+      const touchEndY = e.changedTouches[0].clientY;
+      const diffX = touchEndX - touchStartX;
+      const diffY = touchEndY - touchStartY;
+
+      // Only trigger if horizontal swipe is greater than vertical (to not interfere with scroll)
+      if (Math.abs(diffX) > Math.abs(diffY) && Math.abs(diffX) > 50) {
+        if (diffX > 0) {
+          // Swiped right - open ShoePanel
+          handleOpenShoePanel();
+        } else {
+          // Swiped left - open MusicPanel
+          handleOpenMusicPanel();
+        }
+      }
+    };
+
+    container.addEventListener('touchstart', handleTouchStart, { passive: true });
+    container.addEventListener('touchend', handleTouchEnd, { passive: true });
+
+    return () => {
+      container.removeEventListener('touchstart', handleTouchStart);
+      container.removeEventListener('touchend', handleTouchEnd);
+    };
+  }, []);
+
+  // Intersection Observer for tracking visible card
+  useEffect(() => {
+    const container = containerRef.current;
+    if (!container) return;
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        entries.forEach((entry) => {
+          if (entry.isIntersecting && entry.intersectionRatio > 0.5) {
+            const index = parseInt(entry.target.getAttribute('data-index') || '0');
+            setCurrentIndex(index);
+          }
+        });
+      },
+      { root: container, threshold: 0.5 }
+    );
+
+    container.querySelectorAll('.feed-card').forEach((card) => observer.observe(card));
+
+    return () => observer.disconnect();
+  }, [shoes]);
+
+  const handleBuyClick = (shoe: Shoe) => {
+    trackClick(shoe.id);
+    trackShoeClick(shoe.id);
+    window.open(getAffiliateUrl(shoe.amazon_url), '_blank');
+  };
+
+  const handleOpenShoePanel = () => {
+    if (shoes[currentIndex]) {
+      trackPanelOpen('shoe', shoes[currentIndex].id);
+    }
+    setShowShoePanel(true);
+  };
+
+  const handleOpenMusicPanel = () => {
+    if (shoes[currentIndex]) {
+      trackPanelOpen('music', shoes[currentIndex].id);
+    }
+    setShowMusicPanel(true);
+  };
+
+  const handleShare = async (shoe: Shoe) => {
+    // Generate smart share data with deep links and affiliate tracking
+    const shareData = createAffiliateShareData(shoe, 'share_native');
+
+    if (navigator.share) {
+      try {
+        await navigator.share({
+          title: shareData.title,
+          text: shareData.text,
+          url: shareData.url,
+        });
+        trackShare(shoe.id, 'native');
+      } catch (err) {
+        console.log('Share cancelled');
+      }
+    } else {
+      // Copy rich share text to clipboard
+      navigator.clipboard.writeText(shareData.text);
+      trackShare(shoe.id, 'clipboard');
+      // Show toast instead of alert
+      setShowShareToast(true);
+      setTimeout(() => setShowShareToast(false), 2500);
+    }
+  };
+
+  const handleFavorite = async (shoe: Shoe) => {
+    const wasAlreadyFavorite = isFavorite(shoe.id);
+    const success = await toggleFavorite(shoe.id);
+    if (success) {
+      trackFavorite(shoe.id, wasAlreadyFavorite ? 'remove' : 'add');
+    }
+  };
+
+  if (loading && shoes.length === 0) {
+    return (
+      <div className="h-screen bg-zinc-950 flex items-center justify-center">
+        <div className="text-center">
+          <div className="w-12 h-12 border-4 border-orange-500 border-t-transparent rounded-full animate-spin mx-auto mb-4" />
+          <p className="text-zinc-400">Loading sneakers...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (shoes.length === 0) {
+    return (
+      <div className="h-screen bg-zinc-950 flex items-center justify-center">
+        <div className="text-center">
+          <p className="text-2xl mb-2">👟</p>
+          <p className="text-zinc-400">No sneakers found</p>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div
+      ref={containerRef}
+      className="h-screen overflow-y-scroll snap-y snap-mandatory scrollbar-hide relative"
+      style={{
+        scrollSnapType: 'y mandatory',
+        WebkitOverflowScrolling: 'touch',
+        scrollbarWidth: 'none',
+        msOverflowStyle: 'none'
+      }}
+    >
+      {/* Notification Bell - Fixed Position */}
+      <button
+        onClick={() => setShowNotifications(true)}
+        className="fixed top-4 right-4 z-30 w-11 h-11 bg-black/40 backdrop-blur-sm rounded-full flex items-center justify-center active:scale-90 transition-transform"
+      >
+        <FaBell className="text-white text-lg" />
+        {unreadCount > 0 && (
+          <span className="absolute -top-1 -right-1 min-w-[18px] h-[18px] bg-red-500 text-white text-[10px] font-bold rounded-full flex items-center justify-center px-1">
+            {unreadCount > 9 ? '9+' : unreadCount}
+          </span>
+        )}
+      </button>
+
+      {shoes.map((shoe, index) => (
+        <div
+          key={shoe.id}
+          data-index={index}
+          className="feed-card h-screen min-h-screen snap-start snap-always relative"
+          style={{ scrollSnapAlign: 'start', scrollSnapStop: 'always' }}
+        >
+          {/* Background Image */}
+          <img
+            src={shoe.image_url}
+            alt={shoe.name}
+            className="absolute inset-0 w-full h-full object-cover"
+          />
+
+          {/* Gradient Overlay */}
+          <div className="absolute inset-0 bg-gradient-to-b from-black/40 via-transparent to-black/95 pointer-events-none" />
+
+          {/* Content */}
+          <div className="absolute bottom-32 left-0 right-16 p-6 z-10">
+            {/* Brand & Tags */}
+            <div className="flex items-center gap-2 mb-3">
+              <span className="bg-orange-500 text-white text-xs font-bold px-3 py-1 rounded-full uppercase">
+                {shoe.brand}
+              </span>
+              {shoe.is_featured && (
+                <span className="bg-red-500 text-white text-xs font-bold px-2 py-1 rounded-full">
+                  🔥 HOT
+                </span>
+              )}
+            </div>
+
+            {/* Name */}
+            <h1 className="text-2xl font-black text-white leading-tight mb-2 drop-shadow-lg">
+              {shoe.name}
+            </h1>
+
+            {/* Style Tags */}
+            <div className="flex flex-wrap gap-2 mb-3">
+              {shoe.style_tags?.slice(0, 3).map((tag) => (
+                <span
+                  key={tag}
+                  className="bg-zinc-800/80 backdrop-blur-sm text-zinc-300 text-xs px-2 py-1 rounded"
+                >
+                  #{tag}
+                </span>
+              ))}
+            </div>
+
+            {/* Price - Only shown when Amazon API is connected */}
+            {shouldShowPrice(shoe.price) && (
+              <div className="flex items-center gap-3 mb-4">
+                <span className="text-3xl font-bold text-orange-400">
+                  {formatPrice(shoe.price)}
+                </span>
+              </div>
+            )}
+
+            {/* Buy Button */}
+            <button
+              onClick={() => handleBuyClick(shoe)}
+              className="w-full bg-white text-black font-black py-4 rounded-xl flex items-center justify-center gap-3 text-base active:scale-95 transition-transform shadow-lg"
+            >
+              <FaAmazon className="text-2xl" />
+              BUY ON AMAZON
+            </button>
+          </div>
+
+          {/* Side Actions */}
+          <div className="absolute right-3 bottom-44 flex flex-col gap-5 z-10">
+            <button
+              onClick={() => handleFavorite(shoe)}
+              className="flex flex-col items-center gap-1"
+            >
+              <div className={`w-11 h-11 backdrop-blur-sm rounded-full flex items-center justify-center active:scale-90 transition-all ${
+                isFavorite(shoe.id) ? 'bg-red-500' : 'bg-black/30'
+              }`}>
+                <FaHeart className={`text-xl ${isFavorite(shoe.id) ? 'text-white' : 'text-white'}`} />
+              </div>
+              <span className="text-xs font-bold text-white drop-shadow">
+                {isFavorite(shoe.id) ? 'Liked' : shoe.favorite_count}
+              </span>
+            </button>
+
+            <button
+              onClick={() => handleFavorite(shoe)}
+              className="flex flex-col items-center gap-1"
+            >
+              <div className={`w-11 h-11 backdrop-blur-sm rounded-full flex items-center justify-center active:scale-90 transition-all ${
+                isFavorite(shoe.id) ? 'bg-orange-500' : 'bg-black/30'
+              }`}>
+                <FaBookmark className="text-xl text-white" />
+              </div>
+              <span className="text-xs font-bold text-white drop-shadow">
+                {isFavorite(shoe.id) ? 'Saved' : 'Save'}
+              </span>
+            </button>
+
+            <button
+              onClick={() => handleShare(shoe)}
+              className="flex flex-col items-center gap-1"
+            >
+              <div className="w-11 h-11 bg-black/30 backdrop-blur-sm rounded-full flex items-center justify-center active:scale-90 transition-transform">
+                <FaShare className="text-xl text-white" />
+              </div>
+              <span className="text-xs font-bold text-white drop-shadow">Share</span>
+            </button>
+          </div>
+
+          {/* Music Bar - Bottom of card */}
+          {shoe.music && (
+            <button
+              onClick={handleOpenMusicPanel}
+              className="absolute bottom-20 left-4 right-4 flex items-center gap-3 bg-black/40 backdrop-blur-sm rounded-full px-3 py-2 z-10"
+            >
+              {/* Spinning Disc */}
+              <div className="w-10 h-10 rounded-full bg-gradient-to-br from-zinc-700 to-zinc-900 flex items-center justify-center animate-spin-slow flex-shrink-0 border border-zinc-600">
+                <div className="w-4 h-4 rounded-full bg-orange-500 flex items-center justify-center">
+                  <div className="w-1.5 h-1.5 rounded-full bg-black" />
+                </div>
+              </div>
+
+              {/* Song Info with Marquee */}
+              <div className="flex-1 overflow-hidden">
+                <div className="flex items-center gap-2">
+                  <FaMusic className="text-orange-500 text-xs flex-shrink-0" />
+                  <div className="overflow-hidden whitespace-nowrap">
+                    <span className="inline-block animate-marquee text-white text-sm font-medium">
+                      {shoe.music.song} • {shoe.music.artist}
+                    </span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Tap hint */}
+              <span className="text-zinc-400 text-xs flex-shrink-0">Tap for links</span>
+            </button>
+          )}
+        </div>
+      ))}
+
+      {/* Shoe Panel - Opens on Left Arrow */}
+      {shoes[currentIndex] && (
+        <ShoePanel
+          shoe={shoes[currentIndex]}
+          isOpen={showShoePanel}
+          onClose={() => setShowShoePanel(false)}
+        />
+      )}
+
+      {/* Music Panel - Opens on Right Arrow */}
+      {shoes[currentIndex] && (
+        <MusicPanel
+          shoe={shoes[currentIndex]}
+          isOpen={showMusicPanel}
+          onClose={() => setShowMusicPanel(false)}
+        />
+      )}
+
+      {/* Notifications Panel */}
+      <NotificationsPanel
+        isOpen={showNotifications}
+        onClose={() => setShowNotifications(false)}
+      />
+
+      {/* Share Success Toast */}
+      <div
+        className={`fixed bottom-24 left-1/2 -translate-x-1/2 bg-zinc-800 text-white px-4 py-3 rounded-xl flex items-center gap-2 shadow-lg z-50 transition-all duration-300 ${
+          showShareToast ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4 pointer-events-none'
+        }`}
+      >
+        <div className="w-6 h-6 bg-green-500 rounded-full flex items-center justify-center">
+          <FaCheck className="text-xs text-white" />
+        </div>
+        <span className="font-medium">Link copied with affiliate tracking!</span>
+      </div>
+    </div>
+  );
+};
+
+export default FeedPage;
+
+
+================ FILE: shoeswipermainproject2-main/shoeswiper-complete/src/pages/ProfilePage.tsx ================
+import React, { useEffect, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { supabase, ADMIN_EMAIL } from '../lib/supabaseClient';
+import { FaCog, FaSignOutAlt, FaHeart, FaShoppingBag, FaShieldAlt, FaGem, FaBell } from 'react-icons/fa';
+import { Profile, Shoe } from '../lib/types';
+import { SneakerCard } from '../components/SneakerCard';
+import ReferralCard from '../components/ReferralCard';
+import NotificationSettings from '../components/NotificationSettings';
+import { usePushNotifications } from '../hooks/usePushNotifications';
+
+type Tab = 'favorites' | 'closet';
+
+const ProfilePage: React.FC = () => {
+  const navigate = useNavigate();
+  const { isEnabled: pushEnabled } = usePushNotifications();
+  const [profile, setProfile] = useState<Profile | null>(null);
+  const [favorites, setFavorites] = useState<Shoe[]>([]);
+  const [closet, setCloset] = useState<Shoe[]>([]);
+  const [activeTab, setActiveTab] = useState<Tab>('favorites');
+  const [loading, setLoading] = useState(true);
+  const [showNotificationSettings, setShowNotificationSettings] = useState(false);
+
+  useEffect(() => {
+    loadProfile();
+  }, []);
+
+  const loadProfile = async () => {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) {
+      navigate('/auth');
+      return;
+    }
+
+    // Get profile
+    const { data: profileData } = await supabase
+      .from('profiles')
+      .select('*')
+      .eq('id', user.id)
+      .single();
+
+    if (profileData) {
+      setProfile(profileData);
+    } else {
+      setProfile({
+        id: user.id,
+        email: user.email,
+        username: user.user_metadata?.username || 'User',
+        avatar_url: user.user_metadata?.avatar_url,
+        created_at: user.created_at,
+      });
+    }
+
+    // Get favorites
+    const { data: favData } = await supabase
+      .from('favorites')
+      .select('shoe:shoes(*)')
+      .eq('user_id', user.id);
+
+    if (favData) {
+      setFavorites(favData.map((f: any) => f.shoe).filter(Boolean));
+    }
+
+    // Get closet
+    const { data: closetData } = await supabase
+      .from('user_sneakers')
+      .select('shoe:shoes(*)')
+      .eq('user_id', user.id);
+
+    if (closetData) {
+      setCloset(closetData.map((c: any) => c.shoe).filter(Boolean));
+    }
+
+    setLoading(false);
+  };
+
+  const handleSignOut = async () => {
+    await supabase.auth.signOut();
+    navigate('/');
+  };
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-zinc-950 flex items-center justify-center">
+        <div className="w-8 h-8 border-2 border-orange-500 border-t-transparent rounded-full animate-spin" />
+      </div>
+    );
+  }
+
+  const isAdmin = profile?.email === ADMIN_EMAIL;
+
+  return (
+    <div className="min-h-screen bg-zinc-950 pb-24">
+      {/* Header */}
+      <div className="bg-gradient-to-b from-orange-500/20 to-transparent p-6 pt-12">
+        <div className="flex justify-between items-start mb-6">
+          <div className="flex items-center gap-4">
+            <div className="w-20 h-20 rounded-full bg-zinc-800 border-2 border-orange-500 overflow-hidden">
+              {profile?.avatar_url ? (
+                <img src={profile.avatar_url} alt="" className="w-full h-full object-cover" />
+              ) : (
+                <div className="w-full h-full flex items-center justify-center text-2xl font-bold text-orange-500">
+                  {profile?.username?.[0]?.toUpperCase() || '?'}
+                </div>
+              )}
+            </div>
+            <div>
+              <h1 className="text-xl font-bold text-white">{profile?.username || 'User'}</h1>
+              <p className="text-zinc-400 text-sm">{profile?.email}</p>
+              {isAdmin && (
+                <span className="inline-flex items-center gap-1 mt-1 text-xs text-orange-400 bg-orange-500/10 px-2 py-0.5 rounded-full">
+                  <FaShieldAlt /> Admin
+                </span>
+              )}
+            </div>
+          </div>
+          
+          <div className="flex gap-2">
+            <button className="p-2 bg-zinc-800 rounded-lg text-zinc-400 hover:text-white">
+              <FaCog />
+            </button>
+            <button onClick={handleSignOut} className="p-2 bg-zinc-800 rounded-lg text-zinc-400 hover:text-red-400">
+              <FaSignOutAlt />
+            </button>
+          </div>
+        </div>
+
+        {/* Stats */}
+        <div className="grid grid-cols-3 gap-3">
+          <div className="bg-zinc-900/80 backdrop-blur rounded-xl p-3 text-center">
+            <p className="text-2xl font-bold text-white">{favorites.length}</p>
+            <p className="text-xs text-zinc-400">Favorites</p>
+          </div>
+          <div className="bg-zinc-900/80 backdrop-blur rounded-xl p-3 text-center">
+            <p className="text-2xl font-bold text-white">{closet.length}</p>
+            <p className="text-xs text-zinc-400">Closet</p>
+          </div>
+          <button
+            onClick={() => navigate('/nft')}
+            className="bg-gradient-to-r from-violet-500/20 to-fuchsia-500/20 border border-violet-500/30 rounded-xl p-3 text-center hover:border-violet-400"
+          >
+            <p className="text-lg font-bold text-violet-300"><FaGem className="inline" /></p>
+            <p className="text-xs text-violet-300">My NFTs</p>
+          </button>
+        </div>
+      </div>
+
+      {/* Admin Button */}
+      {isAdmin && (
+        <div className="px-6 mb-4">
+          <button
+            onClick={() => navigate('/admin')}
+            className="w-full py-3 bg-gradient-to-r from-orange-500 to-red-500 rounded-xl text-white font-bold flex items-center justify-center gap-2"
+          >
+            <FaShieldAlt /> Open Admin Dashboard
+          </button>
+        </div>
+      )}
+
+      {/* Referral Program */}
+      <div className="px-6 mb-4">
+        <ReferralCard />
+      </div>
+
+      {/* Notification Settings */}
+      <div className="px-6 mb-4">
+        <button
+          onClick={() => setShowNotificationSettings(true)}
+          className="w-full bg-zinc-900 rounded-xl p-4 flex items-center justify-between hover:bg-zinc-800 transition-colors"
+        >
+          <div className="flex items-center gap-3">
+            <div className={`w-10 h-10 rounded-full flex items-center justify-center ${
+              pushEnabled ? 'bg-green-500/20' : 'bg-zinc-800'
+            }`}>
+              <FaBell className={pushEnabled ? 'text-green-500' : 'text-zinc-500'} />
+            </div>
+            <div className="text-left">
+              <p className="text-white font-medium">Push Notifications</p>
+              <p className="text-zinc-500 text-xs">
+                {pushEnabled ? 'Enabled - Get price drop alerts' : 'Enable to get deal alerts'}
+              </p>
+            </div>
+          </div>
+          <div className={`px-2 py-1 rounded text-xs font-bold ${
+            pushEnabled ? 'bg-green-500/20 text-green-400' : 'bg-orange-500/20 text-orange-400'
+          }`}>
+            {pushEnabled ? 'ON' : 'OFF'}
+          </div>
+        </button>
+      </div>
+
+      {/* Tabs */}
+      <div className="sticky top-0 bg-zinc-950 border-b border-zinc-800 z-10">
+        <div className="flex px-6">
+          <button
+            onClick={() => setActiveTab('favorites')}
+            className={`flex-1 py-4 text-sm font-medium flex items-center justify-center gap-2 border-b-2 transition-colors ${
+              activeTab === 'favorites'
+                ? 'text-orange-500 border-orange-500'
+                : 'text-zinc-400 border-transparent'
+            }`}
+          >
+            <FaHeart /> Favorites
+          </button>
+          <button
+            onClick={() => setActiveTab('closet')}
+            className={`flex-1 py-4 text-sm font-medium flex items-center justify-center gap-2 border-b-2 transition-colors ${
+              activeTab === 'closet'
+                ? 'text-orange-500 border-orange-500'
+                : 'text-zinc-400 border-transparent'
+            }`}
+          >
+            <FaShoppingBag /> My Closet
+          </button>
+        </div>
+      </div>
+
+      {/* Content */}
+      <div className="p-4">
+        {activeTab === 'favorites' && (
+          favorites.length === 0 ? (
+            <div className="text-center py-16">
+              <FaHeart className="text-4xl text-zinc-700 mx-auto mb-4" />
+              <p className="text-zinc-400">No favorites yet</p>
+              <p className="text-zinc-500 text-sm mt-1">Like sneakers to save them here</p>
+            </div>
+          ) : (
+            <div className="grid grid-cols-2 gap-3">
+              {favorites.map(shoe => (
+                <SneakerCard key={shoe.id} shoe={shoe} variant="grid" />
+              ))}
+            </div>
+          )
+        )}
+
+        {activeTab === 'closet' && (
+          closet.length === 0 ? (
+            <div className="text-center py-16">
+              <FaShoppingBag className="text-4xl text-zinc-700 mx-auto mb-4" />
+              <p className="text-zinc-400">No sneakers in your closet</p>
+              <p className="text-zinc-500 text-sm mt-1">Add sneakers you own to mint NFTs</p>
+            </div>
+          ) : (
+            <div className="grid grid-cols-2 gap-3">
+              {closet.map(shoe => (
+                <SneakerCard key={shoe.id} shoe={shoe} variant="grid" />
+              ))}
+            </div>
+          )
+        )}
+      </div>
+
+      {/* Notification Settings Panel */}
+      <NotificationSettings
+        isOpen={showNotificationSettings}
+        onClose={() => setShowNotificationSettings(false)}
+      />
+    </div>
+  );
+};
+
+export default ProfilePage;
+
+
+================ FILE: shoeswipermainproject2-main/shoeswiper-complete/src/pages/SearchPage.tsx ================
+import React, { useState, useEffect } from 'react';
+import { FaSearch, FaFilter, FaTimes } from 'react-icons/fa';
+import { useSneakerSearch, SearchFilters } from '../hooks/useSneakerSearch';
+import { SneakerCard } from '../components/SneakerCard';
+
+const BRANDS = ['Nike', 'Jordan', 'Adidas', 'New Balance', 'ASICS', 'Puma', 'Converse', 'Vans', 'HOKA', 'Salomon'];
+const STYLES = ['streetwear', 'retro', 'casual', 'hype', 'running', 'athletic', 'classic', 'gorpcore'];
+const GENDERS = ['men', 'women', 'unisex', 'kids'] as const;
+
+const SearchPage: React.FC = () => {
+  const { searchSneakers, results, isSearching } = useSneakerSearch();
+  const [query, setQuery] = useState('');
+  const [showFilters, setShowFilters] = useState(false);
+  const [filters, setFilters] = useState<SearchFilters>({});
+
+  useEffect(() => {
+    // Load initial results
+    searchSneakers('', {});
+  }, []);
+
+  const handleSearch = (e: React.FormEvent) => {
+    e.preventDefault();
+    searchSneakers(query, filters);
+  };
+
+  const toggleBrand = (brand: string) => {
+    const brands = filters.brands || [];
+    const newBrands = brands.includes(brand)
+      ? brands.filter(b => b !== brand)
+      : [...brands, brand];
+    setFilters({ ...filters, brands: newBrands.length ? newBrands : undefined });
+  };
+
+  const toggleStyle = (style: string) => {
+    const styles = filters.styleTags || [];
+    const newStyles = styles.includes(style)
+      ? styles.filter(s => s !== style)
+      : [...styles, style];
+    setFilters({ ...filters, styleTags: newStyles.length ? newStyles : undefined });
+  };
+
+  const applyFilters = () => {
+    searchSneakers(query, filters);
+    setShowFilters(false);
+  };
+
+  const clearFilters = () => {
+    setFilters({});
+    searchSneakers(query, {});
+  };
+
+  return (
+    <div className="min-h-screen bg-zinc-950 pb-24">
+      {/* Header */}
+      <div className="sticky top-0 z-20 bg-zinc-950/95 backdrop-blur-lg border-b border-zinc-800 p-4">
+        <form onSubmit={handleSearch} className="flex gap-2">
+          <div className="flex-1 relative">
+            <FaSearch className="absolute left-4 top-1/2 -translate-y-1/2 text-zinc-500" />
+            <input
+              type="text"
+              value={query}
+              onChange={(e) => setQuery(e.target.value)}
+              placeholder="Search sneakers..."
+              className="w-full bg-zinc-900 border border-zinc-800 rounded-xl pl-12 pr-4 py-3 text-white placeholder-zinc-500 focus:border-orange-500 outline-none"
+            />
+          </div>
+          <button
+            type="button"
+            onClick={() => setShowFilters(true)}
+            className="p-3 bg-zinc-900 border border-zinc-800 rounded-xl text-zinc-400 hover:text-white hover:border-orange-500 transition-colors"
+          >
+            <FaFilter />
+          </button>
+        </form>
+
+        {/* Active Filters */}
+        {(filters.brands?.length || filters.styleTags?.length || filters.gender) && (
+          <div className="flex flex-wrap gap-2 mt-3">
+            {filters.brands?.map(brand => (
+              <span key={brand} className="bg-orange-500/20 text-orange-400 text-xs px-2 py-1 rounded-full flex items-center gap-1">
+                {brand}
+                <button onClick={() => toggleBrand(brand)}><FaTimes className="text-[10px]" /></button>
+              </span>
+            ))}
+            {filters.styleTags?.map(style => (
+              <span key={style} className="bg-blue-500/20 text-blue-400 text-xs px-2 py-1 rounded-full flex items-center gap-1">
+                #{style}
+                <button onClick={() => toggleStyle(style)}><FaTimes className="text-[10px]" /></button>
+              </span>
+            ))}
+            {filters.gender && (
+              <span className="bg-purple-500/20 text-purple-400 text-xs px-2 py-1 rounded-full">
+                {filters.gender}
+              </span>
+            )}
+            <button onClick={clearFilters} className="text-zinc-500 text-xs hover:text-white">
+              Clear all
+            </button>
+          </div>
+        )}
+      </div>
+
+      {/* Results */}
+      <div className="p-4">
+        {isSearching ? (
+          <div className="grid grid-cols-2 gap-3">
+            {[...Array(6)].map((_, i) => (
+              <div key={i} className="aspect-square bg-zinc-900 rounded-xl animate-pulse" />
+            ))}
+          </div>
+        ) : results.length === 0 ? (
+          <div className="text-center py-16">
+            <p className="text-4xl mb-4">🔍</p>
+            <p className="text-zinc-400">No sneakers found</p>
+            <p className="text-zinc-500 text-sm mt-1">Try different keywords or filters</p>
+          </div>
+        ) : (
+          <div className="grid grid-cols-2 gap-3">
+            {results.map(shoe => (
+              <SneakerCard key={shoe.id} shoe={shoe} variant="grid" />
+            ))}
+          </div>
+        )}
+      </div>
+
+      {/* Filter Modal */}
+      {showFilters && (
+        <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-end">
+          <div className="bg-zinc-900 w-full max-h-[80vh] rounded-t-3xl overflow-y-auto">
+            <div className="sticky top-0 bg-zinc-900 p-4 border-b border-zinc-800 flex justify-between items-center">
+              <h2 className="text-lg font-bold text-white">Filters</h2>
+              <button onClick={() => setShowFilters(false)} className="text-zinc-400 hover:text-white">
+                <FaTimes />
+              </button>
+            </div>
+
+            <div className="p-4 space-y-6">
+              {/* Brands */}
+              <div>
+                <h3 className="text-sm font-bold text-zinc-400 uppercase mb-3">Brands</h3>
+                <div className="flex flex-wrap gap-2">
+                  {BRANDS.map(brand => (
+                    <button
+                      key={brand}
+                      onClick={() => toggleBrand(brand)}
+                      className={`px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
+                        filters.brands?.includes(brand)
+                          ? 'bg-orange-500 text-white'
+                          : 'bg-zinc-800 text-zinc-300 hover:bg-zinc-700'
+                      }`}
+                    >
+                      {brand}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Gender */}
+              <div>
+                <h3 className="text-sm font-bold text-zinc-400 uppercase mb-3">Gender</h3>
+                <div className="flex flex-wrap gap-2">
+                  {GENDERS.map(gender => (
+                    <button
+                      key={gender}
+                      onClick={() => setFilters({ ...filters, gender: filters.gender === gender ? undefined : gender })}
+                      className={`px-3 py-2 rounded-lg text-sm font-medium capitalize transition-colors ${
+                        filters.gender === gender
+                          ? 'bg-orange-500 text-white'
+                          : 'bg-zinc-800 text-zinc-300 hover:bg-zinc-700'
+                      }`}
+                    >
+                      {gender}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Styles */}
+              <div>
+                <h3 className="text-sm font-bold text-zinc-400 uppercase mb-3">Style</h3>
+                <div className="flex flex-wrap gap-2">
+                  {STYLES.map(style => (
+                    <button
+                      key={style}
+                      onClick={() => toggleStyle(style)}
+                      className={`px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
+                        filters.styleTags?.includes(style)
+                          ? 'bg-orange-500 text-white'
+                          : 'bg-zinc-800 text-zinc-300 hover:bg-zinc-700'
+                      }`}
+                    >
+                      #{style}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Price Range */}
+              <div>
+                <h3 className="text-sm font-bold text-zinc-400 uppercase mb-3">Price Range</h3>
+                <div className="flex gap-3">
+                  <input
+                    type="number"
+                    placeholder="Min"
+                    value={filters.minPrice || ''}
+                    onChange={(e) => setFilters({ ...filters, minPrice: e.target.value ? Number(e.target.value) : undefined })}
+                    className="flex-1 bg-zinc-800 border border-zinc-700 rounded-lg px-3 py-2 text-white placeholder-zinc-500"
+                  />
+                  <input
+                    type="number"
+                    placeholder="Max"
+                    value={filters.maxPrice || ''}
+                    onChange={(e) => setFilters({ ...filters, maxPrice: e.target.value ? Number(e.target.value) : undefined })}
+                    className="flex-1 bg-zinc-800 border border-zinc-700 rounded-lg px-3 py-2 text-white placeholder-zinc-500"
+                  />
+                </div>
+              </div>
+
+              {/* Sort */}
+              <div>
+                <h3 className="text-sm font-bold text-zinc-400 uppercase mb-3">Sort By</h3>
+                <select
+                  value={filters.sortBy || ''}
+                  onChange={(e) => setFilters({ ...filters, sortBy: e.target.value as any || undefined })}
+                  className="w-full bg-zinc-800 border border-zinc-700 rounded-lg px-3 py-2 text-white"
+                >
+                  <option value="">Relevance</option>
+                  <option value="price_asc">Price: Low to High</option>
+                  <option value="price_desc">Price: High to Low</option>
+                  <option value="newest">Newest</option>
+                  <option value="trending">Trending</option>
+                </select>
+              </div>
+            </div>
+
+            <div className="sticky bottom-0 bg-zinc-900 p-4 border-t border-zinc-800 flex gap-3">
+              <button
+                onClick={clearFilters}
+                className="flex-1 py-3 border border-zinc-700 rounded-xl text-zinc-300 font-medium"
+              >
+                Clear All
+              </button>
+              <button
+                onClick={applyFilters}
+                className="flex-1 py-3 bg-orange-500 rounded-xl text-white font-bold"
+              >
+                Apply Filters
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+};
+
+export default SearchPage;
+
+
+================ FILE: shoeswipermainproject2-main/shoeswiper-complete/src/pages/Unauthorized.tsx ================
+import { supabase } from '../lib/supabaseClient';
+
+const Unauthorized = () => {
+  const handleSignOut = async () => {
+    await supabase.auth.signOut();
+  };
+
+  return (
+    <div className="min-h-screen bg-black flex flex-col items-center justify-center text-white p-4">
+      <div className="text-6xl mb-4">🔒</div>
+      <h1 className="text-3xl font-bold mb-4">Access Denied</h1>
+      <p className="text-gray-400 mb-8 text-center">
+        Sorry, your account is not authorized to access ShoeSwiper yet.
+      </p>
+      <button
+        onClick={handleSignOut}
+        className="bg-purple-600 hover:bg-purple-700 px-6 py-3 rounded-lg transition"
+      >
+        Sign Out
+      </button>
+    </div>
+  );
+};
+
+export default Unauthorized;
+
+
+================ FILE: shoeswipermainproject2-main/shoeswiper-complete/src/pages/admin/AnalyticsDashboard.tsx ================
+import React, { useEffect, useState } from 'react';
+import { useAdmin } from '../../hooks/useAdmin';
+import { useAnalytics } from '../../hooks/useAnalytics';
+import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid, PieChart, Pie, Cell } from 'recharts';
+import { FaMousePointer, FaDollarSign, FaBoxOpen, FaUsers, FaMusic, FaSpotify, FaApple, FaAmazon } from 'react-icons/fa';
+
+export const AnalyticsDashboard: React.FC = () => {
+  const { getAnalytics } = useAdmin();
+  const { getAnalyticsSummary } = useAnalytics();
+  const [stats, setStats] = useState<any>(null);
+  const [analyticsData, setAnalyticsData] = useState<any>(null);
+
+  useEffect(() => {
+    // Load basic admin analytics
+    getAnalytics().then(data => {
+      const clickMap = data.clicks.reduce((acc: any, curr: any) => {
+        const date = curr.clicked_at.split('T')[0];
+        acc[date] = (acc[date] || 0) + 1;
+        return acc;
+      }, {});
+
+      const chartData = Object.keys(clickMap).map(date => ({
+        date: date.slice(5),
+        clicks: clickMap[date]
+      })).slice(-30);
+
+      setStats({ ...data, chartData });
+    });
+
+    // Load detailed analytics from useAnalytics hook
+    getAnalyticsSummary().then(data => {
+      setAnalyticsData(data);
+    });
+  }, []);
+
+  if (!stats) return <div className="text-zinc-400">Loading Analytics...</div>;
+
+  const cards = [
+    { label: 'Total Products', value: stats.totalProducts, icon: FaBoxOpen, color: 'text-blue-500' },
+    { label: 'Total Users', value: stats.totalUsers, icon: FaUsers, color: 'text-purple-500' },
+    { label: '30-Day Clicks', value: stats.clicks.length, icon: FaMousePointer, color: 'text-orange-500' },
+    { label: 'Est. Revenue', value: `$${(stats.clicks.length * 0.12).toFixed(2)}`, icon: FaDollarSign, color: 'text-green-500' },
+  ];
+
+  // Music platform colors
+  const MUSIC_COLORS = {
+    spotify: '#1DB954',
+    apple_music: '#FA57C1',
+    amazon_music: '#00A8E1',
+  };
+
+  // Prepare music click data for pie chart
+  const musicClickData = analyticsData?.musicClicks ? [
+    { name: 'Spotify', value: analyticsData.musicClicks.spotify || 0, color: MUSIC_COLORS.spotify },
+    { name: 'Apple Music', value: analyticsData.musicClicks.apple_music || 0, color: MUSIC_COLORS.apple_music },
+    { name: 'Amazon Music', value: analyticsData.musicClicks.amazon_music || 0, color: MUSIC_COLORS.amazon_music },
+  ].filter(d => d.value > 0) : [];
+
+  const totalMusicClicks = musicClickData.reduce((acc, d) => acc + d.value, 0);
+
+  return (
+    <div className="space-y-6">
+      <h2 className="text-2xl font-bold">Dashboard Overview</h2>
+
+      {/* Main Stats Cards */}
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+        {cards.map((card) => (
+          <div key={card.label} className="bg-zinc-900 p-6 rounded-xl border border-zinc-800">
+            <div className="flex justify-between items-start">
+              <div>
+                <p className="text-zinc-400 text-sm mb-1">{card.label}</p>
+                <h3 className="text-3xl font-bold text-white">{card.value}</h3>
+              </div>
+              <card.icon className={`text-2xl ${card.color}`} />
+            </div>
+          </div>
+        ))}
+      </div>
+
+      {/* Charts Row */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        {/* Affiliate Clicks Chart */}
+        <div className="bg-zinc-900 p-6 rounded-xl border border-zinc-800 h-[400px]">
+          <h3 className="text-lg font-bold mb-4 text-zinc-300">Affiliate Clicks (Last 30 Days)</h3>
+          <ResponsiveContainer width="100%" height="85%">
+            <BarChart data={stats.chartData}>
+              <CartesianGrid strokeDasharray="3 3" stroke="#333" vertical={false} />
+              <XAxis dataKey="date" stroke="#666" fontSize={12} tickLine={false} axisLine={false} />
+              <YAxis stroke="#666" fontSize={12} tickLine={false} axisLine={false} />
+              <Tooltip
+                contentStyle={{ backgroundColor: '#18181b', border: '1px solid #333' }}
+                itemStyle={{ color: '#fff' }}
+              />
+              <Bar dataKey="clicks" fill="#f97316" radius={[4, 4, 0, 0]} />
+            </BarChart>
+          </ResponsiveContainer>
+        </div>
+
+        {/* Music Platform Analytics */}
+        <div className="bg-zinc-900 p-6 rounded-xl border border-zinc-800 h-[400px]">
+          <h3 className="text-lg font-bold mb-4 text-zinc-300 flex items-center gap-2">
+            <FaMusic className="text-orange-500" />
+            Music Platform Clicks
+          </h3>
+          {totalMusicClicks > 0 ? (
+            <div className="flex items-center h-[85%]">
+              <ResponsiveContainer width="50%" height="100%">
+                <PieChart>
+                  <Pie
+                    data={musicClickData}
+                    cx="50%"
+                    cy="50%"
+                    innerRadius={60}
+                    outerRadius={100}
+                    paddingAngle={5}
+                    dataKey="value"
+                  >
+                    {musicClickData.map((entry, index) => (
+                      <Cell key={`cell-${index}`} fill={entry.color} />
+                    ))}
+                  </Pie>
+                  <Tooltip
+                    contentStyle={{ backgroundColor: '#18181b', border: '1px solid #333' }}
+                    itemStyle={{ color: '#fff' }}
+                  />
+                </PieChart>
+              </ResponsiveContainer>
+              <div className="flex-1 space-y-4">
+                <div className="flex items-center gap-3">
+                  <FaSpotify className="text-2xl text-[#1DB954]" />
+                  <div>
+                    <p className="text-white font-bold">{analyticsData?.musicClicks?.spotify || 0}</p>
+                    <p className="text-zinc-500 text-sm">Spotify clicks</p>
+                  </div>
+                </div>
+                <div className="flex items-center gap-3">
+                  <FaApple className="text-2xl text-[#FA57C1]" />
+                  <div>
+                    <p className="text-white font-bold">{analyticsData?.musicClicks?.apple_music || 0}</p>
+                    <p className="text-zinc-500 text-sm">Apple Music clicks</p>
+                  </div>
+                </div>
+                <div className="flex items-center gap-3">
+                  <FaAmazon className="text-2xl text-[#00A8E1]" />
+                  <div>
+                    <p className="text-white font-bold">{analyticsData?.musicClicks?.amazon_music || 0}</p>
+                    <p className="text-zinc-500 text-sm">Amazon Music clicks</p>
+                  </div>
+                </div>
+                <div className="pt-2 border-t border-zinc-800">
+                  <p className="text-orange-400 font-bold text-lg">{totalMusicClicks} total</p>
+                  <p className="text-zinc-500 text-sm">music affiliate clicks</p>
+                </div>
+              </div>
+            </div>
+          ) : (
+            <div className="flex items-center justify-center h-[85%] text-zinc-500">
+              <div className="text-center">
+                <FaMusic className="text-4xl mx-auto mb-2 opacity-50" />
+                <p>No music clicks tracked yet</p>
+                <p className="text-sm">Clicks will appear here in real-time</p>
+              </div>
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* Additional Analytics Summary */}
+      {analyticsData && (
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <div className="bg-zinc-900 p-6 rounded-xl border border-zinc-800">
+            <p className="text-zinc-400 text-sm mb-1">Panel Opens</p>
+            <div className="flex items-center justify-between">
+              <div>
+                <span className="text-2xl font-bold text-white">{analyticsData.panelOpens?.shoe || 0}</span>
+                <span className="text-zinc-500 text-sm ml-2">Shoe</span>
+              </div>
+              <div>
+                <span className="text-2xl font-bold text-white">{analyticsData.panelOpens?.music || 0}</span>
+                <span className="text-zinc-500 text-sm ml-2">Music</span>
+              </div>
+            </div>
+          </div>
+          <div className="bg-zinc-900 p-6 rounded-xl border border-zinc-800">
+            <p className="text-zinc-400 text-sm mb-1">Shares</p>
+            <h3 className="text-3xl font-bold text-white">{analyticsData.shares || 0}</h3>
+          </div>
+          <div className="bg-zinc-900 p-6 rounded-xl border border-zinc-800">
+            <p className="text-zinc-400 text-sm mb-1">Favorites</p>
+            <h3 className="text-3xl font-bold text-white">{analyticsData.favorites || 0}</h3>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+};
+
+
+================ FILE: shoeswipermainproject2-main/shoeswiper-complete/src/pages/admin/ProductManager.tsx ================
+import React, { useState, useEffect } from 'react';
+import { useAdmin } from '../../hooks/useAdmin';
+import { Shoe } from '../../lib/types';
+import { FaEdit, FaTrash, FaPlus, FaTimes, FaExternalLinkAlt } from 'react-icons/fa';
+
+export const ProductManager: React.FC = () => {
+  const { getProducts, saveProduct, deleteProduct, loading } = useAdmin();
+  const [products, setProducts] = useState<Shoe[]>([]);
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [editingProduct, setEditingProduct] = useState<Partial<Shoe>>({});
+
+  const fetchAll = () => getProducts().then(setProducts);
+
+  useEffect(() => { fetchAll(); }, []);
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    await saveProduct(editingProduct);
+    setIsModalOpen(false);
+    setEditingProduct({});
+    fetchAll();
+  };
+
+  const handleDelete = async (id: string) => {
+    if (confirm('Are you sure you want to delete this product?')) {
+      await deleteProduct(id);
+      fetchAll();
+    }
+  };
+
+  const openModal = (shoe?: Shoe) => {
+    setEditingProduct(shoe || {});
+    setIsModalOpen(true);
+  };
+
+  return (
+    <div>
+      <div className="flex justify-between items-center mb-6">
+        <h2 className="text-2xl font-bold">Product Management</h2>
+        <button 
+          onClick={() => openModal()}
+          className="bg-orange-500 hover:bg-orange-600 text-white px-4 py-2 rounded-lg font-bold flex items-center gap-2 transition"
+        >
+          <FaPlus /> Add Product
+        </button>
+      </div>
+
+      <div className="bg-zinc-900 rounded-xl border border-zinc-800 overflow-hidden">
+        <table className="w-full text-left">
+          <thead className="bg-zinc-800 text-zinc-400 uppercase text-xs">
+            <tr>
+              <th className="p-4">Product</th>
+              <th className="p-4">Brand</th>
+              <th className="p-4">Price</th>
+              <th className="p-4">Vibe Score</th>
+              <th className="p-4 text-right">Actions</th>
+            </tr>
+          </thead>
+          <tbody className="divide-y divide-zinc-800">
+            {products.map((shoe) => (
+              <tr key={shoe.id} className="hover:bg-zinc-800/50 transition-colors">
+                <td className="p-4 flex items-center gap-3">
+                  <img src={shoe.image_url} alt="" className="w-10 h-10 rounded object-cover bg-zinc-800" />
+                  <span className="font-medium">{shoe.name}</span>
+                </td>
+                <td className="p-4 text-zinc-400">{shoe.brand}</td>
+                <td className="p-4 font-mono text-orange-500">${shoe.price}</td>
+                <td className="p-4">{shoe.vibe_score || 0}</td>
+                <td className="p-4 text-right space-x-2">
+                  <a href={shoe.amazon_url} target="_blank" rel="noreferrer" className="inline-block p-2 text-zinc-400 hover:text-white">
+                    <FaExternalLinkAlt />
+                  </a>
+                  <button onClick={() => openModal(shoe)} className="p-2 text-blue-500 hover:text-blue-400">
+                    <FaEdit />
+                  </button>
+                  <button onClick={() => handleDelete(shoe.id)} className="p-2 text-red-500 hover:text-red-400">
+                    <FaTrash />
+                  </button>
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+
+      {isModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4">
+          <div className="bg-zinc-900 w-full max-w-2xl rounded-2xl border border-zinc-800 shadow-2xl overflow-y-auto max-h-[90vh]">
+            <div className="p-6 border-b border-zinc-800 flex justify-between items-center">
+              <h3 className="text-xl font-bold">{editingProduct.id ? 'Edit Product' : 'New Product'}</h3>
+              <button onClick={() => setIsModalOpen(false)} className="text-zinc-500 hover:text-white"><FaTimes /></button>
+            </div>
+            
+            <form onSubmit={handleSubmit} className="p-6 space-y-4">
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-xs text-zinc-500 uppercase mb-1">Brand</label>
+                  <input 
+                    type="text" 
+                    value={editingProduct.brand || ''} 
+                    onChange={e => setEditingProduct({...editingProduct, brand: e.target.value})}
+                    className="w-full bg-zinc-950 border border-zinc-800 rounded-lg p-3 text-white focus:border-orange-500 outline-none"
+                    required
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs text-zinc-500 uppercase mb-1">Price</label>
+                  <input 
+                    type="number" 
+                    value={editingProduct.price || ''} 
+                    onChange={e => setEditingProduct({...editingProduct, price: Number(e.target.value)})}
+                    className="w-full bg-zinc-950 border border-zinc-800 rounded-lg p-3 text-white focus:border-orange-500 outline-none"
+                    required
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-xs text-zinc-500 uppercase mb-1">Model Name</label>
+                <input 
+                  type="text" 
+                  value={editingProduct.name || ''} 
+                  onChange={e => setEditingProduct({...editingProduct, name: e.target.value})}
+                  className="w-full bg-zinc-950 border border-zinc-800 rounded-lg p-3 text-white focus:border-orange-500 outline-none"
+                  required
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs text-zinc-500 uppercase mb-1">Image URL</label>
+                <input 
+                  type="url" 
+                  value={editingProduct.image_url || ''} 
+                  onChange={e => setEditingProduct({...editingProduct, image_url: e.target.value})}
+                  className="w-full bg-zinc-950 border border-zinc-800 rounded-lg p-3 text-white focus:border-orange-500 outline-none"
+                  required
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs text-zinc-500 uppercase mb-1">Amazon URL (Tag auto-appended)</label>
+                <input 
+                  type="url" 
+                  value={editingProduct.amazon_url || ''} 
+                  onChange={e => setEditingProduct({...editingProduct, amazon_url: e.target.value})}
+                  className="w-full bg-zinc-950 border border-zinc-800 rounded-lg p-3 text-white focus:border-orange-500 outline-none"
+                  required
+                />
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-xs text-zinc-500 uppercase mb-1">Style Tags (Comma separated)</label>
+                  <input 
+                    type="text" 
+                    value={editingProduct.style_tags?.join(', ') || ''} 
+                    onChange={e => setEditingProduct({...editingProduct, style_tags: e.target.value.split(',').map(s => s.trim())})}
+                    className="w-full bg-zinc-950 border border-zinc-800 rounded-lg p-3 text-white focus:border-orange-500 outline-none"
+                  />
+                </div>
+                <div>
+                   <label className="block text-xs text-zinc-500 uppercase mb-1">Color Tags (Comma separated)</label>
+                   <input 
+                     type="text" 
+                     value={editingProduct.color_tags?.join(', ') || ''} 
+                     onChange={e => setEditingProduct({...editingProduct, color_tags: e.target.value.split(',').map(s => s.trim())})}
+                     className="w-full bg-zinc-950 border border-zinc-800 rounded-lg p-3 text-white focus:border-orange-500 outline-none"
+                   />
+                </div>
+              </div>
+
+              <div className="pt-4 flex justify-end gap-3">
+                <button 
+                  type="button" 
+                  onClick={() => setIsModalOpen(false)}
+                  className="px-4 py-2 text-zinc-400 hover:text-white"
+                >
+                  Cancel
+                </button>
+                <button 
+                  type="submit" 
+                  disabled={loading}
+                  className="bg-orange-500 hover:bg-orange-600 text-white px-6 py-2 rounded-lg font-bold transition disabled:opacity-50"
+                >
+                  {loading ? 'Saving...' : 'Save Product'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+};
+
+
+================ FILE: shoeswipermainproject2-main/shoeswiper-complete/src/pages/admin/UserManager.tsx ================
+import React, { useEffect, useState } from 'react';
+import { FaUserSlash, FaUserCheck, FaSearch } from 'react-icons/fa';
+import { DEMO_MODE } from '../../lib/mockData';
+import { supabase } from '../../lib/supabaseClient';
+
+export const UserManager: React.FC = () => {
+  const [users, setUsers] = useState<any[]>([]);
+  const [search, setSearch] = useState('');
+
+  useEffect(() => {
+    const fetchUsers = async () => {
+      // DEMO MODE: Show demo user
+      if (DEMO_MODE) {
+        setUsers([{
+          id: 'demo-user',
+          email: 'demo@shoeswiper.com',
+          username: 'Demo User',
+          created_at: new Date().toISOString(),
+          is_banned: false
+        }]);
+        return;
+      }
+
+      // PRODUCTION MODE: Fetch from Supabase
+      const { data } = await supabase.from('profiles').select('*');
+      setUsers(data || []);
+    };
+    fetchUsers();
+  }, []);
+
+  const toggleBan = async (id: string, currentStatus: boolean) => {
+    // DEMO MODE: Just update local state
+    if (DEMO_MODE) {
+      console.log('[Demo] Toggle ban:', id);
+      setUsers(users.map(u => u.id === id ? { ...u, is_banned: !currentStatus } : u));
+      return;
+    }
+
+    // PRODUCTION MODE: Update in Supabase
+    await supabase.from('profiles').update({ is_banned: !currentStatus }).eq('id', id);
+    setUsers(users.map(u => u.id === id ? { ...u, is_banned: !currentStatus } : u));
+  };
+
+  const filteredUsers = users.filter(u => 
+    u.email?.toLowerCase().includes(search.toLowerCase()) || 
+    u.username?.toLowerCase().includes(search.toLowerCase())
+  );
+
+  return (
+    <div>
+      <div className="flex justify-between items-center mb-6">
+        <h2 className="text-2xl font-bold">User Management</h2>
+        <div className="relative">
+          <FaSearch className="absolute left-3 top-3 text-zinc-500" />
+          <input 
+            type="text" 
+            placeholder="Search users..." 
+            value={search}
+            onChange={e => setSearch(e.target.value)}
+            className="bg-zinc-900 border border-zinc-800 rounded-lg pl-10 pr-4 py-2 text-white focus:border-orange-500 outline-none w-64"
+          />
+        </div>
+      </div>
+
+      <div className="bg-zinc-900 rounded-xl border border-zinc-800 overflow-hidden">
+        <table className="w-full text-left">
+          <thead className="bg-zinc-800 text-zinc-400 uppercase text-xs">
+            <tr>
+              <th className="p-4">User</th>
+              <th className="p-4">Joined</th>
+              <th className="p-4">Status</th>
+              <th className="p-4 text-right">Actions</th>
+            </tr>
+          </thead>
+          <tbody className="divide-y divide-zinc-800">
+            {filteredUsers.map((user) => (
+              <tr key={user.id} className="hover:bg-zinc-800/50 transition-colors">
+                <td className="p-4">
+                  <div className="font-bold text-white">{user.username || 'No Username'}</div>
+                  <div className="text-sm text-zinc-500">{user.email}</div>
+                </td>
+                <td className="p-4 text-zinc-400">
+                  {new Date(user.created_at).toLocaleDateString()}
+                </td>
+                <td className="p-4">
+                  {user.is_banned ? (
+                    <span className="bg-red-500/10 text-red-500 px-2 py-1 rounded text-xs font-bold">BANNED</span>
+                  ) : (
+                    <span className="bg-green-500/10 text-green-500 px-2 py-1 rounded text-xs font-bold">ACTIVE</span>
+                  )}
+                </td>
+                <td className="p-4 text-right">
+                  <button 
+                    onClick={() => toggleBan(user.id, user.is_banned)}
+                    className={`p-2 rounded hover:bg-zinc-700 transition ${user.is_banned ? 'text-green-500' : 'text-red-500'}`}
+                    title={user.is_banned ? "Unban User" : "Ban User"}
+                  >
+                    {user.is_banned ? <FaUserCheck /> : <FaUserSlash />}
+                  </button>
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  );
+};
+
+
+================ FILE: shoeswipermainproject2-main/shoeswiper-complete/supabase/functions/_shared/cors.ts ================
+export const corsHeaders = {
+  "Access-Control-Allow-Origin": "*",
+  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
+};
+
+
+================ FILE: shoeswipermainproject2-main/shoeswiper-complete/supabase/functions/analyze-outfit/deno.json ================
+{
+  "compilerOptions": {
+    "allowJs": true,
+    "lib": ["deno.window"],
+    "strict": true
+  }
+}
+
+
+================ FILE: shoeswipermainproject2-main/shoeswiper-complete/supabase/functions/analyze-outfit/index.ts ================
+// Supabase Edge Function: supabase/functions/analyze-outfit/index.ts
+// Deploy with: supabase functions deploy analyze-outfit
+// Set secret: supabase secrets set GEMINI_API_KEY=your-key-here
+
+import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
+import { corsHeaders } from "../_shared/cors.ts";
+
+serve(async (req) => {
+  // Handle CORS preflight
+  if (req.method === "OPTIONS") {
+    return new Response("ok", { headers: corsHeaders });
+  }
+
+  try {
+    const { image } = await req.json(); // base64 image
+
+    // Call Gemini Vision API
+    const GEMINI_API_KEY = Deno.env.get("GEMINI_API_KEY");
+
+    if (!GEMINI_API_KEY) {
+      throw new Error("GEMINI_API_KEY is not configured");
+    }
+
+    const response = await fetch(
+      `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${GEMINI_API_KEY}`,
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          contents: [{
+            parts: [
+              {
+                text: `Analyze this outfit photo. Return ONLY valid JSON (no markdown, no code blocks) with this exact structure:
+                {
+                  "rating": <number 1-10>,
+                  "feedback": "<personalized style feedback>",
+                  "style_tags": ["<style1>", "<style2>", ...],
+                  "dominant_colors": ["<color1>", "<color2>", ...],
+                  "detected_shoe": "<description of shoes if visible, or null>"
+                }
+                
+                Style tags should include things like: streetwear, casual, athletic, formal, vintage, minimalist, bold, preppy, grunge, etc.
+                Color tags should be the dominant colors in the outfit.
+                Be encouraging but honest in feedback. Rate based on coordination, style cohesion, and overall aesthetic.`
+              },
+              {
+                inline_data: {
+                  mime_type: "image/jpeg",
+                  data: image // base64 without prefix
+                }
+              }
+            ]
+          }]
+        })
+      }
+    );
+
+    // Handle rate limits
+    if (response.status === 429) {
+      return new Response(JSON.stringify({
+        error: "Rate limit exceeded. Please try again in a moment.",
+        fallback: true
+      }), {
+        status: 429,
+        headers: { ...corsHeaders, "Content-Type": "application/json" }
+      });
+    }
+
+    if (!response.ok) {
+      throw new Error(`Gemini API error: ${response.status}`);
+    }
+
+    const data = await response.json();
+    const text = data.candidates?.[0]?.content?.parts?.[0]?.text;
+
+    if (!text) {
+      throw new Error("No response from Gemini API");
+    }
+
+    // Clean up markdown code blocks if Gemini adds them
+    const jsonStr = text.replace(/```json/g, '').replace(/```/g, '').trim();
+    const analysis = JSON.parse(jsonStr);
+
+    return new Response(JSON.stringify(analysis), {
+      headers: { ...corsHeaders, "Content-Type": "application/json" }
+    });
+  } catch (error) {
+    console.error("Error analyzing outfit:", error);
+    return new Response(JSON.stringify({
+      error: error.message,
+      fallback: true
+    }), {
+      status: 500,
+      headers: { ...corsHeaders, "Content-Type": "application/json" }
+    });
+  }
+});
+
+
+================ FILE: shoeswipermainproject2-main/shoeswiper-complete/tailwind.config.js ================
+/** @type {import('tailwindcss').Config} */
+export default {
+  content: [
+    "./index.html",
+    "./src/**/*.{js,ts,jsx,tsx}",
+  ],
+  theme: {
+    extend: {
+      colors: {
+        primary: {
+          50: '#fff7ed',
+          100: '#ffedd5',
+          200: '#fed7aa',
+          300: '#fdba74',
+          400: '#fb923c',
+          500: '#f97316',
+          600: '#ea580c',
+          700: '#c2410c',
+          800: '#9a3412',
+          900: '#7c2d12',
+        },
+      },
+      animation: {
+        'pulse-slow': 'pulse 3s cubic-bezier(0.4, 0, 0.6, 1) infinite',
+        'bounce-slow': 'bounce 2s infinite',
+      },
+    },
+  },
+  plugins: [],
+};
+
+
+================ FILE: shoeswipermainproject2-main/shoeswiper-complete/tsconfig.json ================
+{
+  "compilerOptions": {
+    "target": "ES2020",
+    "useDefineForClassFields": true,
+    "lib": ["ES2020", "DOM", "DOM.Iterable"],
+    "module": "ESNext",
+    "skipLibCheck": true,
+    "moduleResolution": "bundler",
+    "allowImportingTsExtensions": true,
+    "resolveJsonModule": true,
+    "isolatedModules": true,
+    "noEmit": true,
+    "jsx": "react-jsx",
+    "strict": true,
+    "noUnusedLocals": true,
+    "noUnusedParameters": true,
+    "noFallthroughCasesInSwitch": true,
+    "baseUrl": ".",
+    "paths": {
+      "@/*": ["./src/*"]
+    }
+  },
+  "include": ["src"],
+  "references": [{ "path": "./tsconfig.node.json" }]
+}
+
+
+================ FILE: shoeswipermainproject2-main/shoeswiper-complete/tsconfig.node.json ================
+{
+  "compilerOptions": {
+    "composite": true,
+    "skipLibCheck": true,
+    "module": "ESNext",
+    "moduleResolution": "bundler",
+    "allowSyntheticDefaultImports": true
+  },
+  "include": ["vite.config.ts"]
+}
+
+
+================ FILE: shoeswipermainproject2-main/shoeswiper-complete/vite.config.ts ================
+import { defineConfig } from 'vite';
+import react from '@vitejs/plugin-react';
+import path from 'path';
+
+export default defineConfig({
+  plugins: [react()],
+  resolve: {
+    alias: {
+      '@': path.resolve(__dirname, './src'),
+    },
+  },
+  server: {
+    port: 3000,
+    open: true,
+  },
+  build: {
+    outDir: 'dist',
+    sourcemap: true,
+  },
+});
+
+
+================ FILE: shoeswipermainproject2-main/vercel.json ================
+{
+  "buildCommand": "cd shoeswiper-complete && npm install && npm run build",
+  "outputDirectory": "shoeswiper-complete/dist",
+  "installCommand": "cd shoeswiper-complete && npm install",
+  "framework": "vite"
+}
+
+

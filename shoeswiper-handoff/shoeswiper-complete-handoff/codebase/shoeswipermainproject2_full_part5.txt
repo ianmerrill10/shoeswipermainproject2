@@ -1,0 +1,1790 @@
+================ FILE: shoeswipermainproject2-main/shoeswiper-complete/src/hooks/useSneakers.ts ================
+import { useState, useCallback } from 'react';
+import { Shoe } from '../lib/types';
+import { DEMO_MODE, getShuffledShoes, getFeaturedShoes, MOCK_SHOES } from '../lib/mockData';
+import { supabase } from '../lib/supabaseClient';
+
+export const useSneakers = () => {
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  /**
+   * Get Infinite Feed (Randomized or Algorithmically Sorted)
+   * TikTok style usually implies a mix of popularity and randomness.
+   */
+  const getInfiniteFeed = useCallback(async (page: number = 0, limit: number = 5): Promise<Shoe[]> => {
+    setLoading(true);
+    try {
+      // DEMO MODE: Use mock data
+      if (DEMO_MODE) {
+        const shuffled = getShuffledShoes();
+        const from = page * limit;
+        const to = from + limit;
+        setLoading(false);
+        return shuffled.slice(from, to);
+      }
+
+      // PRODUCTION MODE: Use Supabase
+      const from = page * limit;
+      const to = from + limit - 1;
+
+      const { data, error } = await supabase
+        .from('shoes')
+        .select('*')
+        .eq('is_active', true)
+        .order('view_count', { ascending: false })
+        .range(from, to);
+
+      if (error) throw error;
+      return data as Shoe[];
+    } catch (err: any) {
+      setError(err.message);
+      return [];
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  /**
+   * Get Featured Sneakers for "Hot Right Now" sections
+   */
+  const getFeaturedSneakers = useCallback(async (): Promise<Shoe[]> => {
+    // DEMO MODE: Use mock data
+    if (DEMO_MODE) {
+      return getFeaturedShoes();
+    }
+
+    // PRODUCTION MODE: Use Supabase
+    const { data } = await supabase
+      .from('shoes')
+      .select('*')
+      .eq('is_featured', true)
+      .limit(10);
+    return data as Shoe[] || [];
+  }, []);
+
+  /**
+   * Get Specific Sneaker
+   */
+  const getSneakerById = useCallback(async (id: string): Promise<Shoe | null> => {
+    // DEMO MODE: Use mock data
+    if (DEMO_MODE) {
+      return MOCK_SHOES.find(shoe => shoe.id === id) || null;
+    }
+
+    // PRODUCTION MODE: Use Supabase
+    const { data, error } = await supabase
+      .from('shoes')
+      .select('*')
+      .eq('id', id)
+      .single();
+
+    if (error) return null;
+    return data as Shoe;
+  }, []);
+
+  /**
+   * Analytics: Track View
+   * Uses Database RPC for atomic increment
+   */
+  const trackView = useCallback(async (id: string) => {
+    // DEMO MODE: Just log
+    if (DEMO_MODE) {
+      console.log(`[Demo] View tracked: ${id}`);
+      return;
+    }
+
+    // PRODUCTION MODE: Use Supabase
+    supabase.rpc('increment_shoe_view', { shoe_id: id }).then(({ error }: any) => {
+      if (error) console.error('Error tracking view:', error);
+    });
+  }, []);
+
+  /**
+   * Analytics: Track Click (Conversion intent)
+   */
+  const trackClick = useCallback(async (id: string) => {
+    // DEMO MODE: Just log
+    if (DEMO_MODE) {
+      console.log(`[Demo] Click tracked: ${id}`);
+      return;
+    }
+
+    // PRODUCTION MODE: Use Supabase
+    supabase.rpc('increment_shoe_click', { shoe_id: id });
+
+    supabase.from('affiliate_clicks').insert({
+      shoe_id: id,
+      clicked_at: new Date().toISOString()
+    });
+  }, []);
+
+  return {
+    getInfiniteFeed,
+    getFeaturedSneakers,
+    getSneakerById,
+    trackView,
+    trackClick,
+    loading,
+    error
+  };
+};
+
+
+================ FILE: shoeswipermainproject2-main/shoeswiper-complete/src/index.css ================
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Custom scrollbar */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: #18181b;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #3f3f46;
+  border-radius: 3px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #52525b;
+}
+
+/* Hide scrollbar for snap scroll */
+.hide-scrollbar::-webkit-scrollbar,
+.scrollbar-hide::-webkit-scrollbar {
+  display: none;
+}
+
+.hide-scrollbar,
+.scrollbar-hide {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+/* Smooth snap scrolling */
+.snap-mandatory {
+  scroll-snap-type: y mandatory;
+}
+
+.snap-start {
+  scroll-snap-align: start;
+}
+
+/* Glass effect */
+.glass {
+  background: rgba(24, 24, 27, 0.8);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+}
+
+/* Gradient text */
+.gradient-text {
+  background: linear-gradient(135deg, #f97316 0%, #fb923c 50%, #fdba74 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+/* Safe area for mobile */
+.safe-bottom {
+  padding-bottom: env(safe-area-inset-bottom);
+}
+
+.safe-top {
+  padding-top: env(safe-area-inset-top);
+}
+
+/* Animations */
+@keyframes shimmer {
+  0% {
+    background-position: -200% 0;
+  }
+  100% {
+    background-position: 200% 0;
+  }
+}
+
+.animate-shimmer {
+  animation: shimmer 2s linear infinite;
+  background: linear-gradient(90deg, #27272a 25%, #3f3f46 50%, #27272a 75%);
+  background-size: 200% 100%;
+}
+
+/* Slow spin for vinyl disc */
+@keyframes spin-slow {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.animate-spin-slow {
+  animation: spin-slow 8s linear infinite;
+}
+
+/* Music marquee for song title */
+@keyframes marquee {
+  0% {
+    transform: translateX(100%);
+  }
+  100% {
+    transform: translateX(-100%);
+  }
+}
+
+.animate-marquee {
+  animation: marquee 10s linear infinite;
+}
+
+/* Slide up animation for modals */
+@keyframes slide-up {
+  0% {
+    transform: translateY(100%);
+    opacity: 0;
+  }
+  100% {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+
+.animate-slide-up {
+  animation: slide-up 0.3s ease-out forwards;
+}
+
+/* Feed card full height */
+.feed-card {
+  height: 100svh;
+  min-height: -webkit-fill-available;
+}
+
+/* Prevent pull-to-refresh on mobile */
+html, body {
+  overscroll-behavior: none;
+}
+
+body {
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, sans-serif;
+}
+
+
+================ FILE: shoeswipermainproject2-main/shoeswiper-complete/src/lib/config.ts ================
+// ============================================
+// APP CONFIGURATION
+// ============================================
+
+// DEMO MODE: Set to true for local testing without Supabase
+// Set to false for production with Supabase backend
+export const DEMO_MODE = true;
+
+// Amazon Affiliate Configuration
+export const AFFILIATE_TAG = 'shoeswiper-20';
+
+// Feature flags for pricing display
+// Set to true once Amazon Product Advertising API is connected
+export const SHOW_PRICES = false;
+
+// Amazon API configuration (for future use)
+export const AMAZON_API_CONFIG = {
+  enabled: false, // Set to true when API access is granted
+  partnerTag: AFFILIATE_TAG,
+  marketplace: 'www.amazon.com',
+  // API credentials will be stored in environment variables:
+  // VITE_AMAZON_ACCESS_KEY, VITE_AMAZON_SECRET_KEY
+};
+
+// Admin email for access control
+export const ADMIN_EMAIL = 'dadsellsgadgets@gmail.com';
+
+// Allowed emails for Google login protection (SINGLE SOURCE OF TRUTH)
+// Add emails here to grant app access after Google OAuth login
+export const ALLOWED_EMAILS = [
+  'ianmerrill10@gmail.com',
+  ADMIN_EMAIL,  // Admin always has access
+];
+
+
+================ FILE: shoeswipermainproject2-main/shoeswiper-complete/src/lib/deepLinks.ts ================
+// ============================================
+// DEEP LINK CONFIGURATION & UTILITIES
+// ============================================
+// Handles smart links that drive app installs + track referrals
+
+import { AFFILIATE_TAG } from './config';
+
+// App identifiers (update when app is published)
+export const APP_CONFIG = {
+  // iOS App Store
+  iosAppId: '', // e.g., '1234567890'
+  iosAppStoreUrl: '', // e.g., 'https://apps.apple.com/app/shoeswiper/id1234567890'
+
+  // Android Play Store
+  androidPackage: '', // e.g., 'com.shoeswiper.app'
+  androidPlayStoreUrl: '', // e.g., 'https://play.google.com/store/apps/details?id=com.shoeswiper.app'
+
+  // Web fallback
+  webBaseUrl: typeof window !== 'undefined' ? window.location.origin : 'https://shoeswiper.com',
+
+  // Deep link scheme
+  scheme: 'shoeswiper://',
+
+  // Universal link domain (for iOS universal links / Android app links)
+  universalLinkDomain: 'shoeswiper.com',
+};
+
+// Referral tracking prefixes
+export const REFERRAL_SOURCES = {
+  share_native: 'shr_nat',
+  share_clipboard: 'shr_clp',
+  share_social: 'shr_soc',
+  qr_code: 'qr',
+  email: 'eml',
+} as const;
+
+export type ReferralSource = keyof typeof REFERRAL_SOURCES;
+
+interface DeepLinkOptions {
+  shoeId: string;
+  shoeName: string;
+  brand: string;
+  imageUrl?: string;
+  amazonUrl?: string;
+  referralSource?: ReferralSource;
+  referrerId?: string; // User ID who shared
+}
+
+interface ShareData {
+  title: string;
+  text: string;
+  url: string;
+  deepLinkUrl: string;
+  webFallbackUrl: string;
+}
+
+/**
+ * Generate a unique referral code for tracking
+ */
+export const generateReferralCode = (source: ReferralSource, userId?: string): string => {
+  const prefix = REFERRAL_SOURCES[source];
+  const timestamp = Date.now().toString(36);
+  const random = Math.random().toString(36).substring(2, 6);
+  const userPart = userId ? `_${userId.substring(0, 6)}` : '';
+  return `${prefix}_${timestamp}${random}${userPart}`;
+};
+
+/**
+ * Create a tracked web URL that includes referral info
+ */
+export const createTrackedWebUrl = (
+  shoeId: string,
+  referralCode: string
+): string => {
+  const baseUrl = APP_CONFIG.webBaseUrl;
+  const params = new URLSearchParams({
+    shoe: shoeId,
+    ref: referralCode,
+    utm_source: 'share',
+    utm_medium: 'social',
+    utm_campaign: 'shoe_share',
+  });
+  return `${baseUrl}/shoe/${shoeId}?${params.toString()}`;
+};
+
+/**
+ * Create a deep link URL (app://path)
+ */
+export const createDeepLinkUrl = (shoeId: string, referralCode: string): string => {
+  return `${APP_CONFIG.scheme}shoe/${shoeId}?ref=${referralCode}`;
+};
+
+/**
+ * Create a universal link URL (https domain that apps can intercept)
+ */
+export const createUniversalLinkUrl = (
+  shoeId: string,
+  referralCode: string
+): string => {
+  const params = new URLSearchParams({
+    ref: referralCode,
+  });
+  return `https://${APP_CONFIG.universalLinkDomain}/shoe/${shoeId}?${params.toString()}`;
+};
+
+/**
+ * Create a smart link that works across platforms
+ * - Opens app if installed (via universal link / deep link)
+ * - Falls back to web with app install prompt
+ * - Tracks referral source
+ */
+export const createSmartShareLink = (options: DeepLinkOptions): ShareData => {
+  const {
+    shoeId,
+    shoeName,
+    brand,
+    referralSource = 'share_native',
+  } = options;
+
+  const referralCode = generateReferralCode(referralSource);
+
+  // Primary URL: Universal link for app open or web fallback
+  const webFallbackUrl = createTrackedWebUrl(shoeId, referralCode);
+  const deepLinkUrl = createDeepLinkUrl(shoeId, referralCode);
+
+  // For share, use the web URL (which can have app banner)
+  const shareUrl = webFallbackUrl;
+
+  return {
+    title: `${brand} ${shoeName}`,
+    text: `Check out these ${brand} ${shoeName} on ShoeSwiper! Swipe through the hottest sneakers 🔥`,
+    url: shareUrl,
+    deepLinkUrl,
+    webFallbackUrl,
+  };
+};
+
+/**
+ * Create share data with affiliate tracking
+ */
+export const createAffiliateShareData = (
+  shoe: {
+    id: string;
+    name: string;
+    brand: string;
+    amazon_url: string;
+    image_url?: string;
+  },
+  source: ReferralSource = 'share_native'
+): ShareData => {
+  const referralCode = generateReferralCode(source);
+
+  // Create the ShoeSwiper link (drives app installs)
+  const shoeSwiperUrl = createTrackedWebUrl(shoe.id, referralCode);
+
+  // Add affiliate tag to Amazon URL
+  const amazonUrlWithAffiliate = shoe.amazon_url.includes('?')
+    ? `${shoe.amazon_url}&tag=${AFFILIATE_TAG}`
+    : `${shoe.amazon_url}?tag=${AFFILIATE_TAG}`;
+
+  return {
+    title: `${shoe.brand} ${shoe.name}`,
+    text: `🔥 ${shoe.brand} ${shoe.name}\n\n👟 View in ShoeSwiper: ${shoeSwiperUrl}\n\n🛒 Buy on Amazon: ${amazonUrlWithAffiliate}\n\n#ShoeSwiper #Sneakers #${shoe.brand.replace(/\s+/g, '')}`,
+    url: shoeSwiperUrl, // Primary link is ShoeSwiper (for app installs)
+    deepLinkUrl: createDeepLinkUrl(shoe.id, referralCode),
+    webFallbackUrl: shoeSwiperUrl,
+  };
+};
+
+/**
+ * Parse incoming deep link and extract parameters
+ */
+export const parseDeepLink = (url: string): {
+  shoeId?: string;
+  referralCode?: string;
+  source?: string;
+} => {
+  try {
+    // Handle both scheme (shoeswiper://) and https URLs
+    const urlObj = new URL(url.replace(APP_CONFIG.scheme, 'https://placeholder.com/'));
+    const pathParts = urlObj.pathname.split('/').filter(Boolean);
+
+    let shoeId: string | undefined;
+
+    // Parse path like /shoe/123
+    if (pathParts[0] === 'shoe' && pathParts[1]) {
+      shoeId = pathParts[1];
+    }
+
+    const referralCode = urlObj.searchParams.get('ref') || undefined;
+
+    // Extract source from referral code prefix
+    let source: string | undefined;
+    if (referralCode) {
+      const prefix = referralCode.split('_')[0];
+      source = Object.entries(REFERRAL_SOURCES).find(
+        ([, value]) => value === prefix
+      )?.[0];
+    }
+
+    return { shoeId, referralCode, source };
+  } catch {
+    return {};
+  }
+};
+
+/**
+ * Track when a user arrives via referral link
+ */
+export const trackReferralArrival = async (referralCode: string): Promise<void> => {
+  // Store referral in localStorage for attribution
+  localStorage.setItem('shoeswiper_referral', JSON.stringify({
+    code: referralCode,
+    arrivedAt: new Date().toISOString(),
+  }));
+
+  // In production, send to analytics
+  console.log('[DeepLink] Referral arrival tracked:', referralCode);
+};
+
+/**
+ * Get app store link based on platform
+ */
+export const getAppStoreLink = (): string | null => {
+  const userAgent = navigator.userAgent.toLowerCase();
+
+  if (/iphone|ipad|ipod/.test(userAgent)) {
+    return APP_CONFIG.iosAppStoreUrl || null;
+  }
+
+  if (/android/.test(userAgent)) {
+    return APP_CONFIG.androidPlayStoreUrl || null;
+  }
+
+  return null;
+};
+
+/**
+ * Attempt to open app, fallback to web/store
+ */
+export const openAppOrFallback = async (
+  deepLinkUrl: string,
+  webFallbackUrl: string
+): Promise<void> => {
+  const appStoreLink = getAppStoreLink();
+
+  // Try to open app via deep link
+  const start = Date.now();
+  window.location.href = deepLinkUrl;
+
+  // If still here after 1.5s, app not installed
+  setTimeout(() => {
+    if (Date.now() - start < 2000) {
+      // App didn't open, redirect to store or web
+      window.location.href = appStoreLink || webFallbackUrl;
+    }
+  }, 1500);
+};
+
+/**
+ * Generate QR code data URL for a shoe
+ * (Uses a simple QR generation approach - in production use a library)
+ */
+export const generateQRCodeUrl = (shoeId: string): string => {
+  const referralCode = generateReferralCode('qr_code');
+  const shareUrl = createTrackedWebUrl(shoeId, referralCode);
+
+  // Use a public QR code API (in production, use qrcode library)
+  return `https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(shareUrl)}`;
+};
+
+
+================ FILE: shoeswipermainproject2-main/shoeswiper-complete/src/lib/mockData.ts ================
+// ============================================
+// MOCK DATA FOR LOCAL DEMO
+// 102 Products with Amazon Affiliate Links
+// Affiliate Tag: shoeswiper-20
+// Generated: 2025-12-02
+// ============================================
+
+import { Shoe } from './types';
+
+// ============================================
+// MUSIC AFFILIATE CONFIGURATION
+// Amazon: tag=shoeswiper-20 (Amazon Associates)
+// Apple Music: at=1000lJFj (Replace with your Apple Services Performance Partners token)
+// Spotify: No affiliate program - links for user convenience only
+// ============================================
+const APPLE_AFFILIATE_TOKEN = '1000lJFj'; // TODO: Replace with your Apple affiliate token
+const AMAZON_AFFILIATE_TAG = 'shoeswiper-20';
+
+// Music tracks with monetized affiliate links
+const MUSIC_TRACKS = [
+  { song: 'SICKO MODE', artist: 'Travis Scott', spotifyUrl: 'https://open.spotify.com/track/2xLMifQCjDGFmkHkpNLD9h', appleMusicUrl: `https://music.apple.com/us/album/sicko-mode/1421241217?i=1421241853&at=${APPLE_AFFILIATE_TOKEN}`, amazonMusicUrl: `https://amazon.com/dp/B07GXJW5SF?tag=${AMAZON_AFFILIATE_TAG}` },
+  { song: 'Started From The Bottom', artist: 'Drake', spotifyUrl: 'https://open.spotify.com/track/4F4xZ8MpZ3OqMaG5cBNHhH', appleMusicUrl: `https://music.apple.com/us/album/started-from-the-bottom/1440890708?i=1440891396&at=${APPLE_AFFILIATE_TOKEN}`, amazonMusicUrl: `https://amazon.com/dp/B00BFMYZGE?tag=${AMAZON_AFFILIATE_TAG}` },
+  { song: 'HUMBLE', artist: 'Kendrick Lamar', spotifyUrl: 'https://open.spotify.com/track/7KXjTSCq5nL1LoYtL7XAwS', appleMusicUrl: `https://music.apple.com/us/album/humble/1440881047?i=1440881378&at=${APPLE_AFFILIATE_TOKEN}`, amazonMusicUrl: `https://amazon.com/dp/B06Y1Q8GRJ?tag=${AMAZON_AFFILIATE_TAG}` },
+  { song: 'Stronger', artist: 'Kanye West', spotifyUrl: 'https://open.spotify.com/track/0j2T0R9dR9qdJYsB7ciXhf', appleMusicUrl: `https://music.apple.com/us/album/stronger/1451901307?i=1451901308&at=${APPLE_AFFILIATE_TOKEN}`, amazonMusicUrl: `https://amazon.com/dp/B000V6O18G?tag=${AMAZON_AFFILIATE_TAG}` },
+  { song: 'Around The World', artist: 'Daft Punk', spotifyUrl: 'https://open.spotify.com/track/1pKYYY0dkg23sQQXi0Q5zN', appleMusicUrl: `https://music.apple.com/us/album/around-the-world/697194953?i=697195404&at=${APPLE_AFFILIATE_TOKEN}`, amazonMusicUrl: `https://amazon.com/dp/B00138CLGW?tag=${AMAZON_AFFILIATE_TAG}` },
+  { song: 'Blinding Lights', artist: 'The Weeknd', spotifyUrl: 'https://open.spotify.com/track/0VjIjW4GlUZAMYd2vXMi3b', appleMusicUrl: `https://music.apple.com/us/album/blinding-lights/1488408555?i=1488408568&at=${APPLE_AFFILIATE_TOKEN}`, amazonMusicUrl: `https://amazon.com/dp/B081J3QZ7L?tag=${AMAZON_AFFILIATE_TAG}` },
+  { song: 'Levitating', artist: 'Dua Lipa', spotifyUrl: 'https://open.spotify.com/track/463CkQjx2Zk1yXoBuierM9', appleMusicUrl: `https://music.apple.com/us/album/levitating/1510821672?i=1510821689&at=${APPLE_AFFILIATE_TOKEN}`, amazonMusicUrl: `https://amazon.com/dp/B086QYBXPR?tag=${AMAZON_AFFILIATE_TAG}` },
+  { song: 'Money Trees', artist: 'Kendrick Lamar', spotifyUrl: 'https://open.spotify.com/track/2HbKqm4o0w5wEeEFXm2sD4', appleMusicUrl: `https://music.apple.com/us/album/money-trees/1440818886?i=1440819328&at=${APPLE_AFFILIATE_TOKEN}`, amazonMusicUrl: `https://amazon.com/dp/B009AQFNC0?tag=${AMAZON_AFFILIATE_TAG}` },
+  { song: 'goosebumps', artist: 'Travis Scott', spotifyUrl: 'https://open.spotify.com/track/6gBFPUFcJLzWGx4lenP6h2', appleMusicUrl: `https://music.apple.com/us/album/goosebumps/1453585079?i=1453585310&at=${APPLE_AFFILIATE_TOKEN}`, amazonMusicUrl: `https://amazon.com/dp/B01JO9X3OW?tag=${AMAZON_AFFILIATE_TAG}` },
+  { song: 'One Dance', artist: 'Drake', spotifyUrl: 'https://open.spotify.com/track/1zi7xx7UVEFkmKfv06H8x0', appleMusicUrl: `https://music.apple.com/us/album/one-dance/1440841363?i=1440841749&at=${APPLE_AFFILIATE_TOKEN}`, amazonMusicUrl: `https://amazon.com/dp/B01DWRQ3N6?tag=${AMAZON_AFFILIATE_TAG}` },
+];
+
+// Helper to get music for a shoe (based on index)
+const getMusicForShoe = (id: number) => MUSIC_TRACKS[id % MUSIC_TRACKS.length];
+
+// Helper to generate a mock shoe
+const createShoe = (
+  id: number,
+  name: string,
+  brand: string,
+  asin: string,
+  gender: 'men' | 'women' | 'unisex',
+  styleTags: string[] = ['lifestyle', 'casual'],
+  isFeatured: boolean = false
+): Shoe => ({
+  id: `shoe-${id}`,
+  name,
+  brand,
+  amazon_asin: asin,
+  amazon_url: `https://www.amazon.com/dp/${asin}?tag=shoeswiper-20`,
+  image_url: getImageForBrand(brand),
+  gender,
+  style_tags: styleTags,
+  color_tags: ['various'],
+  favorite_count: Math.floor(Math.random() * 500) + 100,
+  view_count: Math.floor(Math.random() * 1000) + 200,
+  click_count: Math.floor(Math.random() * 300) + 50,
+  is_active: true,
+  is_featured: isFeatured,
+  created_at: new Date().toISOString(),
+  updated_at: new Date().toISOString(),
+  music: getMusicForShoe(id),
+});
+
+// Get stock image based on brand
+const getImageForBrand = (brand: string): string => {
+  const images: Record<string, string> = {
+    'Nike': 'https://images.unsplash.com/photo-1542291026-7eec264c27ff?w=800',
+    'Jordan': 'https://images.unsplash.com/photo-1600185365926-3a2ce3cdb9eb?w=800',
+    'Adidas': 'https://images.unsplash.com/photo-1608231387042-66d1773070a5?w=800',
+    'New Balance': 'https://images.unsplash.com/photo-1539185441755-769473a23570?w=800',
+    'Converse': 'https://images.unsplash.com/photo-1463100099107-aa0980c362e6?w=800',
+    'Vans': 'https://images.unsplash.com/photo-1525966222134-fcfa99b8ae77?w=800',
+    'Puma': 'https://images.unsplash.com/photo-1608231387042-66d1773070a5?w=800',
+    'Reebok': 'https://images.unsplash.com/photo-1603787081207-362bcef7c144?w=800',
+    'ASICS': 'https://images.unsplash.com/photo-1606107557195-0e29a4b5b4aa?w=800',
+    'On': 'https://images.unsplash.com/photo-1584735175315-9d5df23860e6?w=800',
+    'Brooks': 'https://images.unsplash.com/photo-1584735175315-9d5df23860e6?w=800',
+    'Skechers': 'https://images.unsplash.com/photo-1560769629-975ec94e6a86?w=800',
+    'Birkenstock': 'https://images.unsplash.com/photo-1603808033192-082d6919d3e1?w=800',
+    'DKNY': 'https://images.unsplash.com/photo-1543163521-1bf539c55dd2?w=800',
+  };
+  return images[brand] || 'https://images.unsplash.com/photo-1542291026-7eec264c27ff?w=800';
+};
+
+// ============================================
+// MEN'S SHOES (51)
+// ============================================
+const mensShoes: Shoe[] = [
+  createShoe(1, "Air Force 1 '07", 'Nike', 'B07QXLFLXT', 'men', ['classic', 'streetwear', 'timeless'], true),
+  createShoe(2, 'Dunk Low Retro', 'Nike', 'B09NLN47LP', 'men', ['streetwear', 'casual', 'trendy'], true),
+  createShoe(3, 'Air Max 90', 'Nike', 'B0DFVXG97P', 'men', ['retro', 'casual', 'classic']),
+  createShoe(4, 'Air Max Plus', 'Nike', 'B0DSNF3FHZ', 'men', ['streetwear', 'bold', 'chunky']),
+  createShoe(5, 'Free Metcon 5', 'Nike', 'B0C7QHDR63', 'men', ['training', 'athletic', 'performance']),
+  createShoe(6, 'Vomero 18', 'Nike', 'B0CVXHZ3VN', 'men', ['running', 'comfort', 'athletic']),
+  createShoe(7, 'Court Vision Low', 'Nike', 'B07TFQSHMD', 'men', ['casual', 'clean', 'classic']),
+  createShoe(8, 'SB Dunk Low Pro', 'Nike', 'B08P1KVDRB', 'men', ['skate', 'streetwear', 'casual']),
+  createShoe(9, 'Zoom Vomero 5', 'Nike', 'B0D8PWWJ2R', 'men', ['chunky', 'techwear', 'retro'], true),
+  createShoe(10, 'Pegasus 41', 'Nike', 'B0D2Q2VQVW', 'men', ['running', 'performance', 'comfort']),
+  createShoe(11, 'Air VaporMax Plus', 'Nike', 'B0DG4YWLZL', 'men', ['futuristic', 'bold', 'streetwear']),
+  createShoe(12, 'Air Max 1', 'Nike', 'B0D24HN2CB', 'men', ['retro', 'classic', 'iconic']),
+  createShoe(13, 'Blazer Mid 77', 'Nike', 'B0949HSWCY', 'men', ['vintage', 'retro', 'casual']),
+  createShoe(14, '1 Retro High OG', 'Jordan', 'B0DBHRM6VR', 'men', ['basketball', 'hypebeast', 'iconic'], true),
+  createShoe(15, '4 Retro', 'Jordan', 'B0DJC5VP3Q', 'men', ['basketball', 'hypebeast', 'chunky'], true),
+  createShoe(16, 'Air Jordan 1 Low', 'Jordan', 'B0D5T1HXPC', 'men', ['streetwear', 'casual', 'classic']),
+  createShoe(17, '11 Retro', 'Jordan', 'B0DLBGPGFX', 'men', ['basketball', 'luxury', 'iconic'], true),
+  createShoe(18, 'Spizike Low', 'Jordan', 'B0DGZ7BT7R', 'men', ['basketball', 'hybrid', 'bold']),
+  createShoe(19, 'Air Jordan 1 Mid', 'Jordan', 'B0DTXVK65V', 'men', ['streetwear', 'casual', 'classic']),
+  createShoe(20, 'Max Aura 5', 'Jordan', 'B0CMVBKJJV', 'men', ['basketball', 'casual', 'comfort']),
+  createShoe(21, '3 Retro', 'Jordan', 'B0DJC4C5DK', 'men', ['basketball', 'iconic', 'elephant print']),
+  createShoe(22, 'Stay Loyal 3', 'Jordan', 'B0D5RX5KVS', 'men', ['basketball', 'casual', 'modern']),
+  createShoe(23, '12 Retro', 'Jordan', 'B0DP61V59T', 'men', ['basketball', 'luxury', 'bold']),
+  createShoe(24, 'Samba OG', 'Adidas', 'B0C37GPXQ9', 'men', ['vintage', 'casual', 'timeless'], true),
+  createShoe(25, 'Gazelle', 'Adidas', 'B09P86BPCR', 'men', ['vintage', 'casual', 'retro']),
+  createShoe(26, 'Grand Court', 'Adidas', 'B09DXW3D8B', 'men', ['casual', 'clean', 'tennis']),
+  createShoe(27, 'Forum Low', 'Adidas', 'B08745PCHW', 'men', ['retro', 'basketball', 'classic']),
+  createShoe(28, 'Grand Court Alpha', 'Adidas', 'B0D2S69CWQ', 'men', ['casual', 'modern', 'clean']),
+  createShoe(29, 'Grand Court Tennis', 'Adidas', 'B09DXVXBFR', 'men', ['tennis', 'casual', 'sport']),
+  createShoe(30, 'Ultraboost', 'Adidas', 'B0D3P29Q5C', 'men', ['running', 'comfort', 'performance'], true),
+  createShoe(31, 'Swift Run', 'Adidas', 'B0BHPVPF4H', 'men', ['running', 'casual', 'lightweight']),
+  createShoe(32, 'Handball Spezial', 'Adidas', 'B0D7HMS8S2', 'men', ['vintage', 'terrace', 'classic']),
+  createShoe(33, 'Streetalk', 'Adidas', 'B0DJV38CBT', 'men', ['streetwear', 'modern', 'bold']),
+  createShoe(34, '550', 'New Balance', 'B0DCX24RNV', 'men', ['retro', 'basketball', 'trendy'], true),
+  createShoe(35, '574 Core', 'New Balance', 'B093QJF4VR', 'men', ['classic', 'casual', 'comfort']),
+  createShoe(36, 'FuelCell', 'New Balance', 'B096NND25R', 'men', ['running', 'performance', 'speed']),
+  createShoe(37, '2002R', 'New Balance', 'B0FN5CXB8M', 'men', ['retro', 'chunky', 'comfort']),
+  createShoe(38, '327', 'New Balance', 'B099TFD8W5', 'men', ['retro', 'bold', 'casual']),
+  createShoe(39, '530', 'New Balance', 'B07B3VM8D2', 'men', ['retro', 'running', 'chunky']),
+  createShoe(40, 'Fresh Foam X 1080v13', 'New Balance', 'B0CNKXG21F', 'men', ['running', 'comfort', 'premium']),
+  createShoe(41, 'Brooklyn Low Top', 'Vans', 'B0D7QC25H7', 'men', ['skate', 'casual', 'streetwear']),
+  createShoe(42, 'Filmore', 'Vans', 'B0949M2KTN', 'men', ['skate', 'casual', 'classic']),
+  createShoe(43, 'Suede Classic', 'Puma', 'B0D32JWHM5', 'men', ['retro', 'casual', 'hip-hop']),
+  createShoe(44, 'Club C Vintage', 'Reebok', 'B07DPD5NS4', 'men', ['retro', 'tennis', 'clean']),
+  createShoe(45, 'Classic Leather', 'Reebok', 'B0971NHH8G', 'men', ['classic', 'retro', 'timeless']),
+  createShoe(46, 'Whispers', 'Puma', 'B0FBHV4RFD', 'men', ['modern', 'casual', 'sleek']),
+  createShoe(47, 'Gel-Kayano 14', 'ASICS', 'B0CMHXJWWN', 'men', ['retro', 'running', 'techwear'], true),
+  createShoe(48, 'Cloud 5', 'On', 'B0D31TNKHB', 'men', ['running', 'swiss', 'premium']),
+  createShoe(49, 'Ghost', 'Brooks', 'B0DQ2BMHDW', 'men', ['running', 'comfort', 'neutral']),
+  createShoe(50, 'Go Walk Max', 'Skechers', 'B072KVD3WD', 'men', ['comfort', 'walking', 'casual']),
+  createShoe(51, 'Fresh Foam X 880', 'New Balance', 'B0C34VNVJ6', 'men', ['running', 'comfort', 'stability']),
+];
+
+// ============================================
+// UNISEX SHOES (3)
+// ============================================
+const unisexShoes: Shoe[] = [
+  createShoe(52, '1906R', 'New Balance', 'B0C8BT9P9S', 'unisex', ['retro', 'chunky', 'premium']),
+  createShoe(53, 'Chuck Taylor All Star High', 'Converse', 'B000OLRWO2', 'unisex', ['classic', 'vintage', 'iconic'], true),
+  createShoe(54, 'Boston Clog', 'Birkenstock', 'B004S998FW', 'unisex', ['comfort', 'casual', 'classic']),
+];
+
+// ============================================
+// WOMEN'S SHOES (48)
+// ============================================
+const womensShoes: Shoe[] = [
+  createShoe(55, 'Gel-1130', 'ASICS', 'B0D82BRSYZ', 'women', ['retro', 'running', 'chunky']),
+  createShoe(56, 'Dunk Low Next Nature', 'Nike', 'B0DWHRNVFN', 'women', ['sustainable', 'streetwear', 'trendy']),
+  createShoe(57, 'Dunk Low Retro Panda', 'Nike', 'B08QBZFVY5', 'women', ['streetwear', 'trendy', 'clean'], true),
+  createShoe(58, 'Court Vision', 'Nike', 'B0F138FGJG', 'women', ['casual', 'clean', 'classic']),
+  createShoe(59, 'Air Max 90', 'Nike', 'B0B1YDKWZW', 'women', ['retro', 'casual', 'classic']),
+  createShoe(60, 'Air Max 97', 'Nike', 'B08WPWWWQN', 'women', ['retro', 'metallic', 'bold']),
+  createShoe(61, 'Cortez', 'Nike', 'B0D1YFHNNK', 'women', ['retro', 'classic', 'vintage']),
+  createShoe(62, "Blazer Mid '77", 'Nike', 'B0BYFBJKTL', 'women', ['vintage', 'retro', 'casual']),
+  createShoe(63, 'Court Vision Low', 'Nike', 'B0CZHQK1Q6', 'women', ['casual', 'clean', 'everyday']),
+  createShoe(64, 'Air Max SC', 'Nike', 'B0F2G9G9H9', 'women', ['casual', 'comfort', 'modern']),
+  createShoe(65, 'V2K Run', 'Nike', 'B0CQGS72QF', 'women', ['running', 'retro', 'chunky']),
+  createShoe(66, 'Vomero', 'Nike', 'B0DYVSDM94', 'women', ['running', 'comfort', 'performance']),
+  createShoe(67, 'Waffle Debut', 'Nike', 'B09NMHN3Q2', 'women', ['retro', 'casual', 'vintage']),
+  createShoe(68, 'Free Metcon 5', 'Nike', 'B0BS6MTK41', 'women', ['training', 'athletic', 'performance']),
+  createShoe(69, 'Pegasus 40', 'Nike', 'B0BQZ4X73G', 'women', ['running', 'comfort', 'everyday']),
+  createShoe(70, '1 Retro Low Satin', 'Jordan', 'B0DJTHZB95', 'women', ['streetwear', 'satin', 'premium']),
+  createShoe(71, 'Air Jordan 1 Low', 'Jordan', 'B0C3JM5YD8', 'women', ['streetwear', 'casual', 'classic']),
+  createShoe(72, '4 Retro', 'Jordan', 'B0F9FVF4BZ', 'women', ['basketball', 'chunky', 'bold'], true),
+  createShoe(73, 'Air Jordan 1 Mid', 'Jordan', 'B0DS6LV8BT', 'women', ['streetwear', 'casual', 'classic']),
+  createShoe(74, 'Max Aura 4', 'Jordan', 'B093CC4LKQ', 'women', ['basketball', 'casual', 'comfort']),
+  createShoe(75, 'Stadium 90', 'Jordan', 'B0DC6ZGC85', 'women', ['modern', 'casual', 'comfort']),
+  createShoe(76, 'Air Jordan 1 Low SE', 'Jordan', 'B0DZVGK3DP', 'women', ['streetwear', 'special edition', 'premium']),
+  createShoe(77, 'Delta 3 Low', 'Jordan', 'B0BZF531LC', 'women', ['modern', 'lifestyle', 'comfort']),
+  createShoe(78, 'Samba OG', 'Adidas', 'B0C2JXJS3M', 'women', ['vintage', 'casual', 'timeless'], true),
+  createShoe(79, 'Gazelle', 'Adidas', 'B0C2JY6GCT', 'women', ['vintage', 'casual', 'retro']),
+  createShoe(80, 'Grand Court Tennis', 'Adidas', 'B09DXVKGTW', 'women', ['tennis', 'casual', 'clean']),
+  createShoe(81, 'Forum Low', 'Adidas', 'B09DXWJPHY', 'women', ['retro', 'basketball', 'classic']),
+  createShoe(82, 'Campus 00s', 'Adidas', 'B0FRYDBBHN', 'women', ['retro', 'casual', 'suede']),
+  createShoe(83, 'Grand Court', 'Adidas', 'B09DXW115R', 'women', ['casual', 'clean', 'everyday']),
+  createShoe(84, 'Ultraboost', 'Adidas', 'B0DJV2FSHF', 'women', ['running', 'comfort', 'performance']),
+  createShoe(85, 'Ozweego', 'Adidas', 'B0989C9VGQ', 'women', ['chunky', 'retro', 'bold']),
+  createShoe(86, '550', 'New Balance', 'B0C9W3BLT3', 'women', ['retro', 'basketball', 'trendy'], true),
+  createShoe(87, '574', 'New Balance', 'B093QK8S8R', 'women', ['classic', 'casual', 'comfort']),
+  createShoe(88, '327', 'New Balance', 'B0FCWDLYF3', 'women', ['retro', 'bold', 'casual']),
+  createShoe(89, '530', 'New Balance', 'B0CQQDW6B8', 'women', ['retro', 'running', 'chunky']),
+  createShoe(90, '9060', 'New Balance', 'B0DSX47PJ1', 'women', ['chunky', 'futuristic', 'bold']),
+  createShoe(91, 'Cross Trainer', 'New Balance', 'B07B41SLY5', 'women', ['training', 'comfort', 'athletic']),
+  createShoe(92, 'Fresh Foam X 880v14', 'New Balance', 'B0CLBB3WLL', 'women', ['running', 'comfort', 'stability']),
+  createShoe(93, 'Chuck Taylor All Star', 'Converse', 'B09SBRZMLT', 'women', ['classic', 'vintage', 'casual']),
+  createShoe(94, 'Brooklyn Low Top', 'Vans', 'B0D7QFMK5N', 'women', ['skate', 'casual', 'streetwear']),
+  createShoe(95, 'Chuck Taylor', 'Converse', 'B07BTCBV5Q', 'women', ['classic', 'vintage', 'iconic']),
+  createShoe(96, 'Ashwood', 'Vans', 'B0DQ1G5ZQ3', 'women', ['casual', 'modern', 'lifestyle']),
+  createShoe(97, 'Carina', 'Puma', 'B07HJRV1YQ', 'women', ['casual', 'platform', 'trendy']),
+  createShoe(98, 'Suede Classic', 'Puma', 'B0D7DVSQ37', 'women', ['retro', 'casual', 'hip-hop']),
+  createShoe(99, 'Classic Leather', 'Reebok', 'B092YWBZ4F', 'women', ['classic', 'retro', 'timeless']),
+  createShoe(100, 'Gel-1130', 'ASICS', 'B0D82FZ11P', 'women', ['retro', 'running', 'techwear']),
+  createShoe(101, 'Boston Shearling', 'Birkenstock', 'B08CRZLHLJ', 'women', ['comfort', 'cozy', 'winter']),
+  createShoe(102, 'Jaysha Heeled', 'DKNY', 'B0BPZWJRB4', 'women', ['fashion', 'heeled', 'luxury']),
+];
+
+// ============================================
+// COMBINED MOCK DATA
+// ============================================
+export const MOCK_SHOES: Shoe[] = [
+  ...mensShoes,
+  ...unisexShoes,
+  ...womensShoes,
+];
+
+// Re-export DEMO_MODE from config for backwards compatibility
+export { DEMO_MODE } from './config';
+
+// Get shuffled shoes for feed
+export const getShuffledShoes = (): Shoe[] => {
+  return [...MOCK_SHOES].sort(() => Math.random() - 0.5);
+};
+
+// Get featured shoes
+export const getFeaturedShoes = (): Shoe[] => {
+  return MOCK_SHOES.filter(shoe => shoe.is_featured);
+};
+
+// Search shoes
+export const searchShoes = (query: string): Shoe[] => {
+  const lowerQuery = query.toLowerCase();
+  return MOCK_SHOES.filter(shoe =>
+    shoe.name.toLowerCase().includes(lowerQuery) ||
+    shoe.brand.toLowerCase().includes(lowerQuery) ||
+    shoe.style_tags.some(tag => tag.toLowerCase().includes(lowerQuery))
+  );
+};
+
+console.log(`[MockData] Loaded ${MOCK_SHOES.length} products (${mensShoes.length} men's, ${womensShoes.length} women's, ${unisexShoes.length} unisex)`);
+
+
+================ FILE: shoeswipermainproject2-main/shoeswiper-complete/src/lib/supabaseClient.ts ================
+import { createClient, SupabaseClient } from '@supabase/supabase-js';
+import { DEMO_MODE } from './config';
+
+const supabaseUrl = import.meta.env.VITE_SUPABASE_URL || 'https://placeholder.supabase.co';
+const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY || 'placeholder-key';
+
+// Only validate environment variables if NOT in demo mode
+if (!DEMO_MODE && (!import.meta.env.VITE_SUPABASE_URL || !import.meta.env.VITE_SUPABASE_ANON_KEY)) {
+  console.error('Missing Supabase environment variables. Check your .env file.');
+}
+
+// Create Supabase client (will only be used in production mode)
+export const supabase: SupabaseClient = createClient(supabaseUrl, supabaseAnonKey);
+
+// Admin email for access control
+export const ADMIN_EMAIL = 'dadsellsgadgets@gmail.com';
+
+// ============================================
+// AMAZON AFFILIATE CONFIGURATION
+// ============================================
+
+// Amazon affiliate tag - MUST be on all Amazon URLs
+export const AFFILIATE_TAG = 'shoeswiper-20';
+
+// Feature flags for pricing display
+// Set to true once Amazon Product Advertising API is connected
+export const SHOW_PRICES = false;
+
+// Amazon API configuration (for future use)
+export const AMAZON_API_CONFIG = {
+  enabled: false, // Set to true when API access is granted
+  partnerTag: AFFILIATE_TAG,
+  marketplace: 'www.amazon.com',
+  // API credentials will be stored in environment variables:
+  // VITE_AMAZON_ACCESS_KEY, VITE_AMAZON_SECRET_KEY
+};
+
+// ============================================
+// AFFILIATE URL HELPERS
+// ============================================
+
+// Build clean affiliate URL from ASIN
+export const getAffiliateUrlFromAsin = (asin: string): string => {
+  return `https://www.amazon.com/dp/${asin}?tag=${AFFILIATE_TAG}`;
+};
+
+// Ensure affiliate tag is present on any Amazon URL
+export const getAffiliateUrl = (url: string): string => {
+  if (!url) return url;
+
+  // If already has our tag, return as-is
+  if (url.includes(`tag=${AFFILIATE_TAG}`)) return url;
+
+  // Try to extract ASIN and build clean URL
+  const asinMatch = url.match(/\/dp\/([A-Z0-9]{10})/i) ||
+                    url.match(/\/gp\/product\/([A-Z0-9]{10})/i);
+
+  if (asinMatch) {
+    return getAffiliateUrlFromAsin(asinMatch[1]);
+  }
+
+  // Fallback: append tag to existing URL
+  const separator = url.includes('?') ? '&' : '?';
+  return `${url}${separator}tag=${AFFILIATE_TAG}`;
+};
+
+// Extract ASIN from Amazon URL
+export const extractAsinFromUrl = (url: string): string | null => {
+  const match = url.match(/\/dp\/([A-Z0-9]{10})/i) ||
+                url.match(/\/gp\/product\/([A-Z0-9]{10})/i) ||
+                url.match(/asin=([A-Z0-9]{10})/i);
+  return match ? match[1] : null;
+};
+
+// ============================================
+// PRICE DISPLAY HELPERS
+// ============================================
+
+// Format price for display (returns null if prices are hidden)
+export const formatPrice = (price: number | null | undefined): string | null => {
+  if (!SHOW_PRICES || price === null || price === undefined) {
+    return null;
+  }
+  return `$${price.toFixed(2)}`;
+};
+
+// Check if we should show price for a shoe
+export const shouldShowPrice = (price: number | null | undefined): boolean => {
+  return SHOW_PRICES && price !== null && price !== undefined;
+};
+
+
+================ FILE: shoeswipermainproject2-main/shoeswiper-complete/src/lib/types.ts ================
+// ============================================
+// SHOE / PRODUCT TYPES
+// ============================================
+
+export interface Shoe {
+  id: string;
+  name: string;
+  brand: string;
+  category_slug?: string;
+
+  // Pricing - Optional until Amazon API is connected
+  // When price is null/undefined, UI hides price display
+  price?: number | null;
+  retail_price?: number | null;
+  sale_price?: number | null;
+  currency?: string;
+  price_last_updated?: string; // ISO timestamp from Amazon API
+
+  // Media & Affiliate
+  image_url: string;
+  amazon_url: string; // Base Amazon URL (affiliate tag added automatically)
+  amazon_asin: string; // Required - Amazon Standard Identification Number
+
+  // Product Details (for detail panel)
+  colorway?: string;
+  style_code?: string;
+
+  // Attributes
+  style_tags: string[];
+  color_tags: string[];
+  gender?: 'men' | 'women' | 'unisex' | 'kids';
+  sizes_available?: string[];
+  release_date?: string;
+  description?: string;
+
+  // Metrics
+  favorite_count: number;
+  view_count: number;
+  click_count: number;
+  vibe_score?: number;
+
+  // Status
+  is_active: boolean;
+  is_featured: boolean;
+  stock_status?: 'in_stock' | 'low_stock' | 'out_of_stock';
+
+  // Timestamps
+  created_at: string;
+  updated_at: string;
+
+  // Music (for feed experience)
+  music?: {
+    song: string;
+    artist: string;
+    spotifyUrl?: string;
+    appleMusicUrl?: string;
+    amazonMusicUrl?: string;
+  };
+}
+
+// ============================================
+// AMAZON API TYPES (for future integration)
+// ============================================
+
+export interface AmazonPriceData {
+  asin: string;
+  price: number;
+  currency: string;
+  availability: 'in_stock' | 'low_stock' | 'out_of_stock';
+  lastUpdated: string;
+}
+
+export interface AmazonAPIConfig {
+  enabled: boolean;
+  accessKey?: string;
+  secretKey?: string;
+  partnerTag: string;
+  marketplace: string; // e.g., 'www.amazon.com'
+}
+
+export interface Brand {
+  id: string;
+  name: string;
+  slug: string;
+  logo_url?: string;
+  description?: string;
+}
+
+export interface Category {
+  id: string;
+  name: string;
+  slug: string;
+  icon?: string;
+}
+
+export interface PriceHistory {
+  id: string;
+  shoe_id: string;
+  price: number;
+  recorded_at: string;
+}
+
+// ============================================
+// USER / PROFILE TYPES
+// ============================================
+
+export interface Profile {
+  id: string;
+  email?: string;
+  username?: string;
+  avatar_url?: string;
+  bio?: string;
+  is_banned?: boolean;
+  created_at: string;
+  updated_at?: string;
+}
+
+export interface UserSneaker {
+  id: string;
+  user_id: string;
+  shoe_id: string;
+  added_at: string;
+  shoe?: Shoe;
+}
+
+// ============================================
+// NFT TYPES
+// ============================================
+
+export type Rarity = 'common' | 'rare' | 'legendary' | 'grail';
+
+export interface NFT {
+  id: string;
+  sneaker_id: string;
+  owner_id: string;
+  token_id: string;
+  rarity: Rarity;
+  minted_at: string | null;
+  for_sale: boolean;
+  price_eth: string | null;
+  auction_end: string | null;
+  sneaker?: Shoe | null;
+  owner?: Profile | null;
+}
+
+export interface NFTOwnershipHistory {
+  id: string;
+  nft_id: string;
+  from_user: string | null;
+  to_user: string;
+  price_eth: string | null;
+  transferred_at: string;
+}
+
+// ============================================
+// AI OUTFIT MATCH TYPES
+// ============================================
+
+export interface OutfitAnalysis {
+  rating: number; // 1-10
+  feedback: string;
+  detectedShoes?: string;
+  styleTags: string[];
+  colorTags: string[];
+  recommendations: Shoe[];
+}
+
+// ============================================
+// SEARCH / FILTER TYPES
+// ============================================
+
+export interface SearchFilters {
+  brands?: string[];
+  minPrice?: number;
+  maxPrice?: number;
+  gender?: 'men' | 'women' | 'unisex' | 'kids';
+  styleTags?: string[];
+  colorTags?: string[];
+  sortBy?: 'price_asc' | 'price_desc' | 'newest' | 'trending';
+}
+
+export type NFTFilter = 'all' | 'for_sale' | 'auction' | 'recent';
+
+// ============================================
+// ADMIN / ANALYTICS TYPES
+// ============================================
+
+export interface AuditLog {
+  id: string;
+  admin_email: string;
+  action: string;
+  target_table: string;
+  target_id?: string;
+  details?: any;
+  created_at: string;
+}
+
+export interface AffiliateClick {
+  id: string;
+  shoe_id: string;
+  user_id?: string;
+  clicked_at: string;
+}
+
+export interface AnalyticsData {
+  totalUsers: number;
+  totalProducts: number;
+  clicks: AffiliateClick[];
+  chartData?: { date: string; clicks: number }[];
+}
+
+
+================ FILE: shoeswipermainproject2-main/shoeswiper-complete/src/main.tsx ================
+import React from 'react';
+import ReactDOM from 'react-dom/client';
+import { BrowserRouter } from 'react-router-dom';
+import App from './App';
+import './index.css';
+
+ReactDOM.createRoot(document.getElementById('root')!).render(
+  <React.StrictMode>
+    <BrowserRouter>
+      <App />
+    </BrowserRouter>
+  </React.StrictMode>
+);
+
+
+================ FILE: shoeswipermainproject2-main/shoeswiper-complete/src/pages/AuthPage.tsx ================
+import React, { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { supabase } from '../lib/supabaseClient';
+import { FaGoogle, FaApple, FaEnvelope, FaLock, FaUser } from 'react-icons/fa';
+
+type AuthMode = 'signin' | 'signup';
+
+const AuthPage: React.FC = () => {
+  const navigate = useNavigate();
+  const [mode, setMode] = useState<AuthMode>('signin');
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [username, setUsername] = useState('');
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const handleEmailAuth = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setLoading(true);
+    setError(null);
+
+    try {
+      if (mode === 'signup') {
+        const { data, error } = await supabase.auth.signUp({
+          email,
+          password,
+          options: {
+            data: { username }
+          }
+        });
+        if (error) throw error;
+        
+        // Create profile
+        if (data.user) {
+          await supabase.from('profiles').insert({
+            id: data.user.id,
+            email,
+            username,
+          });
+        }
+      } else {
+        const { error } = await supabase.auth.signInWithPassword({
+          email,
+          password,
+        });
+        if (error) throw error;
+      }
+      navigate('/');
+    } catch (err: any) {
+      setError(err.message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleOAuth = async (provider: 'google' | 'apple') => {
+    setLoading(true);
+    try {
+      const { error } = await supabase.auth.signInWithOAuth({
+        provider,
+        options: {
+          redirectTo: `${window.location.origin}/`,
+        },
+      });
+      if (error) throw error;
+    } catch (err: any) {
+      setError(err.message);
+      setLoading(false);
+    }
+  };
+
+  return (
+    <div className="min-h-screen bg-zinc-950 flex flex-col items-center justify-center p-6">
+      {/* Logo */}
+      <div className="text-center mb-8">
+        <h1 className="text-4xl font-black gradient-text mb-2">ShoeSwiper</h1>
+        <p className="text-zinc-400">Swipe. Match. Cop.</p>
+      </div>
+
+      {/* Auth Card */}
+      <div className="w-full max-w-md bg-zinc-900 rounded-2xl border border-zinc-800 p-6">
+        {/* Tabs */}
+        <div className="flex mb-6 bg-zinc-800 rounded-xl p-1">
+          <button
+            onClick={() => setMode('signin')}
+            className={`flex-1 py-2 rounded-lg text-sm font-medium transition-colors ${
+              mode === 'signin' ? 'bg-orange-500 text-white' : 'text-zinc-400'
+            }`}
+          >
+            Sign In
+          </button>
+          <button
+            onClick={() => setMode('signup')}
+            className={`flex-1 py-2 rounded-lg text-sm font-medium transition-colors ${
+              mode === 'signup' ? 'bg-orange-500 text-white' : 'text-zinc-400'
+            }`}
+          >
+            Sign Up
+          </button>
+        </div>
+
+        {/* Error */}
+        {error && (
+          <div className="mb-4 p-3 bg-red-500/10 border border-red-500/30 rounded-lg text-red-400 text-sm">
+            {error}
+          </div>
+        )}
+
+        {/* OAuth Buttons */}
+        <div className="space-y-3 mb-6">
+          <button
+            onClick={() => handleOAuth('google')}
+            disabled={loading}
+            className="w-full flex items-center justify-center gap-3 py-3 bg-white text-black rounded-xl font-medium hover:bg-zinc-100 disabled:opacity-50"
+          >
+            <FaGoogle /> Continue with Google
+          </button>
+          <button
+            onClick={() => handleOAuth('apple')}
+            disabled={loading}
+            className="w-full flex items-center justify-center gap-3 py-3 bg-zinc-800 text-white rounded-xl font-medium hover:bg-zinc-700 disabled:opacity-50"
+          >
+            <FaApple /> Continue with Apple
+          </button>
+        </div>
+
+        {/* Divider */}
+        <div className="flex items-center gap-3 mb-6">
+          <div className="flex-1 h-px bg-zinc-800" />
+          <span className="text-zinc-500 text-sm">or</span>
+          <div className="flex-1 h-px bg-zinc-800" />
+        </div>
+
+        {/* Email Form */}
+        <form onSubmit={handleEmailAuth} className="space-y-4">
+          {mode === 'signup' && (
+            <div className="relative">
+              <FaUser className="absolute left-4 top-1/2 -translate-y-1/2 text-zinc-500" />
+              <input
+                type="text"
+                value={username}
+                onChange={(e) => setUsername(e.target.value)}
+                placeholder="Username"
+                required
+                className="w-full bg-zinc-800 border border-zinc-700 rounded-xl pl-12 pr-4 py-3 text-white placeholder-zinc-500 focus:border-orange-500 outline-none"
+              />
+            </div>
+          )}
+          
+          <div className="relative">
+            <FaEnvelope className="absolute left-4 top-1/2 -translate-y-1/2 text-zinc-500" />
+            <input
+              type="email"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              placeholder="Email"
+              required
+              className="w-full bg-zinc-800 border border-zinc-700 rounded-xl pl-12 pr-4 py-3 text-white placeholder-zinc-500 focus:border-orange-500 outline-none"
+            />
+          </div>
+
+          <div className="relative">
+            <FaLock className="absolute left-4 top-1/2 -translate-y-1/2 text-zinc-500" />
+            <input
+              type="password"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              placeholder="Password"
+              required
+              minLength={6}
+              className="w-full bg-zinc-800 border border-zinc-700 rounded-xl pl-12 pr-4 py-3 text-white placeholder-zinc-500 focus:border-orange-500 outline-none"
+            />
+          </div>
+
+          <button
+            type="submit"
+            disabled={loading}
+            className="w-full py-3 bg-orange-500 hover:bg-orange-600 rounded-xl text-white font-bold disabled:opacity-50"
+          >
+            {loading ? 'Loading...' : mode === 'signin' ? 'Sign In' : 'Create Account'}
+          </button>
+        </form>
+      </div>
+
+      {/* Skip */}
+      <button
+        onClick={() => navigate('/')}
+        className="mt-6 text-zinc-500 hover:text-white text-sm"
+      >
+        Continue as guest
+      </button>
+    </div>
+  );
+};
+
+export default AuthPage;
+
+
+================ FILE: shoeswipermainproject2-main/shoeswiper-complete/src/pages/CheckMyFit.tsx ================
+import React, { useState, useRef } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
+import { FaCamera, FaUpload, FaMagic, FaTimes, FaBolt } from 'react-icons/fa';
+import { useOutfitAnalysis } from '../hooks/useOutfitAnalysis';
+import { ShareResults } from '../components/check-fit/ShareResults';
+import { ManualStyleSelector } from '../components/check-fit/ManualStyleSelector';
+
+export const CheckMyFit: React.FC = () => {
+  const [imagePreview, setImagePreview] = useState<string | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const { analyzeImage, manualAnalyze, isAnalyzing, analysis, recommendations, error } = useOutfitAnalysis();
+
+  const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files && e.target.files[0]) {
+      const file = e.target.files[0];
+      setImagePreview(URL.createObjectURL(file));
+      analyzeImage(file);
+    }
+  };
+
+  const reset = () => {
+    setImagePreview(null);
+    if (fileInputRef.current) fileInputRef.current.value = '';
+  };
+
+  return (
+    <div className="min-h-screen bg-black text-white pb-24 overflow-y-auto">
+      {/* Header */}
+      <div className="p-4 flex justify-between items-center bg-zinc-900/80 backdrop-blur-md sticky top-0 z-20 border-b border-zinc-800">
+        <h1 className="font-black text-xl italic tracking-tighter">CHECK MY FIT <span className="text-orange-500">AI</span></h1>
+        {imagePreview && (
+          <button onClick={reset} className="text-zinc-400 text-sm">Reset</button>
+        )}
+      </div>
+
+      <div className="p-4 max-w-md mx-auto">
+        
+        {/* State 1: Upload / Capture */}
+        {!imagePreview && (
+          <div className="flex flex-col items-center justify-center h-[70vh] border-2 border-dashed border-zinc-700 rounded-3xl bg-zinc-900/30">
+            <motion.div 
+              initial={{ scale: 0.9, opacity: 0.5 }}
+              animate={{ scale: 1, opacity: 1 }}
+              transition={{ repeat: Infinity, repeatType: "reverse", duration: 1.5 }}
+              className="text-center space-y-6"
+            >
+              <div className="bg-gradient-to-br from-orange-500 to-pink-500 w-24 h-24 rounded-full flex items-center justify-center mx-auto shadow-2xl shadow-orange-500/20">
+                <FaMagic className="text-4xl text-white" />
+              </div>
+              <h2 className="text-2xl font-bold">Rate My Outfit</h2>
+              <p className="text-zinc-400 max-w-xs px-4">Upload a full body shot. Our AI will rate your fit and recommend sneaker upgrades.</p>
+              
+              <div className="flex gap-4 justify-center mt-8">
+                <button 
+                  onClick={() => fileInputRef.current?.click()}
+                  className="bg-zinc-800 hover:bg-zinc-700 px-6 py-3 rounded-xl font-bold flex items-center gap-2 transition-all"
+                >
+                  <FaUpload /> Upload
+                </button>
+                <div className="relative">
+                  <input 
+                    type="file" 
+                    accept="image/*" 
+                    capture="environment"
+                    ref={fileInputRef}
+                    onChange={handleFileSelect}
+                    className="absolute inset-0 opacity-0 cursor-pointer w-full"
+                  />
+                  <button className="bg-orange-500 hover:bg-orange-600 px-6 py-3 rounded-xl font-bold flex items-center gap-2 transition-all shadow-lg shadow-orange-500/30">
+                    <FaCamera /> Take Photo
+                  </button>
+                </div>
+              </div>
+            </motion.div>
+          </div>
+        )}
+
+        {/* State 2: Preview & Analyzing */}
+        {imagePreview && (
+          <div className="relative rounded-3xl overflow-hidden shadow-2xl border border-zinc-800">
+            <img src={imagePreview} alt="Outfit" className="w-full h-auto object-cover max-h-[60vh]" />
+            
+            {/* Scanning Overlay */}
+            {isAnalyzing && (
+              <div className="absolute inset-0 bg-black/50 backdrop-blur-sm flex flex-col items-center justify-center">
+                <motion.div 
+                  className="absolute top-0 left-0 w-full h-1 bg-orange-500 shadow-[0_0_20px_rgba(249,115,22,0.8)]"
+                  animate={{ top: ['0%', '100%', '0%'] }}
+                  transition={{ duration: 2, ease: "linear", repeat: Infinity }}
+                />
+                <motion.div
+                  animate={{ rotate: 360 }}
+                  transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
+                  className="w-16 h-16 border-4 border-orange-500 border-t-transparent rounded-full"
+                />
+                <p className="mt-4 font-bold text-lg">Analyzing your fit...</p>
+                <p className="text-zinc-400 text-sm">AI magic in progress</p>
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* State 3: Results */}
+        {analysis && !isAnalyzing && (
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="mt-6 space-y-6"
+          >
+             {/* Score Card */}
+             <div className="bg-zinc-900 border border-zinc-800 rounded-2xl p-6 relative overflow-hidden">
+                <div className="absolute top-0 right-0 w-32 h-32 bg-orange-500/10 rounded-full blur-3xl -mr-10 -mt-10"></div>
+                
+                <div className="flex justify-between items-start mb-4">
+                  <div>
+                    <h3 className="text-zinc-400 text-xs uppercase tracking-widest mb-1">Drip Score</h3>
+                    <div className="text-5xl font-black italic flex items-baseline gap-2">
+                      {analysis.rating}<span className="text-xl text-zinc-500 not-italic">/10</span>
+                    </div>
+                  </div>
+                  <div className="text-right">
+                    <div className="flex flex-wrap gap-2 justify-end max-w-[150px]">
+                      {analysis.style_tags.map(tag => (
+                        <span key={tag} className="text-xs bg-zinc-800 px-2 py-1 rounded text-zinc-300 capitalize">{tag}</span>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+                
+                <div className="bg-zinc-800/50 p-3 rounded-xl">
+                  <p className="text-sm italic text-zinc-300">"{analysis.feedback}"</p>
+                </div>
+             </div>
+
+             {/* Results Component */}
+             <ShareResults outfitImage={imagePreview!} analysis={analysis} recommendations={recommendations} />
+          </motion.div>
+        )}
+        
+        {error && (
+          <div className="mt-4 space-y-4">
+            <div className="bg-red-500/10 border border-red-500 text-red-500 p-3 rounded-xl text-center text-sm">
+              {error}
+            </div>
+            {/* Show Manual Selector if AI fails */}
+            <ManualStyleSelector onSelect={manualAnalyze} />
+          </div>
+        )}
+      </div>
+    </div>
+  );
+};
+
+export default CheckMyFit;
+
+
+================ FILE: shoeswipermainproject2-main/shoeswiper-complete/src/pages/ClosetPage.tsx ================
+import React, { useEffect, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { FaHeart, FaAmazon, FaShare, FaTrash, FaArrowLeft, FaBoxOpen } from 'react-icons/fa';
+import { useFavorites } from '../hooks/useFavorites';
+import { useSneakers } from '../hooks/useSneakers';
+import { useAnalytics } from '../hooks/useAnalytics';
+import { getAffiliateUrl } from '../lib/supabaseClient';
+import { createAffiliateShareData } from '../lib/deepLinks';
+import { Shoe } from '../lib/types';
+
+const ClosetPage: React.FC = () => {
+  const navigate = useNavigate();
+  const { getFavoriteIds, removeFavorite, loading: favoritesLoading } = useFavorites();
+  const { getSneakerById, trackClick } = useSneakers();
+  const { trackShoeClick, trackShare, trackFavorite } = useAnalytics();
+  const [shoes, setShoes] = useState<Shoe[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [showToast, setShowToast] = useState<string | null>(null);
+
+  // Load favorited shoes
+  useEffect(() => {
+    const loadFavorites = async () => {
+      setLoading(true);
+      const favoriteIds = getFavoriteIds();
+
+      if (favoriteIds.length === 0) {
+        setShoes([]);
+        setLoading(false);
+        return;
+      }
+
+      const shoePromises = favoriteIds.map(id => getSneakerById(id));
+      const results = await Promise.all(shoePromises);
+      const validShoes = results.filter((shoe): shoe is Shoe => shoe !== null);
+      setShoes(validShoes);
+      setLoading(false);
+    };
+
+    if (!favoritesLoading) {
+      loadFavorites();
+    }
+  }, [favoritesLoading, getFavoriteIds, getSneakerById]);
+
+  const handleBuyClick = (shoe: Shoe) => {
+    trackClick(shoe.id);
+    trackShoeClick(shoe.id);
+    window.open(getAffiliateUrl(shoe.amazon_url), '_blank');
+  };
+
+  const handleShare = async (shoe: Shoe) => {
+    const shareData = createAffiliateShareData(shoe, 'share_native');
+
+    if (navigator.share) {
+      try {
+        await navigator.share({
+          title: shareData.title,
+          text: shareData.text,
+          url: shareData.url,
+        });
+        trackShare(shoe.id, 'native');
+      } catch (err) {
+        console.log('Share cancelled');
+      }
+    } else {
+      navigator.clipboard.writeText(shareData.text);
+      trackShare(shoe.id, 'clipboard');
+      showToastMessage('Link copied!');
+    }
+  };
+
+  const handleRemove = async (shoe: Shoe) => {
+    const success = await removeFavorite(shoe.id);
+    if (success) {
+      trackFavorite(shoe.id, 'remove');
+      setShoes(prev => prev.filter(s => s.id !== shoe.id));
+      showToastMessage('Removed from closet');
+    }
+  };
+
+  const showToastMessage = (message: string) => {
+    setShowToast(message);
+    setTimeout(() => setShowToast(null), 2000);
+  };
+
+  if (loading || favoritesLoading) {
+    return (
+      <div className="min-h-screen bg-zinc-950 pt-4 pb-24 px-4">
+        <div className="flex items-center gap-3 mb-6">
+          <button
+            onClick={() => navigate(-1)}
+            className="w-10 h-10 bg-zinc-800 rounded-full flex items-center justify-center text-white"
+          >
+            <FaArrowLeft />
+          </button>
+          <h1 className="text-xl font-bold text-white">My Closet</h1>
+        </div>
+        <div className="flex items-center justify-center h-64">
+          <div className="w-10 h-10 border-4 border-orange-500 border-t-transparent rounded-full animate-spin" />
+        </div>
+      </div>
+    );
+  }
+
+  if (shoes.length === 0) {
+    return (
+      <div className="min-h-screen bg-zinc-950 pt-4 pb-24 px-4">
+        <div className="flex items-center gap-3 mb-6">
+          <button
+            onClick={() => navigate(-1)}
+            className="w-10 h-10 bg-zinc-800 rounded-full flex items-center justify-center text-white"
+          >
+            <FaArrowLeft />
+          </button>
+          <h1 className="text-xl font-bold text-white">My Closet</h1>
+        </div>
+
+        <div className="flex flex-col items-center justify-center h-[60vh] text-center px-4">
+          <div className="w-20 h-20 bg-zinc-800 rounded-full flex items-center justify-center mb-4">
+            <FaBoxOpen className="text-3xl text-zinc-500" />
+          </div>
+          <h2 className="text-xl font-bold text-white mb-2">Your closet is empty</h2>
+          <p className="text-zinc-400 mb-6 max-w-xs">
+            Start swiping and tap the heart to save sneakers you love
+          </p>
+          <button
+            onClick={() => navigate('/')}
+            className="bg-orange-500 text-white font-bold py-3 px-8 rounded-xl active:scale-95 transition-transform"
+          >
+            Browse Sneakers
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="min-h-screen bg-zinc-950 pt-4 pb-24 px-4">
+      {/* Header */}
+      <div className="flex items-center justify-between mb-6">
+        <div className="flex items-center gap-3">
+          <button
+            onClick={() => navigate(-1)}
+            className="w-10 h-10 bg-zinc-800 rounded-full flex items-center justify-center text-white"
+          >
+            <FaArrowLeft />
+          </button>
+          <div>
+            <h1 className="text-xl font-bold text-white">My Closet</h1>
+            <p className="text-zinc-500 text-sm">{shoes.length} saved sneakers</p>
+          </div>
+        </div>
+        <div className="flex items-center gap-2 bg-red-500/20 text-red-400 px-3 py-1.5 rounded-full">
+          <FaHeart className="text-sm" />
+          <span className="text-sm font-medium">{shoes.length}</span>
+        </div>
+      </div>
+
+      {/* Shoe Grid */}
+      <div className="grid grid-cols-2 gap-3">
+        {shoes.map((shoe) => (
+          <div
+            key={shoe.id}
+            className="bg-zinc-900 rounded-xl overflow-hidden border border-zinc-800"
+          >
+            {/* Image */}
+            <div className="relative aspect-square bg-gradient-to-b from-zinc-800 to-zinc-900">
+              <img
+                src={shoe.image_url}
+                alt={shoe.name}
+                className="w-full h-full object-cover"
+              />
+
+              {/* Remove Button */}
+              <button
+                onClick={() => handleRemove(shoe)}
+                className="absolute top-2 right-2 w-8 h-8 bg-black/50 backdrop-blur-sm rounded-full flex items-center justify-center text-zinc-400 hover:text-red-500 hover:bg-red-500/20 transition-colors"
+              >
+                <FaTrash className="text-xs" />
+              </button>
+
+              {/* Brand Badge */}
+              <div className="absolute bottom-2 left-2">
+                <span className="bg-orange-500 text-white text-[10px] font-bold px-2 py-0.5 rounded-full uppercase">
+                  {shoe.brand}
+                </span>
+              </div>
+            </div>
+
+            {/* Info */}
+            <div className="p-3">
+              <h3 className="text-white font-bold text-sm line-clamp-1 mb-2">
+                {shoe.name}
+              </h3>
+
+              {/* Action Buttons */}
+              <div className="flex gap-2">
+                <button
+                  onClick={() => handleBuyClick(shoe)}
+                  className="flex-1 bg-white text-black font-bold py-2 rounded-lg flex items-center justify-center gap-1.5 text-xs active:scale-95 transition-transform"
+                >
+                  <FaAmazon />
+                  Buy
+                </button>
+                <button
+                  onClick={() => handleShare(shoe)}
+                  className="w-10 bg-zinc-800 text-white rounded-lg flex items-center justify-center hover:bg-zinc-700 transition-colors"
+                >
+                  <FaShare className="text-xs" />
+                </button>
+              </div>
+            </div>
+          </div>
+        ))}
+      </div>
+
+      {/* Toast */}
+      <div
+        className={`fixed bottom-24 left-1/2 -translate-x-1/2 bg-zinc-800 text-white px-4 py-2.5 rounded-xl shadow-lg z-50 transition-all duration-300 ${
+          showToast ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4 pointer-events-none'
+        }`}
+      >
+        <span className="text-sm font-medium">{showToast}</span>
+      </div>
+    </div>
+  );
+};
+
+export default ClosetPage;
+
+
+================ FILE: shoeswipermainproject2-main/shoeswiper-complete/src/pages/ComingSoon.tsx ================
+const ComingSoon = () => {
+  return (
+    <div className="min-h-screen bg-gradient-to-br from-purple-900 via-black to-purple-900 flex flex-col items-center justify-center text-white p-4">
+      {/* Logo */}
+      <div className="text-6xl mb-4">👟</div>
+      
+      {/* Title */}
+      <h1 className="text-5xl md:text-7xl font-bold mb-4 text-center">
+        ShoeSwiper
+      </h1>
+      
+      {/* Tagline */}
+      <p className="text-xl md:text-2xl text-purple-300 mb-8 text-center">
+        Swipe. Match. Drip.
+      </p>
+      
+      {/* Coming Soon Badge */}
+      <div className="bg-purple-600 px-8 py-4 rounded-full mb-8">
+        <span className="text-2xl font-bold">Coming Soon</span>
+      </div>
+      
+      {/* Description */}
+      <p className="text-lg text-gray-300 text-center max-w-md mb-8">
+        The ultimate sneaker discovery app. Find your perfect kicks with AI-powered style matching.
+      </p>
+      
+      {/* Social Links */}
+      <div className="flex gap-4 mb-8">
+        <a 
+          href="https://tiktok.com/@shoeswiper" 
+          target="_blank" 
+          rel="noopener noreferrer"
+          className="bg-white/10 hover:bg-white/20 px-6 py-3 rounded-full transition"
+        >
+          Follow on TikTok
+        </a>
+      </div>
+      
+      {/* Admin Login (subtle) */}
+      <a 
+        href="/auth" 
+        className="text-sm text-gray-500 hover:text-gray-400 transition mt-8"
+      >
+        Admin Login
+      </a>
+    </div>
+  );
+};
+
+export default ComingSoon;
+
+

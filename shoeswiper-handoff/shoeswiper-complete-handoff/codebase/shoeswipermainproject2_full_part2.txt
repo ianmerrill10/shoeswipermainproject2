@@ -1,0 +1,1907 @@
+================ FILE: shoeswipermainproject2-main/shoeswiper-complete/public/sw.js ================
+// ShoeSwiper Service Worker for Push Notifications
+const CACHE_NAME = 'shoeswiper-v1';
+const AFFILIATE_TAG = 'shoeswiper-20';
+
+// Install event - cache essential assets
+self.addEventListener('install', (event) => {
+  console.log('[SW] Installing service worker...');
+  self.skipWaiting();
+});
+
+// Activate event - clean up old caches
+self.addEventListener('activate', (event) => {
+  console.log('[SW] Activating service worker...');
+  event.waitUntil(
+    caches.keys().then((cacheNames) => {
+      return Promise.all(
+        cacheNames
+          .filter((name) => name !== CACHE_NAME)
+          .map((name) => caches.delete(name))
+      );
+    })
+  );
+  self.clients.claim();
+});
+
+// Push event - handle incoming push notifications
+self.addEventListener('push', (event) => {
+  console.log('[SW] Push notification received');
+
+  let data = {
+    title: 'ShoeSwiper',
+    body: 'You have a new notification',
+    icon: '/favicon.svg',
+    badge: '/favicon.svg',
+    tag: 'shoeswiper-notification',
+    data: {},
+  };
+
+  if (event.data) {
+    try {
+      const payload = event.data.json();
+      data = {
+        title: payload.title || data.title,
+        body: payload.body || data.body,
+        icon: payload.icon || data.icon,
+        badge: payload.badge || data.badge,
+        tag: payload.tag || data.tag,
+        data: payload.data || {},
+      };
+    } catch (err) {
+      console.error('[SW] Error parsing push data:', err);
+    }
+  }
+
+  const options = {
+    body: data.body,
+    icon: data.icon,
+    badge: data.badge,
+    tag: data.tag,
+    data: data.data,
+    vibrate: [100, 50, 100],
+    requireInteraction: true,
+    actions: [
+      {
+        action: 'buy',
+        title: 'Buy Now',
+        icon: '/favicon.svg',
+      },
+      {
+        action: 'dismiss',
+        title: 'Dismiss',
+      },
+    ],
+  };
+
+  event.waitUntil(self.registration.showNotification(data.title, options));
+});
+
+// Notification click event - handle user interaction
+self.addEventListener('notificationclick', (event) => {
+  console.log('[SW] Notification clicked:', event.action);
+  event.notification.close();
+
+  const notificationData = event.notification.data || {};
+
+  if (event.action === 'dismiss') {
+    return;
+  }
+
+  // Determine URL to open
+  let urlToOpen = '/';
+
+  if (event.action === 'buy' && notificationData.amazonUrl) {
+    // Add affiliate tag to Amazon URL
+    const url = new URL(notificationData.amazonUrl);
+    url.searchParams.set('tag', AFFILIATE_TAG);
+    urlToOpen = url.toString();
+  } else if (notificationData.shoeId) {
+    // Open app to the specific shoe
+    urlToOpen = `/?shoe=${notificationData.shoeId}`;
+  }
+
+  event.waitUntil(
+    clients.matchAll({ type: 'window', includeUncontrolled: true }).then((clientList) => {
+      // Try to focus an existing window
+      for (const client of clientList) {
+        if (client.url.includes(self.location.origin) && 'focus' in client) {
+          client.focus();
+          if (urlToOpen.startsWith('http')) {
+            // External URL (Amazon) - open in new tab
+            return clients.openWindow(urlToOpen);
+          }
+          // Navigate within app
+          return client.navigate(urlToOpen);
+        }
+      }
+      // Open new window
+      return clients.openWindow(urlToOpen);
+    })
+  );
+});
+
+// Background sync for failed notification tracking
+self.addEventListener('sync', (event) => {
+  if (event.tag === 'notification-tracking') {
+    console.log('[SW] Syncing notification tracking...');
+    // Future: sync notification interaction data
+  }
+});
+
+// Message handler for communication with main app
+self.addEventListener('message', (event) => {
+  console.log('[SW] Message received:', event.data);
+
+  if (event.data.type === 'SKIP_WAITING') {
+    self.skipWaiting();
+  }
+
+  if (event.data.type === 'SHOW_LOCAL_NOTIFICATION') {
+    const { title, body, data } = event.data.payload;
+    self.registration.showNotification(title, {
+      body,
+      icon: '/favicon.svg',
+      badge: '/favicon.svg',
+      tag: 'shoeswiper-local',
+      data,
+      vibrate: [100, 50, 100],
+      requireInteraction: true,
+      actions: [
+        {
+          action: 'buy',
+          title: 'Buy Now',
+        },
+        {
+          action: 'dismiss',
+          title: 'Dismiss',
+        },
+      ],
+    });
+  }
+});
+
+
+================ FILE: shoeswipermainproject2-main/shoeswiper-complete/src/App.tsx ================
+import { Routes, Route, Navigate } from 'react-router-dom';
+import { useAuthGuard } from './hooks/useAuthGuard';
+
+// Pages
+import FeedPage from './pages/FeedPage';
+import SearchPage from './pages/SearchPage';
+import ClosetPage from './pages/ClosetPage';
+import CheckMyFit from './pages/CheckMyFit';
+import ProfilePage from './pages/ProfilePage';
+import AuthPage from './pages/AuthPage';
+import ComingSoon from './pages/ComingSoon';
+import Unauthorized from './pages/Unauthorized';
+import NFTMarketplace from './components/nft/NFTMarketplace';
+
+// Admin Pages
+import { AdminLayout } from './components/admin/AdminLayout';
+import { AnalyticsDashboard } from './pages/admin/AnalyticsDashboard';
+import { ProductManager } from './pages/admin/ProductManager';
+import { UserManager } from './pages/admin/UserManager';
+
+// Components
+import BottomNavigation from './components/BottomNavigation';
+
+function App() {
+  const { user, loading, isAllowed } = useAuthGuard();
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-zinc-950 flex items-center justify-center">
+        <div className="text-center">
+          <div className="w-12 h-12 border-4 border-orange-500 border-t-transparent rounded-full animate-spin mx-auto mb-4" />
+          <p className="text-zinc-400">Loading ShoeSwiper...</p>
+        </div>
+      </div>
+    );
+  }
+
+  // If user is logged in but not in allowed list, show Unauthorized page
+  if (user && !isAllowed) {
+    return (
+      <Routes>
+        <Route path="*" element={<Unauthorized />} />
+      </Routes>
+    );
+  }
+
+  // If not logged in or not allowed, show Coming Soon (except for /auth route)
+  if (!isAllowed) {
+    return (
+      <Routes>
+        <Route path="/auth" element={<AuthPage />} />
+        <Route path="*" element={<ComingSoon />} />
+      </Routes>
+    );
+  }
+
+  // User is authenticated and allowed - show full app
+  return (
+    <div className="min-h-screen bg-zinc-950">
+      <Routes>
+        {/* Auth Routes */}
+        <Route path="/auth" element={<Navigate to="/" />} />
+
+        {/* Main App Routes */}
+        <Route path="/" element={<FeedPage />} />
+        <Route path="/search" element={<SearchPage />} />
+        <Route path="/closet" element={<ClosetPage />} />
+        <Route path="/check-fit" element={<CheckMyFit />} />
+        <Route path="/profile" element={<ProfilePage />} />
+        <Route path="/nft" element={<NFTMarketplace />} />
+
+        {/* Admin Routes - Protected by AdminLayout */}
+        <Route path="/admin" element={<AdminLayout />}>
+          <Route index element={<AnalyticsDashboard />} />
+          <Route path="products" element={<ProductManager />} />
+          <Route path="users" element={<UserManager />} />
+        </Route>
+
+        {/* Fallback */}
+        <Route path="*" element={<Navigate to="/" />} />
+      </Routes>
+
+      {/* Bottom Navigation - shown on main pages */}
+      {!['/auth', '/admin'].some(path => window.location.pathname.startsWith(path)) && (
+        <BottomNavigation />
+      )}
+    </div>
+  );
+}
+
+export default App;
+
+
+================ FILE: shoeswipermainproject2-main/shoeswiper-complete/src/components/BottomNavigation.tsx ================
+import React from 'react';
+import { useNavigate, useLocation } from 'react-router-dom';
+import { FaHome, FaSearch, FaMagic, FaUser, FaHeart } from 'react-icons/fa';
+
+const BottomNavigation: React.FC = () => {
+  const navigate = useNavigate();
+  const location = useLocation();
+
+  const navItems = [
+    { path: '/', icon: FaHome, label: 'Feed' },
+    { path: '/search', icon: FaSearch, label: 'Search' },
+    { path: '/check-fit', icon: FaMagic, label: 'Check Fit', special: true },
+    { path: '/closet', icon: FaHeart, label: 'Closet' },
+    { path: '/profile', icon: FaUser, label: 'Profile' },
+  ];
+
+  return (
+    <nav className="fixed bottom-0 left-0 right-0 bg-zinc-900/95 backdrop-blur-lg border-t border-zinc-800 safe-bottom z-40">
+      <div className="flex items-center justify-around py-2">
+        {navItems.map((item) => {
+          const isActive = location.pathname === item.path;
+          
+          if (item.special) {
+            return (
+              <button
+                key={item.path}
+                onClick={() => navigate(item.path)}
+                className={`relative -mt-8 flex flex-col items-center justify-center w-16 h-16 rounded-full shadow-lg transition-all ${
+                  isActive
+                    ? 'bg-gradient-to-br from-orange-500 to-red-500 shadow-orange-500/30'
+                    : 'bg-zinc-800 hover:bg-zinc-700'
+                }`}
+              >
+                <item.icon className={`text-xl ${isActive ? 'text-white' : 'text-zinc-400'}`} />
+              </button>
+            );
+          }
+
+          return (
+            <button
+              key={item.path}
+              onClick={() => navigate(item.path)}
+              className="flex flex-col items-center justify-center py-2 px-4 min-w-[60px]"
+            >
+              <item.icon
+                className={`text-xl mb-1 transition-colors ${
+                  isActive ? 'text-orange-500' : 'text-zinc-500'
+                }`}
+              />
+              <span
+                className={`text-[10px] font-medium transition-colors ${
+                  isActive ? 'text-orange-500' : 'text-zinc-500'
+                }`}
+              >
+                {item.label}
+              </span>
+            </button>
+          );
+        })}
+      </div>
+    </nav>
+  );
+};
+
+export default BottomNavigation;
+
+
+================ FILE: shoeswipermainproject2-main/shoeswiper-complete/src/components/EmailCaptureModal.tsx ================
+import React, { useState } from 'react';
+import { FaTimes, FaEnvelope, FaBell, FaRocket, FaNewspaper, FaPercent, FaCheck, FaSpinner } from 'react-icons/fa';
+import { useEmailCapture, CapturedEmail } from '../hooks/useEmailCapture';
+
+interface EmailCaptureModalProps {
+  isOpen: boolean;
+  onClose: () => void;
+  source: CapturedEmail['source'];
+  shoeData?: { id: string; name: string };
+  onSuccess?: () => void;
+  title?: string;
+  subtitle?: string;
+}
+
+const EmailCaptureModal: React.FC<EmailCaptureModalProps> = ({
+  isOpen,
+  onClose,
+  source,
+  shoeData,
+  onSuccess,
+  title = 'Get Price Drop Alerts',
+  subtitle = "We'll email you when prices drop on shoes you're watching",
+}) => {
+  const { captureEmail, isValidEmail, email: savedEmail, isSubscribed } = useEmailCapture();
+  const [email, setEmail] = useState(savedEmail || '');
+  const [preferences, setPreferences] = useState({
+    priceAlerts: true,
+    newReleases: true,
+    weeklyDigest: false,
+    promotions: false,
+  });
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [success, setSuccess] = useState(false);
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setError(null);
+
+    if (!email.trim()) {
+      setError('Please enter your email address');
+      return;
+    }
+
+    if (!isValidEmail(email)) {
+      setError('Please enter a valid email address');
+      return;
+    }
+
+    setLoading(true);
+    const result = await captureEmail(email, source, shoeData, preferences);
+    setLoading(false);
+
+    if (result.success) {
+      setSuccess(true);
+      setTimeout(() => {
+        onSuccess?.();
+        onClose();
+      }, 1500);
+    } else {
+      setError(result.error || 'Something went wrong');
+    }
+  };
+
+  const togglePreference = (key: keyof typeof preferences) => {
+    setPreferences(prev => ({ ...prev, [key]: !prev[key] }));
+  };
+
+  if (!isOpen) return null;
+
+  // Already subscribed state
+  if (isSubscribed && savedEmail) {
+    return (
+      <>
+        <div
+          className="fixed inset-0 bg-black/70 backdrop-blur-sm z-50"
+          onClick={onClose}
+        />
+        <div className="fixed inset-x-4 top-1/2 -translate-y-1/2 max-w-md mx-auto bg-zinc-900 rounded-2xl z-50 overflow-hidden">
+          <div className="p-6 text-center">
+            <div className="w-16 h-16 bg-green-500/20 rounded-full flex items-center justify-center mx-auto mb-4">
+              <FaCheck className="text-green-500 text-2xl" />
+            </div>
+            <h2 className="text-xl font-bold text-white mb-2">You're Already Subscribed!</h2>
+            <p className="text-zinc-400 text-sm mb-4">
+              We'll send alerts to <span className="text-orange-400">{savedEmail}</span>
+            </p>
+            <button
+              onClick={onClose}
+              className="w-full bg-orange-500 text-white font-bold py-3 rounded-xl"
+            >
+              Got it!
+            </button>
+          </div>
+        </div>
+      </>
+    );
+  }
+
+  // Success state
+  if (success) {
+    return (
+      <>
+        <div className="fixed inset-0 bg-black/70 backdrop-blur-sm z-50" />
+        <div className="fixed inset-x-4 top-1/2 -translate-y-1/2 max-w-md mx-auto bg-zinc-900 rounded-2xl z-50 overflow-hidden">
+          <div className="p-6 text-center">
+            <div className="w-16 h-16 bg-green-500/20 rounded-full flex items-center justify-center mx-auto mb-4 animate-pulse">
+              <FaCheck className="text-green-500 text-2xl" />
+            </div>
+            <h2 className="text-xl font-bold text-white mb-2">You're All Set!</h2>
+            <p className="text-zinc-400 text-sm">
+              We'll notify you when prices drop
+            </p>
+          </div>
+        </div>
+      </>
+    );
+  }
+
+  return (
+    <>
+      {/* Backdrop */}
+      <div
+        className="fixed inset-0 bg-black/70 backdrop-blur-sm z-50"
+        onClick={onClose}
+      />
+
+      {/* Modal */}
+      <div className="fixed inset-x-4 top-1/2 -translate-y-1/2 max-w-md mx-auto bg-zinc-900 rounded-2xl z-50 overflow-hidden">
+        {/* Header */}
+        <div className="relative bg-gradient-to-r from-orange-500 to-red-500 p-6 text-center">
+          <button
+            onClick={onClose}
+            className="absolute top-4 right-4 w-8 h-8 bg-black/20 rounded-full flex items-center justify-center text-white/80 hover:text-white"
+          >
+            <FaTimes />
+          </button>
+          <div className="w-14 h-14 bg-white/20 rounded-full flex items-center justify-center mx-auto mb-3">
+            <FaEnvelope className="text-white text-2xl" />
+          </div>
+          <h2 className="text-xl font-bold text-white">{title}</h2>
+          <p className="text-white/80 text-sm mt-1">{subtitle}</p>
+        </div>
+
+        {/* Form */}
+        <form onSubmit={handleSubmit} className="p-6 space-y-4">
+          {/* Shoe Preview */}
+          {shoeData && (
+            <div className="bg-zinc-800/50 rounded-xl p-3 flex items-center gap-3">
+              <div className="w-12 h-12 bg-zinc-700 rounded-lg flex items-center justify-center">
+                <span className="text-2xl">👟</span>
+              </div>
+              <div className="flex-1 min-w-0">
+                <p className="text-white font-medium text-sm truncate">{shoeData.name}</p>
+                <p className="text-zinc-500 text-xs">Watching for price drops</p>
+              </div>
+            </div>
+          )}
+
+          {/* Email Input */}
+          <div>
+            <label className="block text-zinc-400 text-sm mb-2">Email Address</label>
+            <input
+              type="email"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              placeholder="you@example.com"
+              className="w-full bg-zinc-800 border border-zinc-700 rounded-xl px-4 py-3 text-white placeholder-zinc-500 focus:border-orange-500 focus:outline-none"
+              autoFocus
+            />
+            {error && (
+              <p className="text-red-400 text-xs mt-2">{error}</p>
+            )}
+          </div>
+
+          {/* Preferences */}
+          <div className="space-y-2">
+            <p className="text-zinc-400 text-sm">What would you like to receive?</p>
+
+            <button
+              type="button"
+              onClick={() => togglePreference('priceAlerts')}
+              className="w-full bg-zinc-800/50 rounded-xl p-3 flex items-center gap-3 text-left"
+            >
+              <div className={`w-8 h-8 rounded-full flex items-center justify-center ${
+                preferences.priceAlerts ? 'bg-orange-500/20 text-orange-500' : 'bg-zinc-700 text-zinc-500'
+              }`}>
+                <FaBell className="text-sm" />
+              </div>
+              <div className="flex-1">
+                <p className="text-white text-sm font-medium">Price Drop Alerts</p>
+                <p className="text-zinc-500 text-xs">Instant notifications when prices drop</p>
+              </div>
+              <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center ${
+                preferences.priceAlerts ? 'bg-orange-500 border-orange-500' : 'border-zinc-600'
+              }`}>
+                {preferences.priceAlerts && <FaCheck className="text-white text-xs" />}
+              </div>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => togglePreference('newReleases')}
+              className="w-full bg-zinc-800/50 rounded-xl p-3 flex items-center gap-3 text-left"
+            >
+              <div className={`w-8 h-8 rounded-full flex items-center justify-center ${
+                preferences.newReleases ? 'bg-orange-500/20 text-orange-500' : 'bg-zinc-700 text-zinc-500'
+              }`}>
+                <FaRocket className="text-sm" />
+              </div>
+              <div className="flex-1">
+                <p className="text-white text-sm font-medium">New Releases</p>
+                <p className="text-zinc-500 text-xs">Be first to know about new drops</p>
+              </div>
+              <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center ${
+                preferences.newReleases ? 'bg-orange-500 border-orange-500' : 'border-zinc-600'
+              }`}>
+                {preferences.newReleases && <FaCheck className="text-white text-xs" />}
+              </div>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => togglePreference('weeklyDigest')}
+              className="w-full bg-zinc-800/50 rounded-xl p-3 flex items-center gap-3 text-left"
+            >
+              <div className={`w-8 h-8 rounded-full flex items-center justify-center ${
+                preferences.weeklyDigest ? 'bg-orange-500/20 text-orange-500' : 'bg-zinc-700 text-zinc-500'
+              }`}>
+                <FaNewspaper className="text-sm" />
+              </div>
+              <div className="flex-1">
+                <p className="text-white text-sm font-medium">Weekly Digest</p>
+                <p className="text-zinc-500 text-xs">Top deals and trending sneakers</p>
+              </div>
+              <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center ${
+                preferences.weeklyDigest ? 'bg-orange-500 border-orange-500' : 'border-zinc-600'
+              }`}>
+                {preferences.weeklyDigest && <FaCheck className="text-white text-xs" />}
+              </div>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => togglePreference('promotions')}
+              className="w-full bg-zinc-800/50 rounded-xl p-3 flex items-center gap-3 text-left"
+            >
+              <div className={`w-8 h-8 rounded-full flex items-center justify-center ${
+                preferences.promotions ? 'bg-orange-500/20 text-orange-500' : 'bg-zinc-700 text-zinc-500'
+              }`}>
+                <FaPercent className="text-sm" />
+              </div>
+              <div className="flex-1">
+                <p className="text-white text-sm font-medium">Exclusive Deals</p>
+                <p className="text-zinc-500 text-xs">Special offers & discounts</p>
+              </div>
+              <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center ${
+                preferences.promotions ? 'bg-orange-500 border-orange-500' : 'border-zinc-600'
+              }`}>
+                {preferences.promotions && <FaCheck className="text-white text-xs" />}
+              </div>
+            </button>
+          </div>
+
+          {/* Submit Button */}
+          <button
+            type="submit"
+            disabled={loading}
+            className="w-full bg-gradient-to-r from-orange-500 to-red-500 text-white font-bold py-4 rounded-xl flex items-center justify-center gap-2 disabled:opacity-50"
+          >
+            {loading ? (
+              <>
+                <FaSpinner className="animate-spin" />
+                Subscribing...
+              </>
+            ) : (
+              <>
+                <FaBell />
+                Get Notified
+              </>
+            )}
+          </button>
+
+          {/* Privacy Note */}
+          <p className="text-center text-zinc-600 text-xs">
+            We respect your privacy. Unsubscribe anytime.
+          </p>
+        </form>
+      </div>
+    </>
+  );
+};
+
+export default EmailCaptureModal;
+
+
+================ FILE: shoeswipermainproject2-main/shoeswiper-complete/src/components/MusicPanel.tsx ================
+import React from 'react';
+import { FaTimes, FaSpotify, FaApple, FaAmazon } from 'react-icons/fa';
+import { Shoe } from '../lib/types';
+import { useAnalytics, MusicPlatform } from '../hooks/useAnalytics';
+
+interface MusicPanelProps {
+  shoe: Shoe;
+  isOpen: boolean;
+  onClose: () => void;
+}
+
+const MusicPanel: React.FC<MusicPanelProps> = ({ shoe, isOpen, onClose }) => {
+  const music = shoe.music;
+  const { trackMusicClick } = useAnalytics();
+
+  const handleMusicClick = (platform: MusicPlatform, url: string) => {
+    if (music) {
+      trackMusicClick(platform, shoe.id, music.song, music.artist);
+    }
+    window.open(url, '_blank');
+  };
+
+  // Generate a placeholder album art based on artist name
+  const getAlbumArt = (artist: string) => {
+    const colors: Record<string, string> = {
+      'Travis Scott': 'from-amber-900 to-black',
+      'Drake': 'from-zinc-800 to-black',
+      'Kendrick Lamar': 'from-red-900 to-black',
+      'Kanye West': 'from-purple-900 to-black',
+      'Daft Punk': 'from-cyan-900 to-black',
+      'The Weeknd': 'from-red-800 to-black',
+      'Dua Lipa': 'from-pink-800 to-black',
+    };
+    return colors[artist] || 'from-orange-900 to-black';
+  };
+
+  if (!music) {
+    return null;
+  }
+
+  return (
+    <>
+      {/* Backdrop */}
+      <div
+        className={`fixed inset-0 bg-black/60 backdrop-blur-sm z-40 transition-opacity duration-300 ${
+          isOpen ? 'opacity-100' : 'opacity-0 pointer-events-none'
+        }`}
+        onClick={onClose}
+      />
+
+      {/* Panel */}
+      <div
+        className={`fixed top-0 right-0 h-full w-full max-w-md bg-zinc-950 z-50 transform transition-transform duration-300 ease-out overflow-y-auto ${
+          isOpen ? 'translate-x-0' : 'translate-x-full'
+        }`}
+      >
+        {/* Header */}
+        <div className="sticky top-0 bg-zinc-950/95 backdrop-blur-sm border-b border-zinc-800 p-4 flex items-center justify-between z-10">
+          <h2 className="text-lg font-bold text-white">Now Playing</h2>
+          <button
+            onClick={onClose}
+            className="w-10 h-10 bg-zinc-800 rounded-full flex items-center justify-center text-white hover:bg-zinc-700 transition-colors"
+          >
+            <FaTimes />
+          </button>
+        </div>
+
+        {/* Album Art */}
+        <div className={`aspect-square bg-gradient-to-br ${getAlbumArt(music.artist)} flex items-center justify-center relative`}>
+          {/* Spinning vinyl effect */}
+          <div className="w-64 h-64 rounded-full bg-black/50 flex items-center justify-center animate-spin-slow">
+            <div className="w-48 h-48 rounded-full bg-gradient-to-br from-zinc-800 to-zinc-900 flex items-center justify-center border-4 border-zinc-700">
+              <div className="w-16 h-16 rounded-full bg-orange-500 flex items-center justify-center">
+                <div className="w-4 h-4 rounded-full bg-black" />
+              </div>
+            </div>
+          </div>
+
+          {/* Sound wave animation */}
+          <div className="absolute bottom-4 left-1/2 -translate-x-1/2 flex gap-1">
+            {[...Array(5)].map((_, i) => (
+              <div
+                key={i}
+                className="w-1 bg-orange-500 rounded-full animate-pulse"
+                style={{
+                  height: `${Math.random() * 20 + 10}px`,
+                  animationDelay: `${i * 0.1}s`,
+                }}
+              />
+            ))}
+          </div>
+        </div>
+
+        {/* Song Info */}
+        <div className="p-6 text-center border-b border-zinc-800">
+          <h3 className="text-2xl font-black text-white mb-2">{music.song}</h3>
+          <p className="text-lg text-zinc-400">{music.artist}</p>
+        </div>
+
+        {/* Streaming Links */}
+        <div className="p-6 space-y-4">
+          <p className="text-zinc-500 text-sm text-center mb-4">Listen on your favorite platform</p>
+
+          {/* Spotify */}
+          {music.spotifyUrl && (
+            <button
+              onClick={() => handleMusicClick('spotify', music.spotifyUrl!)}
+              className="w-full flex items-center gap-4 bg-[#1DB954] hover:bg-[#1ed760] text-white font-bold py-4 px-6 rounded-xl transition-colors"
+            >
+              <FaSpotify className="text-2xl" />
+              <span className="flex-1 text-left">Play on Spotify</span>
+              <span className="text-sm opacity-75">Free</span>
+            </button>
+          )}
+
+          {/* Apple Music */}
+          {music.appleMusicUrl && (
+            <button
+              onClick={() => handleMusicClick('apple_music', music.appleMusicUrl!)}
+              className="w-full flex items-center gap-4 bg-gradient-to-r from-[#FA57C1] to-[#FC5C7D] hover:opacity-90 text-white font-bold py-4 px-6 rounded-xl transition-opacity"
+            >
+              <FaApple className="text-2xl" />
+              <span className="flex-1 text-left">Play on Apple Music</span>
+              <span className="text-xs bg-white/20 px-2 py-0.5 rounded">Affiliate</span>
+            </button>
+          )}
+
+          {/* Amazon Music */}
+          {music.amazonMusicUrl && (
+            <button
+              onClick={() => handleMusicClick('amazon_music', music.amazonMusicUrl!)}
+              className="w-full flex items-center gap-4 bg-[#00A8E1] hover:bg-[#00bfff] text-white font-bold py-4 px-6 rounded-xl transition-colors"
+            >
+              <FaAmazon className="text-2xl" />
+              <span className="flex-1 text-left">Play on Amazon Music</span>
+              <span className="text-xs bg-white/20 px-2 py-0.5 rounded">Affiliate</span>
+            </button>
+          )}
+        </div>
+
+        {/* Paired With */}
+        <div className="p-6 border-t border-zinc-800">
+          <p className="text-zinc-500 text-sm mb-3">Paired with</p>
+          <div className="flex items-center gap-4 bg-zinc-900 p-4 rounded-xl">
+            <img
+              src={shoe.image_url}
+              alt={shoe.name}
+              className="w-16 h-16 rounded-lg object-cover"
+            />
+            <div className="flex-1">
+              <p className="text-xs text-orange-500 font-bold uppercase">{shoe.brand}</p>
+              <p className="text-white font-bold">{shoe.name}</p>
+            </div>
+          </div>
+        </div>
+
+        {/* Tip */}
+        <div className="p-6 pb-8">
+          <p className="text-zinc-600 text-xs text-center">
+            Swipe through the feed to discover more music paired with sneakers
+          </p>
+        </div>
+      </div>
+    </>
+  );
+};
+
+export default MusicPanel;
+
+
+================ FILE: shoeswipermainproject2-main/shoeswiper-complete/src/components/NotificationSettings.tsx ================
+import React, { useState } from 'react';
+import { FaTimes, FaBell, FaBellSlash, FaTag, FaRocket, FaBox, FaPercent, FaCheck, FaExclamationTriangle } from 'react-icons/fa';
+import { usePushNotifications } from '../hooks/usePushNotifications';
+
+interface NotificationSettingsProps {
+  isOpen: boolean;
+  onClose: () => void;
+}
+
+const NotificationSettings: React.FC<NotificationSettingsProps> = ({ isOpen, onClose }) => {
+  const {
+    isSupported,
+    permission,
+    settings,
+    loading,
+    isEnabled,
+    requestPermission,
+    disablePush,
+    updateSettings,
+    notifyPriceDrop,
+  } = usePushNotifications();
+
+  const [enabling, setEnabling] = useState(false);
+  const [testSent, setTestSent] = useState(false);
+
+  const handleEnableNotifications = async () => {
+    setEnabling(true);
+    try {
+      await requestPermission();
+    } finally {
+      setEnabling(false);
+    }
+  };
+
+  const handleDisableNotifications = async () => {
+    await disablePush();
+  };
+
+  const handleTestNotification = async () => {
+    const success = await notifyPriceDrop(
+      'Air Jordan 1 Retro High OG',
+      189.99,
+      149.99,
+      'https://amazon.com/dp/test',
+      'test-shoe-id'
+    );
+    if (success) {
+      setTestSent(true);
+      setTimeout(() => setTestSent(false), 3000);
+    }
+  };
+
+  const toggleSetting = (key: 'priceDrops' | 'newReleases' | 'restocks' | 'promotions') => {
+    updateSettings({ [key]: !settings[key] });
+  };
+
+  if (loading) {
+    return null;
+  }
+
+  return (
+    <>
+      {/* Backdrop */}
+      <div
+        className={`fixed inset-0 bg-black/60 backdrop-blur-sm z-40 transition-opacity duration-300 ${
+          isOpen ? 'opacity-100' : 'opacity-0 pointer-events-none'
+        }`}
+        onClick={onClose}
+      />
+
+      {/* Panel */}
+      <div
+        className={`fixed bottom-0 left-0 right-0 bg-zinc-950 z-50 rounded-t-3xl transform transition-transform duration-300 ease-out max-h-[85vh] overflow-y-auto ${
+          isOpen ? 'translate-y-0' : 'translate-y-full'
+        }`}
+      >
+        {/* Handle */}
+        <div className="flex justify-center pt-3 pb-2">
+          <div className="w-10 h-1 bg-zinc-700 rounded-full" />
+        </div>
+
+        {/* Header */}
+        <div className="px-6 pb-4 flex items-center justify-between border-b border-zinc-800">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 bg-orange-500/20 rounded-full flex items-center justify-center">
+              <FaBell className="text-orange-500" />
+            </div>
+            <div>
+              <h2 className="text-lg font-bold text-white">Notifications</h2>
+              <p className="text-zinc-500 text-xs">Never miss a deal</p>
+            </div>
+          </div>
+          <button
+            onClick={onClose}
+            className="w-10 h-10 bg-zinc-800 rounded-full flex items-center justify-center text-zinc-400 hover:text-white transition-colors"
+          >
+            <FaTimes />
+          </button>
+        </div>
+
+        <div className="p-6 space-y-6">
+          {/* Not Supported Warning */}
+          {!isSupported && (
+            <div className="bg-yellow-500/10 border border-yellow-500/30 rounded-xl p-4 flex items-start gap-3">
+              <FaExclamationTriangle className="text-yellow-500 flex-shrink-0 mt-0.5" />
+              <div>
+                <p className="text-yellow-500 font-medium text-sm">Notifications not supported</p>
+                <p className="text-yellow-500/70 text-xs mt-1">
+                  Your browser doesn't support push notifications. Try using Chrome, Firefox, or Safari on a newer device.
+                </p>
+              </div>
+            </div>
+          )}
+
+          {/* Permission Denied Warning */}
+          {isSupported && permission === 'denied' && (
+            <div className="bg-red-500/10 border border-red-500/30 rounded-xl p-4 flex items-start gap-3">
+              <FaBellSlash className="text-red-500 flex-shrink-0 mt-0.5" />
+              <div>
+                <p className="text-red-400 font-medium text-sm">Notifications blocked</p>
+                <p className="text-red-400/70 text-xs mt-1">
+                  You've blocked notifications for ShoeSwiper. To enable them, update your browser settings and allow notifications for this site.
+                </p>
+              </div>
+            </div>
+          )}
+
+          {/* Main Toggle */}
+          {isSupported && permission !== 'denied' && (
+            <div className="bg-zinc-900 rounded-xl p-4">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <div className={`w-12 h-12 rounded-full flex items-center justify-center ${
+                    isEnabled ? 'bg-green-500/20' : 'bg-zinc-800'
+                  }`}>
+                    {isEnabled ? (
+                      <FaBell className="text-green-500 text-lg" />
+                    ) : (
+                      <FaBellSlash className="text-zinc-500 text-lg" />
+                    )}
+                  </div>
+                  <div>
+                    <p className="text-white font-bold">Push Notifications</p>
+                    <p className="text-zinc-500 text-sm">
+                      {isEnabled ? 'Enabled' : 'Get alerts for price drops'}
+                    </p>
+                  </div>
+                </div>
+                <button
+                  onClick={isEnabled ? handleDisableNotifications : handleEnableNotifications}
+                  disabled={enabling}
+                  className={`px-4 py-2 rounded-lg font-bold text-sm transition-colors ${
+                    isEnabled
+                      ? 'bg-zinc-700 text-white hover:bg-zinc-600'
+                      : 'bg-orange-500 text-white hover:bg-orange-600'
+                  } disabled:opacity-50`}
+                >
+                  {enabling ? 'Enabling...' : isEnabled ? 'Disable' : 'Enable'}
+                </button>
+              </div>
+            </div>
+          )}
+
+          {/* Notification Types */}
+          {isEnabled && (
+            <div className="space-y-3">
+              <p className="text-zinc-400 text-sm font-medium">Notification Types</p>
+
+              {/* Price Drops */}
+              <button
+                onClick={() => toggleSetting('priceDrops')}
+                className="w-full bg-zinc-900 rounded-xl p-4 flex items-center justify-between"
+              >
+                <div className="flex items-center gap-3">
+                  <div className={`w-10 h-10 rounded-full flex items-center justify-center ${
+                    settings.priceDrops ? 'bg-green-500/20' : 'bg-zinc-800'
+                  }`}>
+                    <FaTag className={settings.priceDrops ? 'text-green-500' : 'text-zinc-500'} />
+                  </div>
+                  <div className="text-left">
+                    <p className="text-white font-medium">Price Drops</p>
+                    <p className="text-zinc-500 text-xs">When shoes you're watching drop in price</p>
+                  </div>
+                </div>
+                <div className={`w-12 h-7 rounded-full transition-colors ${
+                  settings.priceDrops ? 'bg-green-500' : 'bg-zinc-700'
+                }`}>
+                  <div className={`w-5 h-5 bg-white rounded-full mt-1 transition-transform ${
+                    settings.priceDrops ? 'translate-x-6' : 'translate-x-1'
+                  }`} />
+                </div>
+              </button>
+
+              {/* New Releases */}
+              <button
+                onClick={() => toggleSetting('newReleases')}
+                className="w-full bg-zinc-900 rounded-xl p-4 flex items-center justify-between"
+              >
+                <div className="flex items-center gap-3">
+                  <div className={`w-10 h-10 rounded-full flex items-center justify-center ${
+                    settings.newReleases ? 'bg-green-500/20' : 'bg-zinc-800'
+                  }`}>
+                    <FaRocket className={settings.newReleases ? 'text-green-500' : 'text-zinc-500'} />
+                  </div>
+                  <div className="text-left">
+                    <p className="text-white font-medium">New Releases</p>
+                    <p className="text-zinc-500 text-xs">Hot new sneaker drops from your favorite brands</p>
+                  </div>
+                </div>
+                <div className={`w-12 h-7 rounded-full transition-colors ${
+                  settings.newReleases ? 'bg-green-500' : 'bg-zinc-700'
+                }`}>
+                  <div className={`w-5 h-5 bg-white rounded-full mt-1 transition-transform ${
+                    settings.newReleases ? 'translate-x-6' : 'translate-x-1'
+                  }`} />
+                </div>
+              </button>
+
+              {/* Restocks */}
+              <button
+                onClick={() => toggleSetting('restocks')}
+                className="w-full bg-zinc-900 rounded-xl p-4 flex items-center justify-between"
+              >
+                <div className="flex items-center gap-3">
+                  <div className={`w-10 h-10 rounded-full flex items-center justify-center ${
+                    settings.restocks ? 'bg-green-500/20' : 'bg-zinc-800'
+                  }`}>
+                    <FaBox className={settings.restocks ? 'text-green-500' : 'text-zinc-500'} />
+                  </div>
+                  <div className="text-left">
+                    <p className="text-white font-medium">Restocks</p>
+                    <p className="text-zinc-500 text-xs">When sold-out sneakers become available again</p>
+                  </div>
+                </div>
+                <div className={`w-12 h-7 rounded-full transition-colors ${
+                  settings.restocks ? 'bg-green-500' : 'bg-zinc-700'
+                }`}>
+                  <div className={`w-5 h-5 bg-white rounded-full mt-1 transition-transform ${
+                    settings.restocks ? 'translate-x-6' : 'translate-x-1'
+                  }`} />
+                </div>
+              </button>
+
+              {/* Promotions */}
+              <button
+                onClick={() => toggleSetting('promotions')}
+                className="w-full bg-zinc-900 rounded-xl p-4 flex items-center justify-between"
+              >
+                <div className="flex items-center gap-3">
+                  <div className={`w-10 h-10 rounded-full flex items-center justify-center ${
+                    settings.promotions ? 'bg-green-500/20' : 'bg-zinc-800'
+                  }`}>
+                    <FaPercent className={settings.promotions ? 'text-green-500' : 'text-zinc-500'} />
+                  </div>
+                  <div className="text-left">
+                    <p className="text-white font-medium">Promotions</p>
+                    <p className="text-zinc-500 text-xs">Special deals and exclusive offers</p>
+                  </div>
+                </div>
+                <div className={`w-12 h-7 rounded-full transition-colors ${
+                  settings.promotions ? 'bg-green-500' : 'bg-zinc-700'
+                }`}>
+                  <div className={`w-5 h-5 bg-white rounded-full mt-1 transition-transform ${
+                    settings.promotions ? 'translate-x-6' : 'translate-x-1'
+                  }`} />
+                </div>
+              </button>
+            </div>
+          )}
+
+          {/* Test Notification */}
+          {isEnabled && (
+            <div className="pt-2">
+              <button
+                onClick={handleTestNotification}
+                disabled={testSent}
+                className="w-full bg-zinc-800 text-white font-bold py-3 rounded-xl flex items-center justify-center gap-2 hover:bg-zinc-700 transition-colors disabled:opacity-50"
+              >
+                {testSent ? (
+                  <>
+                    <FaCheck className="text-green-500" />
+                    Test notification sent!
+                  </>
+                ) : (
+                  <>
+                    <FaBell />
+                    Send Test Notification
+                  </>
+                )}
+              </button>
+              <p className="text-center text-zinc-600 text-xs mt-2">
+                Make sure notifications are allowed in your browser
+              </p>
+            </div>
+          )}
+
+          {/* Footer Info */}
+          <div className="text-center pt-4 pb-safe">
+            <p className="text-zinc-600 text-xs">
+              You can change these settings anytime from your profile
+            </p>
+          </div>
+        </div>
+      </div>
+    </>
+  );
+};
+
+export default NotificationSettings;
+
+
+================ FILE: shoeswipermainproject2-main/shoeswiper-complete/src/components/NotificationsPanel.tsx ================
+import React, { useState } from 'react';
+import { FaTimes, FaBell, FaTag, FaExternalLinkAlt, FaTrash, FaCheck } from 'react-icons/fa';
+import { usePriceAlerts, PriceNotification, PriceAlert } from '../hooks/usePriceAlerts';
+import { getAffiliateUrl } from '../lib/supabaseClient';
+
+interface NotificationsPanelProps {
+  isOpen: boolean;
+  onClose: () => void;
+}
+
+type TabType = 'notifications' | 'alerts';
+
+const NotificationsPanel: React.FC<NotificationsPanelProps> = ({ isOpen, onClose }) => {
+  const {
+    alerts,
+    notifications,
+    unreadCount,
+    markNotificationRead,
+    clearNotifications,
+    removeAlert,
+  } = usePriceAlerts();
+
+  const [activeTab, setActiveTab] = useState<TabType>('notifications');
+
+  const handleNotificationClick = (notification: PriceNotification) => {
+    markNotificationRead(notification.id);
+    window.open(getAffiliateUrl(notification.amazonUrl), '_blank');
+  };
+
+  const handleRemoveAlert = async (shoeId: string, e: React.MouseEvent) => {
+    e.stopPropagation();
+    await removeAlert(shoeId);
+  };
+
+  const formatTimeAgo = (dateString: string): string => {
+    const now = new Date();
+    const date = new Date(dateString);
+    const diffMs = now.getTime() - date.getTime();
+    const diffMins = Math.floor(diffMs / 60000);
+    const diffHours = Math.floor(diffMs / 3600000);
+    const diffDays = Math.floor(diffMs / 86400000);
+
+    if (diffMins < 1) return 'Just now';
+    if (diffMins < 60) return `${diffMins}m ago`;
+    if (diffHours < 24) return `${diffHours}h ago`;
+    if (diffDays < 7) return `${diffDays}d ago`;
+    return date.toLocaleDateString();
+  };
+
+  return (
+    <>
+      {/* Backdrop */}
+      <div
+        className={`fixed inset-0 bg-black/60 backdrop-blur-sm z-40 transition-opacity duration-300 ${
+          isOpen ? 'opacity-100' : 'opacity-0 pointer-events-none'
+        }`}
+        onClick={onClose}
+      />
+
+      {/* Panel */}
+      <div
+        className={`fixed top-0 right-0 h-full w-full max-w-md bg-zinc-950 z-50 transform transition-transform duration-300 ease-out overflow-hidden flex flex-col ${
+          isOpen ? 'translate-x-0' : 'translate-x-full'
+        }`}
+      >
+        {/* Header */}
+        <div className="sticky top-0 bg-zinc-950/95 backdrop-blur-sm border-b border-zinc-800 p-4 flex items-center justify-between z-10">
+          <div className="flex items-center gap-2">
+            <FaBell className="text-orange-500" />
+            <h2 className="text-lg font-bold text-white">Notifications</h2>
+            {unreadCount > 0 && (
+              <span className="bg-red-500 text-white text-xs font-bold px-2 py-0.5 rounded-full">
+                {unreadCount}
+              </span>
+            )}
+          </div>
+          <button
+            onClick={onClose}
+            className="w-10 h-10 bg-zinc-800 rounded-full flex items-center justify-center text-white hover:bg-zinc-700 transition-colors"
+          >
+            <FaTimes />
+          </button>
+        </div>
+
+        {/* Tabs */}
+        <div className="flex border-b border-zinc-800">
+          <button
+            onClick={() => setActiveTab('notifications')}
+            className={`flex-1 py-3 text-sm font-medium transition-colors ${
+              activeTab === 'notifications'
+                ? 'text-orange-500 border-b-2 border-orange-500'
+                : 'text-zinc-400'
+            }`}
+          >
+            Price Drops
+            {unreadCount > 0 && (
+              <span className="ml-1 bg-red-500 text-white text-xs px-1.5 rounded-full">
+                {unreadCount}
+              </span>
+            )}
+          </button>
+          <button
+            onClick={() => setActiveTab('alerts')}
+            className={`flex-1 py-3 text-sm font-medium transition-colors ${
+              activeTab === 'alerts'
+                ? 'text-orange-500 border-b-2 border-orange-500'
+                : 'text-zinc-400'
+            }`}
+          >
+            Active Alerts ({alerts.length})
+          </button>
+        </div>
+
+        {/* Content */}
+        <div className="flex-1 overflow-y-auto">
+          {activeTab === 'notifications' ? (
+            notifications.length === 0 ? (
+              <div className="flex flex-col items-center justify-center h-64 text-center px-6">
+                <div className="w-16 h-16 bg-zinc-800 rounded-full flex items-center justify-center mb-4">
+                  <FaTag className="text-2xl text-zinc-500" />
+                </div>
+                <p className="text-white font-bold mb-1">No price drops yet</p>
+                <p className="text-zinc-500 text-sm">
+                  We'll notify you when shoes you're watching drop in price
+                </p>
+              </div>
+            ) : (
+              <div className="divide-y divide-zinc-800">
+                {/* Clear All Button */}
+                {notifications.length > 0 && (
+                  <div className="p-3 flex justify-end">
+                    <button
+                      onClick={clearNotifications}
+                      className="text-zinc-500 text-xs hover:text-red-400 transition-colors"
+                    >
+                      Clear all
+                    </button>
+                  </div>
+                )}
+
+                {notifications.map((notification) => (
+                  <button
+                    key={notification.id}
+                    onClick={() => handleNotificationClick(notification)}
+                    className={`w-full p-4 flex items-start gap-3 hover:bg-zinc-900/50 transition-colors text-left ${
+                      !notification.read ? 'bg-orange-500/5' : ''
+                    }`}
+                  >
+                    {/* Image */}
+                    <div className="relative flex-shrink-0">
+                      <img
+                        src={notification.shoeImage}
+                        alt={notification.shoeName}
+                        className="w-16 h-16 rounded-lg object-cover"
+                      />
+                      {!notification.read && (
+                        <div className="absolute -top-1 -right-1 w-3 h-3 bg-orange-500 rounded-full border-2 border-zinc-950" />
+                      )}
+                    </div>
+
+                    {/* Content */}
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-start justify-between gap-2">
+                        <div>
+                          <p className="text-xs text-orange-500 font-bold uppercase">
+                            {notification.shoeBrand}
+                          </p>
+                          <p className="text-white font-bold text-sm line-clamp-1">
+                            {notification.shoeName}
+                          </p>
+                        </div>
+                        <span className="text-zinc-500 text-xs flex-shrink-0">
+                          {formatTimeAgo(notification.createdAt)}
+                        </span>
+                      </div>
+
+                      {/* Price Drop Info */}
+                      <div className="mt-2 flex items-center gap-2">
+                        <span className="text-zinc-500 line-through text-sm">
+                          ${notification.oldPrice}
+                        </span>
+                        <span className="text-green-400 font-bold">
+                          ${notification.newPrice}
+                        </span>
+                        <span className="bg-green-500/20 text-green-400 text-xs font-bold px-1.5 py-0.5 rounded">
+                          -{notification.percentOff}%
+                        </span>
+                      </div>
+
+                      <p className="text-green-400 text-xs mt-1">
+                        You save ${notification.savedAmount.toFixed(2)}!
+                      </p>
+                    </div>
+
+                    <FaExternalLinkAlt className="text-zinc-500 text-xs flex-shrink-0 mt-1" />
+                  </button>
+                ))}
+              </div>
+            )
+          ) : (
+            // Active Alerts Tab
+            alerts.length === 0 ? (
+              <div className="flex flex-col items-center justify-center h-64 text-center px-6">
+                <div className="w-16 h-16 bg-zinc-800 rounded-full flex items-center justify-center mb-4">
+                  <FaBell className="text-2xl text-zinc-500" />
+                </div>
+                <p className="text-white font-bold mb-1">No active alerts</p>
+                <p className="text-zinc-500 text-sm">
+                  Set price alerts on shoes you're interested in
+                </p>
+              </div>
+            ) : (
+              <div className="divide-y divide-zinc-800">
+                {alerts.map((alert) => (
+                  <div
+                    key={alert.shoeId}
+                    className="p-4 flex items-center gap-3"
+                  >
+                    {/* Image */}
+                    <img
+                      src={alert.shoeImage}
+                      alt={alert.shoeName}
+                      className="w-14 h-14 rounded-lg object-cover flex-shrink-0"
+                    />
+
+                    {/* Info */}
+                    <div className="flex-1 min-w-0">
+                      <p className="text-xs text-orange-500 font-bold uppercase">
+                        {alert.shoeBrand}
+                      </p>
+                      <p className="text-white font-medium text-sm line-clamp-1">
+                        {alert.shoeName}
+                      </p>
+                      <div className="flex items-center gap-2 mt-1">
+                        <span className="text-zinc-400 text-xs">Alert at:</span>
+                        <span className="text-yellow-400 font-bold text-sm">
+                          ${alert.targetPrice}
+                        </span>
+                        {alert.triggered && (
+                          <span className="bg-green-500/20 text-green-400 text-xs px-1.5 py-0.5 rounded flex items-center gap-1">
+                            <FaCheck className="text-[10px]" /> Triggered
+                          </span>
+                        )}
+                      </div>
+                    </div>
+
+                    {/* Remove Button */}
+                    <button
+                      onClick={(e) => handleRemoveAlert(alert.shoeId, e)}
+                      className="w-8 h-8 bg-zinc-800 rounded-full flex items-center justify-center text-zinc-400 hover:text-red-400 hover:bg-red-500/10 transition-colors"
+                    >
+                      <FaTrash className="text-xs" />
+                    </button>
+                  </div>
+                ))}
+              </div>
+            )
+          )}
+        </div>
+
+        {/* Bottom CTA */}
+        {activeTab === 'notifications' && notifications.length > 0 && (
+          <div className="p-4 border-t border-zinc-800 bg-zinc-900/50">
+            <p className="text-center text-zinc-500 text-xs">
+              Tap a notification to buy on Amazon with your affiliate link
+            </p>
+          </div>
+        )}
+      </div>
+    </>
+  );
+};
+
+export default NotificationsPanel;
+
+
+================ FILE: shoeswipermainproject2-main/shoeswiper-complete/src/components/PriceAlertButton.tsx ================
+import React, { useState } from 'react';
+import { FaBell, FaBellSlash, FaCheck, FaTimes } from 'react-icons/fa';
+import { usePriceAlerts } from '../hooks/usePriceAlerts';
+import { useEmailCapture } from '../hooks/useEmailCapture';
+import { Shoe } from '../lib/types';
+import EmailCaptureModal from './EmailCaptureModal';
+
+interface PriceAlertButtonProps {
+  shoe: Shoe;
+  variant?: 'button' | 'icon';
+  onAlertSet?: (targetPrice: number) => void;
+}
+
+const PriceAlertButton: React.FC<PriceAlertButtonProps> = ({
+  shoe,
+  variant = 'button',
+  onAlertSet,
+}) => {
+  const { hasAlert, getAlert, addAlert, removeAlert } = usePriceAlerts();
+  const { isSubscribed } = useEmailCapture();
+  const [showModal, setShowModal] = useState(false);
+  const [showEmailCapture, setShowEmailCapture] = useState(false);
+  const [targetPrice, setTargetPrice] = useState<string>('');
+  const [saving, setSaving] = useState(false);
+  const [showSuccess, setShowSuccess] = useState(false);
+
+  const existingAlert = getAlert(shoe.id);
+  const isAlertActive = hasAlert(shoe.id);
+
+  const suggestedPrices = shoe.price
+    ? [
+        { label: '10% off', value: Math.floor(shoe.price * 0.9) },
+        { label: '20% off', value: Math.floor(shoe.price * 0.8) },
+        { label: '30% off', value: Math.floor(shoe.price * 0.7) },
+      ]
+    : [
+        { label: '$100', value: 100 },
+        { label: '$150', value: 150 },
+        { label: '$200', value: 200 },
+      ];
+
+  const handleSetAlert = async () => {
+    const price = parseFloat(targetPrice);
+    if (isNaN(price) || price <= 0) return;
+
+    setSaving(true);
+    const success = await addAlert(shoe, price);
+    setSaving(false);
+
+    if (success) {
+      setShowSuccess(true);
+      onAlertSet?.(price);
+
+      setTimeout(() => {
+        setShowSuccess(false);
+        setShowModal(false);
+
+        // Show email capture if not already subscribed
+        if (!isSubscribed) {
+          setTimeout(() => setShowEmailCapture(true), 300);
+        }
+      }, 1500);
+    }
+  };
+
+  const handleRemoveAlert = async () => {
+    await removeAlert(shoe.id);
+  };
+
+  const handleSuggestedPrice = (price: number) => {
+    setTargetPrice(price.toString());
+  };
+
+  if (variant === 'icon') {
+    return (
+      <>
+        <button
+          onClick={() => isAlertActive ? handleRemoveAlert() : setShowModal(true)}
+          className={`w-11 h-11 backdrop-blur-sm rounded-full flex items-center justify-center active:scale-90 transition-all ${
+            isAlertActive ? 'bg-yellow-500' : 'bg-black/30'
+          }`}
+        >
+          {isAlertActive ? (
+            <FaBell className="text-xl text-white" />
+          ) : (
+            <FaBell className="text-xl text-white" />
+          )}
+        </button>
+
+        {/* Modal */}
+        {showModal && (
+          <div className="fixed inset-0 bg-black/70 backdrop-blur-sm z-50 flex items-end justify-center">
+            <div className="w-full max-w-md bg-zinc-900 rounded-t-2xl p-6 animate-slide-up">
+              <div className="flex justify-between items-center mb-4">
+                <h3 className="text-lg font-bold text-white">Set Price Alert</h3>
+                <button
+                  onClick={() => setShowModal(false)}
+                  className="w-8 h-8 bg-zinc-800 rounded-full flex items-center justify-center text-zinc-400"
+                >
+                  <FaTimes />
+                </button>
+              </div>
+
+              {/* Shoe Preview */}
+              <div className="flex items-center gap-3 bg-zinc-800 rounded-xl p-3 mb-4">
+                <img
+                  src={shoe.image_url}
+                  alt={shoe.name}
+                  className="w-16 h-16 rounded-lg object-cover"
+                />
+                <div className="flex-1">
+                  <p className="text-xs text-orange-500 font-bold uppercase">{shoe.brand}</p>
+                  <p className="text-white font-bold text-sm line-clamp-1">{shoe.name}</p>
+                  {shoe.price && (
+                    <p className="text-zinc-400 text-sm">Current: ${shoe.price}</p>
+                  )}
+                </div>
+              </div>
+
+              {/* Price Input */}
+              <div className="mb-4">
+                <label className="text-zinc-400 text-sm mb-2 block">
+                  Alert me when price drops to:
+                </label>
+                <div className="relative">
+                  <span className="absolute left-4 top-1/2 -translate-y-1/2 text-zinc-400 text-lg">$</span>
+                  <input
+                    type="number"
+                    value={targetPrice}
+                    onChange={(e) => setTargetPrice(e.target.value)}
+                    placeholder="Enter target price"
+                    className="w-full bg-zinc-800 border border-zinc-700 rounded-xl py-3 pl-10 pr-4 text-white text-lg focus:border-orange-500 focus:outline-none"
+                  />
+                </div>
+              </div>
+
+              {/* Suggested Prices */}
+              <div className="mb-6">
+                <p className="text-zinc-500 text-xs mb-2">Quick select:</p>
+                <div className="flex gap-2">
+                  {suggestedPrices.map((suggestion) => (
+                    <button
+                      key={suggestion.label}
+                      onClick={() => handleSuggestedPrice(suggestion.value)}
+                      className={`flex-1 py-2 rounded-lg text-sm font-medium transition-colors ${
+                        targetPrice === suggestion.value.toString()
+                          ? 'bg-orange-500 text-white'
+                          : 'bg-zinc-800 text-zinc-300 hover:bg-zinc-700'
+                      }`}
+                    >
+                      {suggestion.label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Set Alert Button */}
+              <button
+                onClick={handleSetAlert}
+                disabled={saving || !targetPrice}
+                className={`w-full py-4 rounded-xl font-bold flex items-center justify-center gap-2 transition-all ${
+                  showSuccess
+                    ? 'bg-green-500 text-white'
+                    : 'bg-orange-500 text-white active:scale-95'
+                } ${(!targetPrice || saving) && 'opacity-50 cursor-not-allowed'}`}
+              >
+                {showSuccess ? (
+                  <>
+                    <FaCheck /> Alert Set!
+                  </>
+                ) : saving ? (
+                  <>
+                    <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                    Setting...
+                  </>
+                ) : (
+                  <>
+                    <FaBell /> Set Price Alert
+                  </>
+                )}
+              </button>
+
+              <p className="text-center text-zinc-500 text-xs mt-3">
+                We'll notify you when the price drops
+              </p>
+            </div>
+          </div>
+        )}
+      </>
+    );
+  }
+
+  // Button variant
+  return (
+    <>
+      {isAlertActive ? (
+        <button
+          onClick={handleRemoveAlert}
+          className="flex items-center gap-2 bg-yellow-500/20 text-yellow-400 font-medium py-2 px-4 rounded-lg hover:bg-yellow-500/30 transition-colors"
+        >
+          <FaBell />
+          <span className="text-sm">Alert: ${existingAlert?.targetPrice}</span>
+          <FaBellSlash className="text-xs opacity-70" />
+        </button>
+      ) : (
+        <button
+          onClick={() => setShowModal(true)}
+          className="flex items-center gap-2 bg-zinc-800 text-white font-medium py-2 px-4 rounded-lg hover:bg-zinc-700 transition-colors"
+        >
+          <FaBell />
+          <span className="text-sm">Set Price Alert</span>
+        </button>
+      )}
+
+      {/* Modal - same as icon variant */}
+      {showModal && (
+        <div className="fixed inset-0 bg-black/70 backdrop-blur-sm z-50 flex items-end justify-center">
+          <div className="w-full max-w-md bg-zinc-900 rounded-t-2xl p-6 animate-slide-up">
+            <div className="flex justify-between items-center mb-4">
+              <h3 className="text-lg font-bold text-white">Set Price Alert</h3>
+              <button
+                onClick={() => setShowModal(false)}
+                className="w-8 h-8 bg-zinc-800 rounded-full flex items-center justify-center text-zinc-400"
+              >
+                <FaTimes />
+              </button>
+            </div>
+
+            {/* Shoe Preview */}
+            <div className="flex items-center gap-3 bg-zinc-800 rounded-xl p-3 mb-4">
+              <img
+                src={shoe.image_url}
+                alt={shoe.name}
+                className="w-16 h-16 rounded-lg object-cover"
+              />
+              <div className="flex-1">
+                <p className="text-xs text-orange-500 font-bold uppercase">{shoe.brand}</p>
+                <p className="text-white font-bold text-sm line-clamp-1">{shoe.name}</p>
+                {shoe.price && (
+                  <p className="text-zinc-400 text-sm">Current: ${shoe.price}</p>
+                )}
+              </div>
+            </div>
+
+            {/* Price Input */}
+            <div className="mb-4">
+              <label className="text-zinc-400 text-sm mb-2 block">
+                Alert me when price drops to:
+              </label>
+              <div className="relative">
+                <span className="absolute left-4 top-1/2 -translate-y-1/2 text-zinc-400 text-lg">$</span>
+                <input
+                  type="number"
+                  value={targetPrice}
+                  onChange={(e) => setTargetPrice(e.target.value)}
+                  placeholder="Enter target price"
+                  className="w-full bg-zinc-800 border border-zinc-700 rounded-xl py-3 pl-10 pr-4 text-white text-lg focus:border-orange-500 focus:outline-none"
+                />
+              </div>
+            </div>
+
+            {/* Suggested Prices */}
+            <div className="mb-6">
+              <p className="text-zinc-500 text-xs mb-2">Quick select:</p>
+              <div className="flex gap-2">
+                {suggestedPrices.map((suggestion) => (
+                  <button
+                    key={suggestion.label}
+                    onClick={() => handleSuggestedPrice(suggestion.value)}
+                    className={`flex-1 py-2 rounded-lg text-sm font-medium transition-colors ${
+                      targetPrice === suggestion.value.toString()
+                        ? 'bg-orange-500 text-white'
+                        : 'bg-zinc-800 text-zinc-300 hover:bg-zinc-700'
+                    }`}
+                  >
+                    {suggestion.label}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* Set Alert Button */}
+            <button
+              onClick={handleSetAlert}
+              disabled={saving || !targetPrice}
+              className={`w-full py-4 rounded-xl font-bold flex items-center justify-center gap-2 transition-all ${
+                showSuccess
+                  ? 'bg-green-500 text-white'
+                  : 'bg-orange-500 text-white active:scale-95'
+              } ${(!targetPrice || saving) && 'opacity-50 cursor-not-allowed'}`}
+            >
+              {showSuccess ? (
+                <>
+                  <FaCheck /> Alert Set!
+                </>
+              ) : saving ? (
+                <>
+                  <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                  Setting...
+                </>
+              ) : (
+                <>
+                  <FaBell /> Set Price Alert
+                </>
+              )}
+            </button>
+
+            <p className="text-center text-zinc-500 text-xs mt-3">
+              We'll notify you when the price drops
+            </p>
+          </div>
+        </div>
+      )}
+
+      {/* Email Capture Modal - shows after setting alert if not subscribed */}
+      <EmailCaptureModal
+        isOpen={showEmailCapture}
+        onClose={() => setShowEmailCapture(false)}
+        source="price_alert"
+        shoeData={{ id: shoe.id, name: shoe.name }}
+        title="Get Price Alerts via Email"
+        subtitle="Never miss a deal - we'll email you when prices drop"
+      />
+    </>
+  );
+};
+
+export default PriceAlertButton;
+
+
+================ FILE: shoeswipermainproject2-main/shoeswiper-complete/src/components/ReferralCard.tsx ================
+import React, { useState } from 'react';
+import { FaGift, FaShare, FaUsers, FaCopy, FaCheck, FaTrophy, FaChevronRight } from 'react-icons/fa';
+import { useReferral } from '../hooks/useReferral';
+
+interface ReferralCardProps {
+  compact?: boolean;
+}
+
+const ReferralCard: React.FC<ReferralCardProps> = ({ compact = false }) => {
+  const {
+    referralCode,
+    referralStats,
+    loading,
+    shareReferralLink,
+    getReferralUrl,
+    getRewardTier,
+  } = useReferral();
+
+  const [copied, setCopied] = useState(false);
+  const [showDetails, setShowDetails] = useState(false);
+
+  const handleShare = async () => {
+    const result = await shareReferralLink();
+    if (result.success && result.method === 'clipboard') {
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    }
+  };
+
+  const handleCopyCode = async () => {
+    if (referralCode) {
+      await navigator.clipboard.writeText(getReferralUrl());
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    }
+  };
+
+  if (loading) {
+    return (
+      <div className="bg-gradient-to-r from-orange-500/20 to-red-500/20 rounded-xl p-4 border border-orange-500/30">
+        <div className="animate-pulse flex items-center gap-3">
+          <div className="w-10 h-10 bg-orange-500/30 rounded-full" />
+          <div className="flex-1">
+            <div className="h-4 bg-orange-500/30 rounded w-1/2 mb-2" />
+            <div className="h-3 bg-orange-500/30 rounded w-3/4" />
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  const { tier, progress, nextTier, signupsNeeded } = getRewardTier();
+
+  // Tier colors
+  const tierColors: Record<string, string> = {
+    'Starter': 'from-zinc-500 to-zinc-600',
+    'Bronze': 'from-amber-700 to-amber-800',
+    'Silver': 'from-gray-400 to-gray-500',
+    'Gold': 'from-yellow-500 to-amber-500',
+    'Diamond': 'from-cyan-400 to-blue-500',
+  };
+
+  if (compact) {
+    return (
+      <button
+        onClick={() => setShowDetails(true)}
+        className="w-full bg-gradient-to-r from-orange-500/20 to-red-500/20 rounded-xl p-4 border border-orange-500/30 hover:border-orange-400 transition-colors text-left"
+      >
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 bg-gradient-to-br from-orange-500 to-red-500 rounded-full flex items-center justify-center">
+              <FaGift className="text-white" />
+            </div>
+            <div>
+              <p className="text-white font-bold text-sm">Invite Friends</p>
+              <p className="text-zinc-400 text-xs">{referralStats.totalSignups} friends joined</p>
+            </div>
+          </div>
+          <FaChevronRight className="text-zinc-500" />
+        </div>
+      </button>
+    );
+  }
+
+  return (
+    <div className="bg-gradient-to-r from-orange-500/10 to-red-500/10 rounded-xl border border-orange-500/30 overflow-hidden">
+      {/* Header */}
+      <div className="bg-gradient-to-r from-orange-500/20 to-red-500/20 px-4 py-3 flex items-center justify-between">
+        <div className="flex items-center gap-2">
+          <FaGift className="text-orange-400" />
+          <span className="text-white font-bold">Refer & Earn</span>
+        </div>
+        <div className={`px-2 py-0.5 rounded-full text-xs font-bold bg-gradient-to-r ${tierColors[tier]} text-white`}>
+          {tier}
+        </div>
+      </div>
+
+      {/* Stats */}
+      <div className="p-4 grid grid-cols-3 gap-3 border-b border-zinc-800/50">
+        <div className="text-center">
+          <p className="text-xl font-bold text-white">{referralStats.totalShares}</p>
+          <p className="text-[10px] text-zinc-400 uppercase">Shares</p>
+        </div>
+        <div className="text-center border-x border-zinc-800/50">
+          <p className="text-xl font-bold text-white">{referralStats.totalClicks}</p>
+          <p className="text-[10px] text-zinc-400 uppercase">Clicks</p>
+        </div>
+        <div className="text-center">
+          <p className="text-xl font-bold text-orange-400">{referralStats.totalSignups}</p>
+          <p className="text-[10px] text-zinc-400 uppercase">Signups</p>
+        </div>
+      </div>
+
+      {/* Progress to next tier */}
+      {tier !== 'Diamond' && (
+        <div className="px-4 py-3 border-b border-zinc-800/50">
+          <div className="flex justify-between items-center mb-1.5">
+            <span className="text-xs text-zinc-400">Progress to {nextTier}</span>
+            <span className="text-xs text-orange-400 font-medium">{signupsNeeded} more</span>
+          </div>
+          <div className="h-2 bg-zinc-800 rounded-full overflow-hidden">
+            <div
+              className={`h-full bg-gradient-to-r ${tierColors[nextTier]} transition-all duration-500`}
+              style={{ width: `${Math.min(progress, 100)}%` }}
+            />
+          </div>
+        </div>
+      )}
+
+      {/* Referral Code */}
+      <div className="p-4 border-b border-zinc-800/50">
+        <p className="text-xs text-zinc-400 mb-2">Your referral code</p>
+        <div className="flex items-center gap-2">
+          <div className="flex-1 bg-zinc-900 rounded-lg px-3 py-2 font-mono text-orange-400 text-sm tracking-wider">
+            {referralCode || '...'}
+          </div>
+          <button
+            onClick={handleCopyCode}
+            className={`p-2.5 rounded-lg transition-colors ${
+              copied ? 'bg-green-500 text-white' : 'bg-zinc-800 text-zinc-400 hover:text-white'
+            }`}
+          >
+            {copied ? <FaCheck /> : <FaCopy />}
+          </button>
+        </div>
+      </div>
+
+      {/* Rewards Info */}
+      <div className="p-4 border-b border-zinc-800/50 bg-zinc-900/30">
+        <div className="flex items-center gap-2 mb-2">
+          <FaTrophy className="text-yellow-500" />
+          <span className="text-sm font-medium text-white">Rewards</span>
+        </div>
+        <div className="space-y-1.5 text-xs text-zinc-400">
+          <div className="flex justify-between">
+            <span>Per signup</span>
+            <span className="text-orange-400">+100 points</span>
+          </div>
+          <div className="flex justify-between">
+            <span>Your earnings</span>
+            <span className="text-white font-medium">{referralStats.earnedRewards} pts</span>
+          </div>
+          {referralStats.pendingRewards > 0 && (
+            <div className="flex justify-between">
+              <span>Pending</span>
+              <span className="text-yellow-400">{referralStats.pendingRewards} pts</span>
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* Share Button */}
+      <div className="p-4">
+        <button
+          onClick={handleShare}
+          className="w-full bg-gradient-to-r from-orange-500 to-red-500 text-white font-bold py-3 rounded-xl flex items-center justify-center gap-2 active:scale-95 transition-transform"
+        >
+          <FaShare />
+          {copied ? 'Link Copied!' : 'Share & Invite Friends'}
+        </button>
+        <p className="text-center text-zinc-500 text-xs mt-2">
+          <FaUsers className="inline mr-1" />
+          Earn rewards when friends join
+        </p>
+      </div>
+    </div>
+  );
+};
+
+export default ReferralCard;
+
+
