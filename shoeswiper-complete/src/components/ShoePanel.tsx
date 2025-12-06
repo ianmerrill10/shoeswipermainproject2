@@ -42,7 +42,10 @@ const ShoePanel: React.FC<ShoePanelProps> = ({ shoe, isOpen, onClose }) => {
       source: 'shoe_panel',
     });
 
-    window.open(getAffiliateUrl(shoe.amazon_url), '_blank');
+    const url = getAffiliateUrl(shoe.amazon_url);
+    if (url?.startsWith('https://')) {
+      window.open(url, '_blank', 'noopener,noreferrer');
+    }
   };
 
   const handleShare = async () => {

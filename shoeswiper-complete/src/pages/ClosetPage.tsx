@@ -44,7 +44,10 @@ const ClosetPage: React.FC = () => {
   const handleBuyClick = (shoe: Shoe) => {
     trackClick(shoe.id);
     trackShoeClick(shoe.id);
-    window.open(getAffiliateUrl(shoe.amazon_url), '_blank');
+    const url = getAffiliateUrl(shoe.amazon_url);
+    if (url?.startsWith('https://')) {
+      window.open(url, '_blank', 'noopener,noreferrer');
+    }
   };
 
   const handleShare = async (shoe: Shoe) => {

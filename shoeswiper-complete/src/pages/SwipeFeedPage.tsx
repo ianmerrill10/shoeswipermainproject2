@@ -105,12 +105,15 @@ const SwipeFeedPage: React.FC = () => {
   const handleBuyClick = (shoe: Shoe) => {
     trackClick(shoe.id);
     trackShoeClick(shoe.id);
-    
+
     // Track affiliate click for revenue attribution
     const asin = extractAsinFromUrl(shoe.amazon_url);
     trackAffiliateClick(shoe.id, asin || undefined, 'swipe_feed');
-    
-    window.open(getAffiliateUrl(shoe.amazon_url), '_blank');
+
+    const url = getAffiliateUrl(shoe.amazon_url);
+    if (url?.startsWith('https://')) {
+      window.open(url, '_blank', 'noopener,noreferrer');
+    }
   };
 
   const handleShare = async (shoe: Shoe) => {

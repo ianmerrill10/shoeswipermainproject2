@@ -24,7 +24,10 @@ const NotificationsPanel: React.FC<NotificationsPanelProps> = ({ isOpen, onClose
 
   const handleNotificationClick = (notification: PriceNotification) => {
     markNotificationRead(notification.id);
-    window.open(getAffiliateUrl(notification.amazonUrl), '_blank');
+    const url = getAffiliateUrl(notification.amazonUrl);
+    if (url?.startsWith('https://')) {
+      window.open(url, '_blank', 'noopener,noreferrer');
+    }
   };
 
   const handleRemoveAlert = async (shoeId: string, e: React.MouseEvent) => {

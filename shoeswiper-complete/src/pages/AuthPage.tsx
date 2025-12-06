@@ -185,7 +185,7 @@ const AuthPage: React.FC = () => {
               onChange={(e) => setPassword(e.target.value)}
               placeholder="Password"
               required
-              minLength={6}
+              minLength={8}
               autoComplete={mode === 'signin' ? 'current-password' : 'new-password'}
               className="w-full bg-zinc-800 border border-zinc-700 rounded-xl pl-12 pr-4 py-3 text-white placeholder-zinc-500 focus:border-orange-500 outline-none"
             />

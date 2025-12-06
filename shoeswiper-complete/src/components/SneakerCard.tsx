@@ -27,7 +27,10 @@ export const SneakerCard: React.FC<Props> = ({ shoe, variant = 'grid' }) => {
     });
 
     // Use centralized getAffiliateUrl to ensure tag is always present
-    window.open(getAffiliateUrl(shoe.amazon_url), '_blank');
+    const url = getAffiliateUrl(shoe.amazon_url);
+    if (url?.startsWith('https://')) {
+      window.open(url, '_blank', 'noopener,noreferrer');
+    }
   };
 
   const toggleLike = (e: React.MouseEvent) => {

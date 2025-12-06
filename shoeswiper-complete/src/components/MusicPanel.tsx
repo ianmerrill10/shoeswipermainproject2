@@ -17,7 +17,10 @@ const MusicPanel: React.FC<MusicPanelProps> = ({ shoe, isOpen, onClose }) => {
     if (music) {
       trackMusicClick(platform, shoe.id, music.song, music.artist);
     }
-    window.open(url, '_blank');
+    // Validate URL before opening external music links
+    if (url?.startsWith('https://')) {
+      window.open(url, '_blank', 'noopener,noreferrer');
+    }
   };
 
   // Generate a placeholder album art based on artist name
