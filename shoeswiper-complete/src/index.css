@@ -171,6 +171,123 @@
   min-height: -webkit-fill-available;
 }
 
+/* ============================================
+   GPU ACCELERATION & PERFORMANCE OPTIMIZATIONS
+   ============================================ */
+
+/* Swipeable card GPU acceleration */
+.swipeable-card {
+  /* Force GPU layer promotion for smooth 60fps animations */
+  transform: translateZ(0);
+  backface-visibility: hidden;
+  -webkit-backface-visibility: hidden;
+  perspective: 1000px;
+
+  /* Hint browser about upcoming transforms */
+  will-change: transform, opacity;
+
+  /* Optimize rendering */
+  contain: layout style paint;
+
+  /* Smooth touch scrolling on iOS */
+  -webkit-overflow-scrolling: touch;
+
+  /* Prevent flickering on WebKit */
+  -webkit-transform-style: preserve-3d;
+  transform-style: preserve-3d;
+}
+
+/* Active drag state - maximum GPU priority */
+.swipeable-card.is-dragging {
+  will-change: transform, opacity, box-shadow;
+  /* Isolate compositing layer */
+  isolation: isolate;
+}
+
+/* Card image optimization */
+.swipeable-card-image {
+  /* GPU accelerate images */
+  transform: translateZ(0);
+  backface-visibility: hidden;
+  -webkit-backface-visibility: hidden;
+
+  /* Prevent image rendering issues */
+  image-rendering: -webkit-optimize-contrast;
+
+  /* Content-visibility for offscreen optimization */
+  content-visibility: auto;
+}
+
+/* Feed container GPU optimization */
+.feed-container {
+  /* Enable smooth scrolling with GPU */
+  transform: translateZ(0);
+  -webkit-overflow-scrolling: touch;
+
+  /* Optimize scroll performance */
+  will-change: scroll-position;
+
+  /* Prevent layout thrashing */
+  contain: strict;
+}
+
+/* Snap scroll performance */
+.snap-scroll-optimized {
+  scroll-snap-type: y mandatory;
+  -webkit-overflow-scrolling: touch;
+
+  /* GPU accelerate scroll container */
+  transform: translateZ(0);
+
+  /* Smooth momentum scrolling */
+  scroll-behavior: smooth;
+}
+
+/* Card stack optimization - next card behind */
+.card-stack-behind {
+  transform: scale(0.95) translateZ(-10px);
+  will-change: transform, opacity;
+  backface-visibility: hidden;
+  -webkit-backface-visibility: hidden;
+}
+
+/* Touch action optimization for swipe gestures */
+.swipe-gesture-container {
+  /* Only allow horizontal panning, prevent browser gestures */
+  touch-action: pan-y pinch-zoom;
+
+  /* Prevent text selection during drag */
+  user-select: none;
+  -webkit-user-select: none;
+
+  /* Prevent callout on long press (iOS) */
+  -webkit-touch-callout: none;
+}
+
+/* Reduce motion - disable GPU-heavy effects */
+@media (prefers-reduced-motion: reduce) {
+  .swipeable-card,
+  .swipeable-card-image,
+  .feed-container {
+    will-change: auto;
+    transform: none;
+  }
+
+  .animate-spin-slow,
+  .animate-marquee {
+    animation: none;
+  }
+}
+
+/* High refresh rate display optimization */
+@media (min-resolution: 2dppx) {
+  .swipeable-card {
+    /* Higher quality rendering on retina displays */
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+}
+
 /* Prevent pull-to-refresh on mobile */
 html, body {
   overscroll-behavior: none;

@@ -198,7 +198,7 @@ const SwipeFeedPage: React.FC = () => {
   return (
     <div
       ref={containerRef}
-      className="h-screen bg-zinc-950 relative overflow-hidden"
+      className="h-screen bg-zinc-950 relative overflow-hidden feed-container"
     >
       {/* Notification Bell - Fixed Position */}
       <button
@@ -222,13 +222,15 @@ const SwipeFeedPage: React.FC = () => {
 
       {/* Card Stack */}
       <div className="absolute inset-0">
-        {/* Next card (behind) */}
+        {/* Next card (behind) - GPU optimized */}
         {nextShoe && (
-          <div className="absolute inset-0 scale-95 opacity-50">
+          <div className="card-stack-behind absolute inset-0 opacity-50">
             <img
               src={nextShoe.image_url}
               alt={nextShoe.name}
-              className="w-full h-full object-cover"
+              className="swipeable-card-image w-full h-full object-cover"
+              loading="lazy"
+              decoding="async"
             />
             <div className="absolute inset-0 bg-gradient-to-b from-black/40 via-transparent to-black/95" />
           </div>

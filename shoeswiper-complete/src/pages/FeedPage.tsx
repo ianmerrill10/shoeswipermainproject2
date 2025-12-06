@@ -234,7 +234,7 @@ const FeedPage: React.FC = () => {
   return (
     <div
       ref={containerRef}
-      className="h-screen overflow-y-scroll snap-y snap-mandatory scrollbar-hide relative"
+      className="h-screen overflow-y-scroll snap-y snap-mandatory scrollbar-hide relative feed-container snap-scroll-optimized"
       style={{
         scrollSnapType: 'y mandatory',
         WebkitOverflowScrolling: 'touch',
@@ -262,17 +262,20 @@ const FeedPage: React.FC = () => {
         <article
           key={shoe.id}
           data-index={index}
-          className="feed-card h-screen min-h-screen snap-start snap-always relative"
+          className="feed-card swipe-gesture-container h-screen min-h-screen snap-start snap-always relative"
           style={{ scrollSnapAlign: 'start', scrollSnapStop: 'always' }}
           aria-label={`${shoe.brand} ${shoe.name}`}
           aria-setsize={shoes.length}
           aria-posinset={index + 1}
         >
-          {/* Background Image */}
+          {/* Background Image - GPU optimized with lazy loading */}
           <img
             src={shoe.image_url}
             alt={`${shoe.brand} ${shoe.name}${shoe.colorway ? ` in ${shoe.colorway}` : ''}`}
-            className="absolute inset-0 w-full h-full object-cover"
+            className="swipeable-card-image absolute inset-0 w-full h-full object-cover"
+            loading="lazy"
+            decoding="async"
+            fetchPriority={index === currentIndex ? 'high' : 'low'}
           />
 
           {/* Gradient Overlay */}

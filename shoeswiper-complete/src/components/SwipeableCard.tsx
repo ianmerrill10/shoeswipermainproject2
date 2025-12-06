@@ -1,4 +1,4 @@
-import React, { useCallback, useState } from 'react';
+import React, { useCallback, useState, useRef, useEffect } from 'react';
 import { motion, useMotionValue, useTransform, PanInfo } from 'framer-motion';
 import { FaHeart, FaTimes, FaAmazon, FaBookmark, FaShare, FaMusic } from 'react-icons/fa';
 import { Shoe } from '../lib/types';
@@ -6,6 +6,22 @@ import { useReducedMotion, useHaptics, SwipeDirection } from '../hooks/useAnimat
 import { SPRING_CONFIGS, DEFAULT_SWIPE_CONFIG } from '../lib/animationConfig';
 import { shouldShowPrice, formatPrice } from '../lib/supabaseClient';
 import MatchCelebration from './MatchCelebration';
+
+/**
+ * Easing function for smooth velocity curves
+ * Creates a more natural feel for swipe gestures
+ */
+const easeOutCubic = (t: number): number => 1 - Math.pow(1 - t, 3);
+
+/**
+ * Calculate smooth velocity with easing
+ * Prevents jarring movements at swipe boundaries
+ */
+const calculateSmoothVelocity = (velocity: number, maxVelocity: number = 2000): number => {
+  const normalizedVelocity = Math.min(Math.abs(velocity), maxVelocity) / maxVelocity;
+  const easedVelocity = easeOutCubic(normalizedVelocity) * maxVelocity;
+  return velocity >= 0 ? easedVelocity : -easedVelocity;
+};
 
 interface SwipeableCardProps {
   shoe: Shoe;
@@ -34,14 +50,29 @@ const SwipeableCard: React.FC<SwipeableCardProps> = ({
 }) => {
   const { prefersReducedMotion } = useReducedMotion();
   const { trigger: triggerHaptic } = useHaptics();
-  
+
   // Motion values for drag
   const x = useMotionValue(0);
   const y = useMotionValue(0);
-  
-  // State for celebration
+
+  // State for celebration and dragging
   const [showCelebration, setShowCelebration] = useState(false);
   const [isDragging, setIsDragging] = useState(false);
+  const [imageLoaded, setImageLoaded] = useState(false);
+
+  // Refs for frame throttling
+  const rafRef = useRef<number | null>(null);
+  const lastDragInfoRef = useRef<PanInfo | null>(null);
+  const hasTriggeredThresholdHaptic = useRef(false);
+
+  // Cleanup RAF on unmount
+  useEffect(() => {
+    return () => {
+      if (rafRef.current) {
+        cancelAnimationFrame(rafRef.current);
+      }
+    };
+  }, []);
 
   // Transform rotation based on x position
   const rotate = useTransform(
@@ -76,30 +107,68 @@ const SwipeableCard: React.FC<SwipeableCardProps> = ({
 
   const handleDragStart = useCallback(() => {
     setIsDragging(true);
+    hasTriggeredThresholdHaptic.current = false;
     triggerHaptic('light');
   }, [triggerHaptic]);
 
-  const handleDrag = useCallback((_: MouseEvent | TouchEvent | PointerEvent, info: PanInfo) => {
+  /**
+   * Frame-throttled drag handler using requestAnimationFrame
+   * Prevents excessive callbacks and ensures smooth 60fps animations
+   */
+  const processDragFrame = useCallback(() => {
+    const info = lastDragInfoRef.current;
+    if (!info) return;
+
     const absX = Math.abs(info.offset.x);
-    if (absX > DEFAULT_SWIPE_CONFIG.swipeThreshold * 0.8) {
+
+    // Only trigger haptic once when threshold is approached
+    if (absX > DEFAULT_SWIPE_CONFIG.swipeThreshold * 0.8 && !hasTriggeredThresholdHaptic.current) {
+      hasTriggeredThresholdHaptic.current = true;
       triggerHaptic('medium');
     }
+
+    rafRef.current = null;
   }, [triggerHaptic]);
+
+  const handleDrag = useCallback((_: MouseEvent | TouchEvent | PointerEvent, info: PanInfo) => {
+    // Store latest drag info
+    lastDragInfoRef.current = info;
+
+    // Throttle processing to animation frames for smooth 60fps
+    if (!rafRef.current) {
+      rafRef.current = requestAnimationFrame(processDragFrame);
+    }
+  }, [processDragFrame]);
 
   const handleDragEnd = useCallback(
     (_: MouseEvent | TouchEvent | PointerEvent, info: PanInfo) => {
+      // Cancel any pending RAF
+      if (rafRef.current) {
+        cancelAnimationFrame(rafRef.current);
+        rafRef.current = null;
+      }
+
       setIsDragging(false);
-      
+      lastDragInfoRef.current = null;
+      hasTriggeredThresholdHaptic.current = false;
+
       const absX = Math.abs(info.offset.x);
-      const absVelocity = Math.abs(info.velocity.x);
-      
+
+      // Apply smooth velocity curve for natural feel
+      const smoothVelocity = calculateSmoothVelocity(info.velocity.x);
+      const absVelocity = Math.abs(smoothVelocity);
+
       // Check if swipe threshold is met by either distance or velocity
-      const isSwipe = absX > DEFAULT_SWIPE_CONFIG.swipeThreshold || 
-                      absVelocity > DEFAULT_SWIPE_CONFIG.velocityThreshold;
-      
+      // Use weighted combination for more natural feel
+      const distanceScore = absX / DEFAULT_SWIPE_CONFIG.swipeThreshold;
+      const velocityScore = absVelocity / DEFAULT_SWIPE_CONFIG.velocityThreshold;
+      const combinedScore = distanceScore * 0.6 + velocityScore * 0.4;
+
+      const isSwipe = combinedScore > 0.8 || absX > DEFAULT_SWIPE_CONFIG.swipeThreshold;
+
       if (isSwipe) {
         const direction: SwipeDirection = info.offset.x > 0 ? 'right' : 'left';
-        
+
         if (direction === 'right') {
           triggerHaptic('success');
           setShowCelebration(true);
@@ -140,11 +209,20 @@ const SwipeableCard: React.FC<SwipeableCardProps> = ({
 
   return (
     <motion.div
-      className="relative w-full h-full touch-none select-none overflow-hidden"
+      className={`swipeable-card swipe-gesture-container relative w-full h-full touch-none select-none overflow-hidden ${
+        isDragging ? 'is-dragging' : ''
+      }`}
       style={{ x, y, rotate, scale, boxShadow }}
       drag="x"
       dragConstraints={{ left: 0, right: 0, top: 0, bottom: 0 }}
       dragElastic={0.9}
+      dragMomentum={true}
+      dragTransition={{
+        bounceStiffness: 600,
+        bounceDamping: 30,
+        power: 0.3,
+        timeConstant: 200,
+      }}
       onDragStart={handleDragStart}
       onDrag={handleDrag}
       onDragEnd={handleDragEnd}
@@ -157,12 +235,21 @@ const SwipeableCard: React.FC<SwipeableCardProps> = ({
       role="article"
       aria-label={`${shoe.brand} ${shoe.name}. Swipe right to like, left to skip.`}
     >
-      {/* Background Image */}
+      {/* Background Image with Lazy Loading */}
+      {!imageLoaded && (
+        <div className="absolute inset-0 bg-zinc-800 animate-pulse" aria-hidden="true" />
+      )}
       <img
         src={shoe.image_url}
         alt={`${shoe.brand} ${shoe.name}${shoe.colorway ? ` in ${shoe.colorway}` : ''}`}
-        className="absolute inset-0 w-full h-full object-cover pointer-events-none"
+        className={`swipeable-card-image absolute inset-0 w-full h-full object-cover pointer-events-none transition-opacity duration-300 ${
+          imageLoaded ? 'opacity-100' : 'opacity-0'
+        }`}
         draggable={false}
+        loading="lazy"
+        decoding="async"
+        onLoad={() => setImageLoaded(true)}
+        fetchPriority="high"
       />
 
       {/* Gradient Overlay */}
