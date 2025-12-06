@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { FaTimes, FaGift, FaBolt, FaArrowRight } from 'react-icons/fa';
 import { useEmailCapture } from '../hooks/useEmailCapture';
-import { emailCaptureSchema } from '../lib/validationSchemas';
+import { captureEmailSecure } from '../lib/apiService';
 
 interface ExitIntentPopupProps {
   /** Delay before popup can show (prevents immediate popup) */
@@ -78,29 +78,28 @@ const ExitIntentPopup: React.FC<ExitIntentPopupProps> = ({
     e.preventDefault();
     setError(null);
 
-    // Validate with Zod schema
-    const validation = emailCaptureSchema.safeParse({
+    setLoading(true);
+
+    // Use secure API with built-in validation and rate limiting
+    const result = await captureEmailSecure({
       email: email.trim().toLowerCase(),
       source: 'exit_intent',
+      preferences: {
+        priceAlerts: true,
+        newReleases: true,
+        weeklyDigest: true,
+        promotions: true,
+      },
     });
 
-    if (!validation.success) {
-      setError(validation.error.errors[0]?.message || 'Invalid email');
-      return;
-    }
-
-    setLoading(true);
-    const result = await captureEmail(email, 'exit_intent', undefined, {
-      priceAlerts: true,
-      newReleases: true,
-      weeklyDigest: true,
-      promotions: true,
-    });
     setLoading(false);
 
     if (result.success) {
       setSuccess(true);
       setTimeout(() => setIsVisible(false), 2500);
+    } else if (result.errors) {
+      // Validation errors
+      setError(result.errors[0]?.message || 'Invalid email');
     } else {
       setError(result.error || 'Something went wrong');
     }

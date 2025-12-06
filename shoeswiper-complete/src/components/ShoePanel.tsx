@@ -1,7 +1,8 @@
 import React, { useState } from 'react';
 import { FaTimes, FaAmazon, FaBookmark, FaShare, FaChevronLeft, FaChevronRight, FaCheck } from 'react-icons/fa';
 import { Shoe } from '../lib/types';
-import { getAffiliateUrl, shouldShowPrice, formatPrice, trackAffiliateClick, extractAsinFromUrl } from '../lib/supabaseClient';
+import { getAffiliateUrl, shouldShowPrice, formatPrice, extractAsinFromUrl } from '../lib/supabaseClient';
+import { trackAffiliateClick } from '../lib/apiService';
 import { createAffiliateShareData } from '../lib/deepLinks';
 import { useFavorites } from '../hooks/useFavorites';
 import { useAnalytics } from '../hooks/useAnalytics';
@@ -33,10 +34,14 @@ const ShoePanel: React.FC<ShoePanelProps> = ({ shoe, isOpen, onClose }) => {
   const sizes = shoe.sizes_available || ['7', '7.5', '8', '8.5', '9', '9.5', '10', '10.5', '11', '11.5', '12', '13'];
 
   const handleBuyClick = () => {
-    // Track affiliate click for revenue attribution
-    const asin = extractAsinFromUrl(shoe.amazon_url);
-    trackAffiliateClick(shoe.id, asin || undefined, 'shoe_panel');
-    
+    // Track affiliate click for revenue attribution (rate limited)
+    trackAffiliateClick({
+      shoeId: shoe.id,
+      shoeName: shoe.name,
+      amazonUrl: shoe.amazon_url,
+      source: 'shoe_panel',
+    });
+
     window.open(getAffiliateUrl(shoe.amazon_url), '_blank');
   };
 

@@ -2,7 +2,8 @@ import React, { useState } from 'react';
 import { FaHeart, FaRegHeart, FaAmazon, FaTag } from 'react-icons/fa';
 import { Shoe } from '../lib/types';
 import { useSneakers } from '../hooks/useSneakers';
-import { shouldShowPrice, formatPrice, getAffiliateUrl, trackAffiliateClick, extractAsinFromUrl } from '../lib/supabaseClient';
+import { shouldShowPrice, formatPrice, getAffiliateUrl } from '../lib/supabaseClient';
+import { trackAffiliateClick } from '../lib/apiService';
 
 interface Props {
   shoe: Shoe;
@@ -16,11 +17,15 @@ export const SneakerCard: React.FC<Props> = ({ shoe, variant = 'grid' }) => {
   const showPrice = shouldShowPrice(shoe.price);
 
   const handleBuyClick = () => {
-    // Track both general click and affiliate click for revenue attribution
+    // Track both general click and affiliate click (rate limited)
     trackClick(shoe.id);
-    const asin = extractAsinFromUrl(shoe.amazon_url);
-    trackAffiliateClick(shoe.id, asin || undefined, 'sneaker_card');
-    
+    trackAffiliateClick({
+      shoeId: shoe.id,
+      shoeName: shoe.name,
+      amazonUrl: shoe.amazon_url,
+      source: 'sneaker_card',
+    });
+
     // Use centralized getAffiliateUrl to ensure tag is always present
     window.open(getAffiliateUrl(shoe.amazon_url), '_blank');
   };
