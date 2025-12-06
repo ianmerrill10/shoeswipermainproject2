@@ -210,9 +210,11 @@ const womensShoes: Shoe[] = [
 
 // Import additional real sneaker data (150+ more products)
 import { REAL_SNEAKER_DATA } from './realSneakerSeedData';
+// Import expanded catalog (700+ more products for 1000+ total)
+import { EXPANDED_CATALOG } from './expandedCatalog';
 
 // Combine all product sources - deduped by ASIN
-const allProducts = [...mensShoes, ...unisexShoes, ...womensShoes, ...REAL_SNEAKER_DATA];
+const allProducts = [...mensShoes, ...unisexShoes, ...womensShoes, ...REAL_SNEAKER_DATA, ...EXPANDED_CATALOG];
 const seenAsins = new Set<string>();
 const dedupedProducts: Shoe[] = [];
 
