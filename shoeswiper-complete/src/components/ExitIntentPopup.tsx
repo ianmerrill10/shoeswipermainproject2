@@ -3,8 +3,6 @@ import { FaTimes, FaGift, FaBolt, FaArrowRight } from 'react-icons/fa';
 import { useEmailCapture } from '../hooks/useEmailCapture';
 import { captureEmailSecure } from '../lib/apiService';
 
-/* eslint-disable @typescript-eslint/no-unused-vars */
-
 interface ExitIntentPopupProps {
   /** Delay before popup can show (prevents immediate popup) */
   delayMs?: number;
@@ -29,7 +27,7 @@ const ExitIntentPopup: React.FC<ExitIntentPopupProps> = ({
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
 
-  const { captureEmail, isSubscribed } = useEmailCapture();
+  const { isSubscribed } = useEmailCapture();
 
   // Check if we should show based on frequency
   useEffect(() => {
