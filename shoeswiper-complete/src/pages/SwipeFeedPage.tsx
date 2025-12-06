@@ -196,29 +196,31 @@ const SwipeFeedPage: React.FC = () => {
   }
 
   return (
-    <div
-      ref={containerRef}
-      className="h-screen bg-zinc-950 relative overflow-hidden feed-container"
-    >
-      {/* Notification Bell - Fixed Position */}
-      <button
-        onClick={openNotificationsPanel}
-        className="fixed top-4 right-4 z-30 w-11 h-11 bg-black/40 backdrop-blur-sm rounded-full flex items-center justify-center active:scale-90 transition-transform"
+    <div className="desktop-feed-wrapper">
+      <div
+        ref={containerRef}
+        className="feed-desktop-container h-screen full-height-mobile bg-zinc-950 relative overflow-hidden feed-container"
       >
-        <FaBell className="text-white text-lg" />
-        {unreadCount > 0 && (
-          <span className="absolute -top-1 -right-1 min-w-[18px] h-[18px] bg-red-500 text-white text-[10px] font-bold rounded-full flex items-center justify-center px-1">
-            {unreadCount > 9 ? '9+' : unreadCount}
-          </span>
-        )}
-      </button>
+        {/* Notification Bell - Responsive positioning */}
+        <button
+          onClick={openNotificationsPanel}
+          aria-label={`Notifications${unreadCount > 0 ? `, ${unreadCount} unread` : ''}`}
+          className="absolute top-3 sm:top-4 right-3 sm:right-4 z-30 w-10 h-10 sm:w-11 sm:h-11 bg-black/40 backdrop-blur-sm rounded-full flex items-center justify-center active:scale-90 transition-transform touch-target safe-area-inset-top"
+        >
+          <FaBell className="text-white text-base sm:text-lg" aria-hidden="true" />
+          {unreadCount > 0 && (
+            <span className="absolute -top-1 -right-1 min-w-[16px] sm:min-w-[18px] h-[16px] sm:h-[18px] bg-red-500 text-white text-[9px] sm:text-[10px] font-bold rounded-full flex items-center justify-center px-1" aria-hidden="true">
+              {unreadCount > 9 ? '9+' : unreadCount}
+            </span>
+          )}
+        </button>
 
-      {/* Swipe Counter */}
-      <div className="fixed top-4 left-4 z-30 bg-black/40 backdrop-blur-sm rounded-full px-3 py-1.5">
-        <span className="text-white text-sm font-bold">
-          {currentIndex + 1} / {shoes.length}
-        </span>
-      </div>
+        {/* Swipe Counter - Responsive */}
+        <div className="absolute top-3 sm:top-4 left-3 sm:left-4 z-30 bg-black/40 backdrop-blur-sm rounded-full px-2.5 sm:px-3 py-1 sm:py-1.5 safe-area-inset-top">
+          <span className="text-white text-xs sm:text-sm font-bold">
+            {currentIndex + 1} / {shoes.length}
+          </span>
+        </div>
 
       {/* Card Stack */}
       <div className="absolute inset-0">
@@ -280,16 +282,19 @@ const SwipeFeedPage: React.FC = () => {
         onClose={closeNotificationsPanel}
       />
 
-      {/* Share Success Toast */}
-      <div
-        className={`fixed bottom-24 left-1/2 -translate-x-1/2 bg-zinc-800 text-white px-4 py-3 rounded-xl flex items-center gap-2 shadow-lg z-50 transition-all duration-300 ${
-          showShareToast ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4 pointer-events-none'
-        }`}
-      >
-        <div className="w-6 h-6 bg-green-500 rounded-full flex items-center justify-center">
-          <FaCheck className="text-xs text-white" />
+        {/* Share Success Toast - Responsive */}
+        <div
+          role="status"
+          aria-live="polite"
+          className={`absolute bottom-20 sm:bottom-24 left-1/2 -translate-x-1/2 bg-zinc-800 text-white px-3 sm:px-4 py-2 sm:py-3 rounded-xl flex items-center gap-2 shadow-lg z-50 transition-all duration-300 mb-safe ${
+            showShareToast ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4 pointer-events-none'
+          }`}
+        >
+          <div className="w-5 h-5 sm:w-6 sm:h-6 bg-green-500 rounded-full flex items-center justify-center">
+            <FaCheck className="text-[10px] sm:text-xs text-white" aria-hidden="true" />
+          </div>
+          <span className="font-medium text-sm sm:text-base">Link copied!</span>
         </div>
-        <span className="font-medium">Link copied with affiliate tracking!</span>
       </div>
     </div>
   );
