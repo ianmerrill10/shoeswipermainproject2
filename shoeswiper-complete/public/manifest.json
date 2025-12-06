@@ -1,0 +1,114 @@
+{
+  "name": "ShoeSwiper - Swipe. Match. Cop.",
+  "short_name": "ShoeSwiper",
+  "description": "TikTok-style sneaker discovery marketplace with AI-powered outfit matching. Swipe through sneakers, find your perfect kicks, and cop from trusted retailers.",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#09090b",
+  "theme_color": "#18181b",
+  "orientation": "portrait-primary",
+  "scope": "/",
+  "lang": "en-US",
+  "categories": ["shopping", "lifestyle", "entertainment"],
+  "icons": [
+    {
+      "src": "/favicon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    },
+    {
+      "src": "/icons/icon-72x72.png",
+      "sizes": "72x72",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/icons/icon-96x96.png",
+      "sizes": "96x96",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/icons/icon-128x128.png",
+      "sizes": "128x128",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/icons/icon-144x144.png",
+      "sizes": "144x144",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/icons/icon-152x152.png",
+      "sizes": "152x152",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/icons/icon-192x192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/icons/icon-384x384.png",
+      "sizes": "384x384",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/icons/icon-512x512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ],
+  "screenshots": [
+    {
+      "src": "/screenshots/swipe-feed.png",
+      "sizes": "1080x1920",
+      "type": "image/png",
+      "form_factor": "narrow",
+      "label": "Swipe through sneakers TikTok-style"
+    },
+    {
+      "src": "/screenshots/closet.png",
+      "sizes": "1080x1920",
+      "type": "image/png",
+      "form_factor": "narrow",
+      "label": "Your personal sneaker closet"
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "Discover",
+      "short_name": "Swipe",
+      "description": "Start swiping through sneakers",
+      "url": "/swipe",
+      "icons": [{ "src": "/icons/swipe-icon.png", "sizes": "96x96" }]
+    },
+    {
+      "name": "My Closet",
+      "short_name": "Closet",
+      "description": "View your saved sneakers",
+      "url": "/closet",
+      "icons": [{ "src": "/icons/closet-icon.png", "sizes": "96x96" }]
+    },
+    {
+      "name": "Outfit Match",
+      "short_name": "Match",
+      "description": "Find sneakers that match your outfit",
+      "url": "/outfit-match",
+      "icons": [{ "src": "/icons/match-icon.png", "sizes": "96x96" }]
+    }
+  ],
+  "related_applications": [],
+  "prefer_related_applications": false,
+  "handle_links": "preferred",
+  "launch_handler": {
+    "client_mode": "navigate-existing"
+  }
+}

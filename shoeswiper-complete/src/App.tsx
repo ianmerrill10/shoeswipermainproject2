@@ -12,6 +12,8 @@ const AuthPage = lazy(() => import('./pages/AuthPage'));
 const ComingSoon = lazy(() => import('./pages/ComingSoon'));
 const Unauthorized = lazy(() => import('./pages/Unauthorized'));
 const NFTMarketplace = lazy(() => import('./components/nft/NFTMarketplace'));
+const PrivacyPolicy = lazy(() => import('./pages/PrivacyPolicy'));
+const TermsOfService = lazy(() => import('./pages/TermsOfService'));
 
 // Lazy-loaded Admin Pages
 const AnalyticsDashboard = lazy(() => import('./pages/admin/AnalyticsDashboard').then(m => ({ default: m.AnalyticsDashboard })));
@@ -80,6 +82,8 @@ function App() {
       <Suspense fallback={<LoadingSpinner />}>
         <Routes>
           <Route path="/auth" element={<AuthPage />} />
+          <Route path="/privacy" element={<PrivacyPolicy />} />
+          <Route path="/terms" element={<TermsOfService />} />
           <Route path="*" element={<ComingSoon />} />
         </Routes>
       </Suspense>
@@ -115,6 +119,10 @@ function App() {
           <Route path="/check-fit" element={<CheckMyFit />} />
           <Route path="/profile" element={<ProfilePage />} />
           <Route path="/nft" element={<NFTMarketplace />} />
+
+          {/* Legal Pages */}
+          <Route path="/privacy" element={<PrivacyPolicy />} />
+          <Route path="/terms" element={<TermsOfService />} />
 
           {/* Admin Routes - Protected by AdminLayout */}
           <Route path="/admin" element={<AdminLayout />}>

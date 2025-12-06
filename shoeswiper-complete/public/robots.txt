@@ -1,0 +1,26 @@
+# ShoeSwiper Robots.txt
+# https://shoeswiper.com
+
+User-agent: *
+Allow: /
+Allow: /search
+Allow: /closet
+Allow: /check-fit
+Allow: /profile
+Allow: /privacy
+Allow: /terms
+
+# Block admin and auth pages from indexing
+Disallow: /admin
+Disallow: /admin/*
+Disallow: /auth
+
+# Block API and internal routes
+Disallow: /api/
+Disallow: /_next/
+
+# Sitemap location
+Sitemap: https://shoeswiper.com/sitemap.xml
+
+# Crawl-delay for politeness (optional)
+Crawl-delay: 1

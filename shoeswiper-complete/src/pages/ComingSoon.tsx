@@ -1,3 +1,5 @@
+import { Link } from 'react-router-dom';
+
 const ComingSoon = () => {
   return (
     <main className="min-h-screen bg-gradient-to-br from-purple-900 via-black to-purple-900 flex flex-col items-center justify-center text-white p-4">
@@ -37,12 +39,23 @@ const ComingSoon = () => {
       </nav>
       
       {/* Admin Login (subtle) */}
-      <a 
-        href="/auth" 
+      <a
+        href="/auth"
         className="text-sm text-gray-500 hover:text-gray-400 transition mt-8"
       >
         Admin Login
       </a>
+
+      {/* Legal Links */}
+      <footer className="flex gap-4 mt-8 text-xs text-gray-500">
+        <Link to="/privacy" className="hover:text-gray-300 transition">
+          Privacy Policy
+        </Link>
+        <span aria-hidden="true">|</span>
+        <Link to="/terms" className="hover:text-gray-300 transition">
+          Terms of Service
+        </Link>
+      </footer>
     </main>
   );
 };

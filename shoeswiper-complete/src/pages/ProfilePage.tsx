@@ -1,7 +1,7 @@
 import React, { useEffect, useState, useCallback } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, Link } from 'react-router-dom';
 import { supabase } from '../lib/supabaseClient';
-import { FaCog, FaSignOutAlt, FaHeart, FaShoppingBag, FaShieldAlt, FaGem, FaBell } from 'react-icons/fa';
+import { FaCog, FaSignOutAlt, FaHeart, FaShoppingBag, FaShieldAlt, FaGem, FaBell, FaFileContract, FaUserShield } from 'react-icons/fa';
 import { Profile, Shoe } from '../lib/types';
 import { SneakerCard } from '../components/SneakerCard';
 import ReferralCard from '../components/ReferralCard';
@@ -272,6 +272,29 @@ const ProfilePage: React.FC = () => {
           )}
           </div>
         )}
+      </div>
+
+      {/* Legal Links Footer */}
+      <div className="px-6 py-8 border-t border-zinc-800 mt-8">
+        <div className="flex justify-center gap-6 text-sm">
+          <Link
+            to="/privacy"
+            className="flex items-center gap-1.5 text-zinc-500 hover:text-zinc-300 transition-colors"
+          >
+            <FaUserShield className="text-xs" aria-hidden="true" />
+            Privacy Policy
+          </Link>
+          <Link
+            to="/terms"
+            className="flex items-center gap-1.5 text-zinc-500 hover:text-zinc-300 transition-colors"
+          >
+            <FaFileContract className="text-xs" aria-hidden="true" />
+            Terms of Service
+          </Link>
+        </div>
+        <p className="text-center text-zinc-600 text-xs mt-4">
+          ShoeSwiper &copy; {new Date().getFullYear()}
+        </p>
       </div>
 
       {/* Notification Settings Panel */}
